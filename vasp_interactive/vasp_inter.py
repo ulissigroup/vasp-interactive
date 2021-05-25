@@ -172,7 +172,16 @@ class VaspInteractive(Vasp):
                 "".format(self.process.poll())
             )
 
+    def _close_io(self):
+        """ Explicitly close io stream of self.txt
+        """
+        if hasattr(self.txt, "write"):
+            print("closing io stream", self.txt)
+            self.txt.close()
+        return
+        
     def close(self):
+        # Not really good handling of process but use it as is
         if self.process is None:
             return
 
@@ -195,6 +204,7 @@ class VaspInteractive(Vasp):
             time.sleep(1)
         self._stdout("VASP has been closed\n")
         self.process = None
+        self._close_io()
         return
 
     def calculate(
@@ -288,11 +298,14 @@ class VaspInteractive(Vasp):
         return self
 
     def __exit__(self, type, value, traceback):
+        """Close the process and file operators
+        """
         self.close()
 
-
-#     def __del__(self):
-#         self.close()
+    def __del__(self):
+        """Close the process and file operators
+        """
+        self.close()
 
 # if __name__ == "__main__":
 #     from ase import Atoms
