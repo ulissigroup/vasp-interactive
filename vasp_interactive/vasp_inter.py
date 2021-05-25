@@ -97,8 +97,10 @@ class VaspInteractive(Vasp):
             pass
 
         # Make command a list of args for Popen
-        #         if isinstance(self.command, str):
-        #             self.command = self.command.split()
+        cmd = self.make_command(self.command)
+        if isinstance(cmd, str):
+            cmd = cmd.split()
+        self._args = cmd
 
         return
 
@@ -125,9 +127,6 @@ class VaspInteractive(Vasp):
 
     def _run_vasp(self, atoms):
         if self.process is None:
-            cmd = self.make_command(self.command)
-            if isinstance(cmd, str):
-                cmd = cmd.split()
             print("Initialize")
             stopcar = os.path.join(self.directory, "STOPCAR")
             if os.path.isfile(stopcar):
@@ -136,24 +135,16 @@ class VaspInteractive(Vasp):
             self.initialize(atoms)
             self.write_input(atoms)
             self._stdout("Starting VASP for initial step...\n")
-            if sys.version_info[0] >= 3:
-                self.process = Popen(
-                    cmd,
-                    stdout=PIPE,
-                    stdin=PIPE,
-                    stderr=PIPE,
-                    cwd=self.directory,
-                    universal_newlines=True,
-                    bufsize=0,
-                )
-            else:
-                self.process = Popen(
-                    cmd,
-                    stdout=PIPE,
-                    stdin=PIPE,
-                    stderr=PIPE,
-                    cwd=self.directory,
-                )
+            # Drop py2 support
+            self.process = Popen(
+                        self._args,
+                        stdout=PIPE,
+                        stdin=PIPE,
+                        stderr=PIPE,
+                        cwd=self.directory,
+                        universal_newlines=True,
+                        bufsize=0,
+                    )
         else:
             print("Still running", self.process, self.process.poll())
             self._stdout("Inputting positions...\n")
