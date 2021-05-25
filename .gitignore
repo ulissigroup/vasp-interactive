@@ -127,3 +127,16 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+*CAR
+*KPT*
+PCDAT
+CHG*
+vasprun.xml
+EIGENVAL
+KPOINTS
+REPORT
+STOPCAR*
+ase-sort*
+Untitled*
+*~
+*#*
