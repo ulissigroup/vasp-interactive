@@ -2,6 +2,7 @@
 """
 import numpy as np
 import os
+import shutil
 import tempfile
 
 from ase.atoms import Atoms
@@ -19,13 +20,15 @@ def run_with_vasp_interactive():
         d = 0.9575
         h2 = Atoms("H2", 
                    positions=[(d, 0, 0), (0, 0, 0)], 
-                   cell=[8, 8, 8])
+                   cell=[8, 8, 8],
+                   pbc=True)
         # Best practice of VaspInteractive is to use it as ContextManager
         with calc:
             h2.set_calculator(calc)
             dyn = BFGS(h2)
             # Now ASE-BFGS controls the relaxation, not VASP
             dyn.run(fmax=0.05)
+        shutil.copy(os.path.join(tmpdir, "OUTCAR"), "OUTCAR")
             
 if __name__ == "__main__":
     run_with_vasp_interactive()

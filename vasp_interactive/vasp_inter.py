@@ -10,6 +10,8 @@ from ase.calculators.calculator import Calculator
 from ase.calculators.vasp import Vasp
 from ase.io import read
 
+from ase.calculators.vasp.vasp import check_atoms
+
 
 # from ase.calculators.vasp.create_input import GenerateVaspInput
 
@@ -264,8 +266,8 @@ class VaspInteractive(Vasp):
 
             # Following two calls to _run_vasp: 1 is to let vasp see STOPCAR and do 1 SCF
             # second is to exit the program
-            self._run_vasp(self.atoms)
-            self._run_vasp(self.atoms)
+            self._run(self.atoms, out=out)
+            self._run(self.atoms, out=out)
             # if runs to this stage, process.poll() should be 0
             print(
                 "Two consequetive runs of vasp for STOPCAR to work",
@@ -286,22 +288,23 @@ class VaspInteractive(Vasp):
         properties=["energy"],
         system_changes=["positions", "numbers", "cell"],
     ):
+        # TODO: use base method to handle directory
+        check_atoms(atoms)
+        self.clear_results()
+        if atoms is not None:
+            self.atoms = atoms.copy()
 
-        atoms = atoms.copy()
-#         self.results.clear()
-#         Calculator.calculate(self, atoms, properties, system_changes)
-
-#         if not system_changes:
-#             return
+        if not system_changes:
+            return
         
 #         # TODO: Doubt about this part
 #         # maybe something like self.restart() ?
-#         if "numbers" in system_changes:
-#             self.close()
+        if "numbers" in system_changes:
+            self.close()
         
         # TODO: add the out component
         with self._txt_outstream() as out:
-            self._run(atoms, out=out)
+            self._run(self.atoms, out=out)
 
         print("Before reading OUTCAR")
         max_retry = 1
