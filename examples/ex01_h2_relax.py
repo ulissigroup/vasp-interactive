@@ -26,3 +26,6 @@ def run_with_vasp_interactive():
             dyn = BFGS(h2)
             # Now ASE-BFGS controls the relaxation, not VASP
             dyn.run(fmax=0.05)
+            
+if __name__ == "__main__":
+    run_with_vasp_interactive()
