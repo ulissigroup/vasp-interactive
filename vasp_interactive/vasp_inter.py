@@ -129,7 +129,8 @@ class VaspInteractive(Vasp):
     def _run_vasp(self, atoms):
         if self.process is None:
             print("Initialize")
-            stopcar = os.path.join(self.directory, "STOPCAR")
+#             stopcar = os.path.join(self.directory, "STOPCAR")
+            stopcar = self._indir("STOPCAR")
             if os.path.isfile(stopcar):
                 os.remove(stopcar)
             self._stdout("Writing VASP input files\n")
@@ -173,12 +174,13 @@ class VaspInteractive(Vasp):
                 "".format(self.process.poll())
             )
 
-    def _closetext(self):
+    def _close_io(self):
         """ Explicitly close io stream of self.txt
         """
         if hasattr(self.txt, "write"):
-            print("closing io stream", self.txt)
-            self.txt.close()
+            if self.txt.closed is False:
+                print("closing io stream", self.txt)
+                self.txt.close()
         return
         
     def close(self):
@@ -188,8 +190,9 @@ class VaspInteractive(Vasp):
 
         print("Waiting to close ", self.process)
         self._stdout("Attemping to close VASP cleanly\n")
-        with open(os.path.join(self.directory, "STOPCAR"), "w") as stopcar:
-            stopcar.write("LABORT = .TRUE.")
+        stopcar = self._indir("STOPCAR")
+        with open(stopcar, "w") as fd:
+            fd.write("LABORT = .TRUE.")
 
         # Following two calls to _run_vasp: 1 is to let vasp see STOPCAR and do 1 SCF
         # second is to exit the program
@@ -205,7 +208,6 @@ class VaspInteractive(Vasp):
             time.sleep(1)
         self._stdout("VASP has been closed\n")
         self.process = None
-        self._closetext()
         return
 
     def calculate(
@@ -230,18 +232,15 @@ class VaspInteractive(Vasp):
         print("Before reading OUTCAR")
         max_retry = 1
         new = None
+        outcar = self._indir("OUTCAR")
         for i in range(max_retry):
             try:
-                new = read(
-                    os.path.join(self.directory, "OUTCAR"),
-                )
-                # index=-1)
+                new = read(outcar, index=-1)
             except Exception as e:
                 print(e)
                 # Just continue the look
                 print("Failed OUTCAR read for time {}".format(i))
                 time.sleep(0.5)
-                outcar = os.path.join(self.directory, "OUTCAR")
                 # print(read(outcar))
                 with open(outcar, "r") as fd:
                     print("OUTCAR looks like this (last 25 lines)")
@@ -302,8 +301,10 @@ class VaspInteractive(Vasp):
         """Close the process and file operators
         """
         self.close()
+        self._close_io()
 
     def __del__(self):
         """Close the process and file operators
         """
         self.close()
+        self._close_io()

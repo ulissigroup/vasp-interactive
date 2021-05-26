@@ -25,6 +25,20 @@ def test_class():
         with open(incar, "r") as fd:
             context = fd.read()
             print(context)
+        
+        # Additional parameters for VaspInteractive
         assert "INTERACTIVE = .TRUE." in context
+        assert "IBRION = -1" in context
+        assert "POTIM = 0" in context
+        assert "IWAVPR = 11" in context
+        
+        # Try manual closing, since no process is given
+        assert calc.close() is None
+        assert calc.txt.closed is False
+        
+        # Context manager will close txt correctly
+        with calc:
+            pass
+        assert calc.txt.closed is True
     return
     
