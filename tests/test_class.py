@@ -2,6 +2,7 @@ import pytest
 from vasp_interactive import VaspInteractive
 import tempfile
 from pathlib import Path
+import os
 
 def test_class():
     from ase.build import molecule
@@ -14,9 +15,13 @@ def test_class():
                                directory=tempdir)
         # Initialization
         assert calc.process is None
-        assert hasattr(calc.txt, "write")
-        assert calc.txt.mode == "a"
-        assert calc.txt.closed is False
+        
+        # txt io
+        with calc._txt_outstream() as out:
+            assert out.mode == "a"
+            assert hasattr(out, "write")
+            assert os.path.exists(out.name)
+            print(out.name)
         
         # Write inputs
         calc.write_input(atoms)
@@ -35,11 +40,11 @@ def test_class():
         # Try manual closing, since no process is given
         # Should we close txt at the same time?
         assert calc.close() is None
-        assert calc.txt.closed is False
+#         assert calc.txt.closed is False
         
         # Context manager will close txt correctly
         with calc:
             pass
-        assert calc.txt.closed is True
+        assert calc.process is None
     return
 

@@ -4,10 +4,12 @@
    May be merged with upstream by the end of day.
 """
 from subprocess import Popen, PIPE
+from contextlib import contextmanager
 
 from ase.calculators.calculator import Calculator
 from ase.calculators.vasp import Vasp
 from ase.io import read
+
 
 # from ase.calculators.vasp.create_input import GenerateVaspInput
 
@@ -41,7 +43,6 @@ class VaspInteractive(Vasp):
         ignore_bad_restart_file=Calculator._deprecated,
         command=None,
         txt="vasp-interactive.out",
-        print_log=False,
         **kwargs
     ):
         """Initialize the calculator object like the normal Vasp object.
@@ -76,26 +77,6 @@ class VaspInteractive(Vasp):
         )
         # VaspInteractive can take 1 Popen process to track the VASP job
         self.process = None
-        self.print_log = print_log
-
-        # The output context is slightly different from original Vasp calculator though
-        if self.txt is None:
-            # If txt is None, output stream will be supressed
-            self.txt = None
-        elif self.txt == "-":
-            # If txt is '-' the output will be sent through stdout
-            self.txt = sys.stdout
-        elif isinstance(self.txt, str):
-            # If txt is a string a file will be opened
-            filename = self._indir(self.txt)
-            self.txt = open(filename, "a")
-        else:
-            # No change, but make sure self.txt has write
-            if not hasattr(self.txt, "write"):
-                raise AttributeError(
-                    "If Vasp.txt should be either a string, PurPath or IO stream."
-                )
-            pass
 
         # Make command a list of args for Popen
         cmd = self.make_command(self.command)
@@ -104,15 +85,86 @@ class VaspInteractive(Vasp):
         self._args = cmd
 
         return
-
-    def _stdin(self, text, ending="\n"):
-        """Pass input to the stdin of VASP process
-        single line
+    
+    def _ensure_directory(self):
+        """Makesure self.directory exists, if not use `os.makedirs`
         """
-        if self.txt is not None:
-            self.txt.write(text + ending)
-        if self.print_log:
-            print(text, end=ending)
+        # Create the folders where we write the files, if we aren't in the
+        # current working directory.
+        if self.directory != os.curdir and not os.path.isdir(self.directory):
+            os.makedirs(self.directory)
+
+    
+    @contextmanager
+    def _txt_outstream(self):
+        """Overwrites the parent Vasp._txt_outstream, so that the file io uses append mode
+        Custom function for opening a text output stream. Uses self.txt
+        to determine the output stream, and accepts a string or an open
+        writable object.
+        If a string is used, a new stream is opened, and automatically closes
+        the new stream again when exiting.
+
+        Examples:
+        # Pass a string
+        calc.txt = 'vasp.out'
+        with calc.txt_outstream() as out:
+            calc.run(out=out)   # Redirects the stdout to 'vasp-interactive.out'
+
+        # Use an existing stream
+        mystream = open('vasp.out', 'w')
+        calc.txt = mystream
+        with calc.txt_outstream() as out:
+            calc.run(out=out)
+        mystream.close()
+
+        # Print to stdout
+        calc.txt = '-'
+        with calc.txt_outstream() as out:
+            calc.run(out=out)   # output is written to stdout
+        """
+
+        txt = self.txt
+        open_and_close = False  # Do we open the file?
+
+        if txt is None:
+            # Suppress stdout
+            out = None
+        else:
+            if isinstance(txt, str):
+                if txt == '-':
+                    # subprocess.call redirects this to stdout
+                    out = None
+                else:
+                    # Open the file in the work directory
+                    self._ensure_directory()
+                    txt = self._indir(txt)
+                    # We wait with opening the file, until we are inside the
+                    # try/finally
+                    open_and_close = True
+            elif hasattr(txt, 'write'):
+                out = txt
+            else:
+                raise RuntimeError('txt should either be a string'
+                                   'or an I/O stream, got {}'.format(txt))
+
+        try:
+            if open_and_close:
+                # For interactive vasp mode, the io stream is in append mode
+                # Using multiple stream context would not affect the performance
+                out = open(txt, 'a')
+            yield out
+        finally:
+            if open_and_close:
+                out.close()
+
+
+    def _stdin(self, text, out=None, ending="\n"):
+        """Write single line text to `self.process.stdin`
+           if `out` provided, the same input is write to `out` as well.
+           `text` should be a single line input without ending char
+        """
+        if out is not None:
+            out.write(text + ending)
         if self.process is not None:
             self.process.stdin.write(text + ending)
             # ASE only supports py3 now, no need for py2 compatibility
@@ -120,23 +172,33 @@ class VaspInteractive(Vasp):
         else:
             raise RuntimeError("VaspInteractive does not have the VASP process.")
 
-    def _stdout(self, text):
-        if self.txt is not None:
-            self.txt.write(text)
-        if self.print_log:
-            print(text, end="")
+    def _stdout(self, text, out=None):
+        """ 
+        """
+        if out is not None:
+            out.write(text)
 
-    def _run_vasp(self, atoms):
+    def _run(self, atoms, out):
+        """ Overwrite the Vasp._run method
+            Running pipe-based vasp job
+            `out` is the io stream determined by `_txt_outstream()`
+            Logic: 
+            - If the vasp process not present (either not started or restarted):
+                make inputs and run until stdout captures request for new pos input
+            - Else the vasp process has started and asks for input (2+ ionic step)
+                write new positions to stdin
+            - If the process continues without asking input, check the process return code
+              if returncode != 0 then there is an error
+        """
         if self.process is None:
-            print("Initialize")
-#             stopcar = os.path.join(self.directory, "STOPCAR")
+            # Delete STOPCAR left by an unsuccessful run
             stopcar = self._indir("STOPCAR")
             if os.path.isfile(stopcar):
                 os.remove(stopcar)
-            self._stdout("Writing VASP input files\n")
+            self._stdout("Writing VASP input files\n", out=out)
             self.initialize(atoms)
             self.write_input(atoms)
-            self._stdout("Starting VASP for initial step...\n")
+            self._stdout("Starting VASP for initial step...\n", out=out)
             # Drop py2 support
             self.process = Popen(
                         self._args,
@@ -148,21 +210,23 @@ class VaspInteractive(Vasp):
                         bufsize=0,
                     )
         else:
+            # Whenever at this point, VASP interactive asks the input
+            # write the current atoms positions to the stdin
             print("Still running", self.process, self.process.poll())
-            self._stdout("Inputting positions...\n")
+            self._stdout("Inputting positions...\n", out=out)
             for atom in atoms.get_scaled_positions():
-                self._stdin(" ".join(map("{:19.16f}".format, atom)))
+                self._stdin(" ".join(map("{:19.16f}".format, atom)), out=out)
 
         while self.process.poll() is None:
             text = self.process.stdout.readline()
-            self._stdout(text)
+            self._stdout(text, out=out)
             if "POSITIONS: reading from stdin" in text:
                 return
 
         # Extra condition, vasp exited with 0 (completed)
         # only happens at second call to _run_vasp when STOPCAR is present
         if self.process.poll() == 0:
-            self._stdout("VASP successfully terminated")
+            self._stdout("VASP successfully terminated\n", out=out)
             return
         else:
             # If we've reached this point, then VASP has exited without asking for
@@ -174,40 +238,46 @@ class VaspInteractive(Vasp):
                 "".format(self.process.poll())
             )
 
-    def _close_io(self):
-        """ Explicitly close io stream of self.txt
-        """
-        if hasattr(self.txt, "write"):
-            if self.txt.closed is False:
-                print("closing io stream", self.txt)
-                self.txt.close()
-        return
+#     def _close_io(self):
+#         """ Explicitly close io stream of self.txt
+            
+#         """
+#         if hasattr(self.txt, "write"):
+#             if self.txt.closed is False:
+#                 print("closing io stream", self.txt)
+#                 self.txt.close()
+#         return
         
     def close(self):
-        # Not really good handling of process but use it as is
+        """Necessary step to stop the stream-based VASP process
+           Works by writing STOPCAR file and runs two dummy scf cycles
+        """
         if self.process is None:
             return
 
         print("Waiting to close ", self.process)
-        self._stdout("Attemping to close VASP cleanly\n")
-        stopcar = self._indir("STOPCAR")
-        with open(stopcar, "w") as fd:
-            fd.write("LABORT = .TRUE.")
+        with self._txt_outstream() as out:
+            self._stdout("Attemping to close VASP cleanly\n", out=out)
+            stopcar = self._indir("STOPCAR")
+            with open(stopcar, "w") as fd:
+                fd.write("LABORT = .TRUE.")
 
-        # Following two calls to _run_vasp: 1 is to let vasp see STOPCAR and do 1 SCF
-        # second is to exit the program
-        self._run_vasp(self.atoms)
-        self._run_vasp(self.atoms)
-        # if runs to this stage, process.poll() should be 0
-        print(
-            "Two consequetive runs of vasp for STOPCAR to work",
-            self.process,
-            self.process.poll(),
-        )
-        while self.process.poll() is None:
-            time.sleep(1)
-        self._stdout("VASP has been closed\n")
-        self.process = None
+            # Following two calls to _run_vasp: 1 is to let vasp see STOPCAR and do 1 SCF
+            # second is to exit the program
+            self._run_vasp(self.atoms)
+            self._run_vasp(self.atoms)
+            # if runs to this stage, process.poll() should be 0
+            print(
+                "Two consequetive runs of vasp for STOPCAR to work",
+                self.process,
+                self.process.poll(),
+            )
+            # TODO: the endless waiting cycle is hand-waving
+            # consider add a timeout function
+            while self.process.poll() is None:
+                time.sleep(1)
+            self._stdout("VASP has been closed\n", out=out)
+            self.process = None
         return
 
     def calculate(
@@ -218,16 +288,20 @@ class VaspInteractive(Vasp):
     ):
 
         atoms = atoms.copy()
-        self.results.clear()
-        Calculator.calculate(self, atoms, properties, system_changes)
+#         self.results.clear()
+#         Calculator.calculate(self, atoms, properties, system_changes)
 
-        if not system_changes:
-            return
-
-        if "numbers" in system_changes:
-            self.close()
-
-        self._run_vasp(atoms)
+#         if not system_changes:
+#             return
+        
+#         # TODO: Doubt about this part
+#         # maybe something like self.restart() ?
+#         if "numbers" in system_changes:
+#             self.close()
+        
+        # TODO: add the out component
+        with self._txt_outstream() as out:
+            self._run(atoms, out=out)
 
         print("Before reading OUTCAR")
         max_retry = 1
@@ -256,7 +330,7 @@ class VaspInteractive(Vasp):
                     # ot = Outcar(outcar)
                     # print(ot)
 
-                with open("OUTCAR.error", "w") as fd:
+                with open(self._indir("OUTCAR.error"), "w") as fd:
                     print("Writing to OUTCAR.error")
                     fd.write("".join(lines))
                 # tmp = NamedTemporaryFile()
@@ -295,17 +369,16 @@ class VaspInteractive(Vasp):
         print(self.results)
 
     def __enter__(self):
-        self
         return self
 
     def __exit__(self, type, value, traceback):
         """Close the process and file operators
         """
         self.close()
-        self._close_io()
+#         self._close_io()
 
     def __del__(self):
         """Close the process and file operators
         """
         self.close()
-        self._close_io()
+#         self._close_io()
