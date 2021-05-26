@@ -82,12 +82,13 @@ class VaspInteractive(Vasp):
         if self.txt is None:
             # If txt is None, output stream will be supressed
             self.txt = None
-        elif self._txt == "-":
+        elif self.txt == "-":
             # If txt is '-' the output will be sent through stdout
             self.txt = sys.stdout
         elif isinstance(self.txt, str):
             # If txt is a string a file will be opened
-            self.txt = open(self.txt, "a")
+            filename = self._indir(self.txt)
+            self.txt = open(filename, "a")
         else:
             # No change, but make sure self.txt has write
             if not hasattr(self.txt, "write"):
@@ -172,7 +173,7 @@ class VaspInteractive(Vasp):
                 "".format(self.process.poll())
             )
 
-    def _close_io(self):
+    def _closetext(self):
         """ Explicitly close io stream of self.txt
         """
         if hasattr(self.txt, "write"):
@@ -204,7 +205,7 @@ class VaspInteractive(Vasp):
             time.sleep(1)
         self._stdout("VASP has been closed\n")
         self.process = None
-        self._close_io()
+        self._closetext()
         return
 
     def calculate(
@@ -306,45 +307,3 @@ class VaspInteractive(Vasp):
         """Close the process and file operators
         """
         self.close()
-
-# if __name__ == "__main__":
-#     from ase import Atoms
-#     from ase.build import molecule
-#     from ase.optimize import BFGS, QuasiNewton
-#     from ase.calculators.emt import EMT
-#     import numpy as np
-#     import os
-
-#     os.environ["VASP_COMMAND"] = "mpirun -np 8 /opt/vasp.6.1.2_pgi_mkl_beef/bin/vasp_std"
-
-#     # Delete all *CAR files to reproduce error
-#     for f in next(os.walk("./"))[-1]:
-#         if "CAR" in f:
-#             os.unlink(f)
-
-#     parent_calc = VaspInteractive(
-#         istart=0,
-#         algo="Fast",
-#         prec="Normal",
-#         isif=4,
-#         ismear=0,
-#         ispin=1,
-#         ediff=1e-4,
-#         xc="rpbe",
-#         encut=300,
-#         #     nsw=0,  # important that this is set higher than the number of times it will be called
-#         kpts=(1, 1, 1),  # not important, just keeps it faster
-#     )
-
-#     # atoms = molecule("C6H6", vacuum=5)
-#     # atoms.rattle(0.05)
-#     # atoms.set_calculator(parent_calc)
-#     with parent_calc:
-#         d = 0.9575
-#         h2 = Atoms(
-#             "H2", positions=[(d, 0, 0), (0, 0, 0)], cell=[8, 8, 8], calculator=parent_calc
-#         )
-
-#         # dyn = BFGS(atoms)
-#         dyn = BFGS(h2)
-#         dyn.run(fmax=0.05)
