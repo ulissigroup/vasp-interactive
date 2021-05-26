@@ -272,12 +272,12 @@ class VaspInteractive(Vasp):
                 "forces": new.get_forces()[self.resort],
             }
         else:
+            # Dirty patch, not using os.path
+            # from https://gist.github.com/gVallverdu/0e232988f32109b5dc6202cf193a49fb
             from pymatgen.io.vasp import Outcar
             import numpy as np
 
-            # Dirty patch, not using os.path
-            # from https://gist.github.com/gVallverdu/0e232988f32109b5dc6202cf193a49fb
-            ot = Outcar("OUTCAR")
+            ot = Outcar(self._indir("OUTCAR"))
             forces = ot.read_table_pattern(
                 header_pattern=r"\sPOSITION\s+TOTAL-FORCE \(eV/Angst\)\n\s-+",
                 row_pattern=r"\s+[+-]?\d+\.\d+\s+[+-]?\d+\.\d+\s+[+-]?\d+\.\d+\s+([+-]?\d+\.\d+)\s+([+-]?\d+\.\d+)\s+([+-]?\d+\.\d+)",
@@ -295,6 +295,7 @@ class VaspInteractive(Vasp):
         print(self.results)
 
     def __enter__(self):
+        self
         return self
 
     def __exit__(self, type, value, traceback):

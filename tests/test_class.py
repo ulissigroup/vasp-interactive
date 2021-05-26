@@ -33,6 +33,7 @@ def test_class():
         assert "IWAVPR = 11" in context
         
         # Try manual closing, since no process is given
+        # Should we close txt at the same time?
         assert calc.close() is None
         assert calc.txt.closed is False
         
@@ -41,4 +42,4 @@ def test_class():
             pass
         assert calc.txt.closed is True
     return
-    
+
