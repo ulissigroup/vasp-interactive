@@ -5,17 +5,12 @@
 """
 from subprocess import Popen, PIPE
 from contextlib import contextmanager
-import atexit
-from warnings import warn
 
 from ase.calculators.calculator import Calculator
 from ase.calculators.vasp import Vasp
 from ase.io import read
 
 from ase.calculators.vasp.vasp import check_atoms
-
-
-# from ase.calculators.vasp.create_input import GenerateVaspInput
 
 import time
 import os
@@ -52,7 +47,7 @@ class VaspInteractive(Vasp):
         label="vasp-interactive",
         ignore_bad_restart_file=Calculator._deprecated,
         command=None,
-        txt="vasp-interactive.out",
+        txt="vasp.out",
         **kwargs
     ):
         """Initialize the calculator object like the normal Vasp object.
@@ -62,16 +57,16 @@ class VaspInteractive(Vasp):
         """
 
         # Add the mandatory keywords
-        for kw, val in self.mandatory_input.items():
+        for kw, val in VaspInteractive.mandatory_input.items():
             if kw in kwargs and val != kwargs[kw]:
                 raise ValueError(
                     "Keyword {} cannot be overridden! "
                     "It must have have value {}, but {} "
                     "was provided instead.".format(kw, val, kwargs[kw])
                 )
-        kwargs.update(self.mandatory_input)
+        kwargs.update(VaspInteractive.mandatory_input)
 
-        for kw, val in self.default_input.items():
+        for kw, val in VaspInteractive.default_input.items():
             if kw not in kwargs:
                 kwargs[kw] = val
 
@@ -416,7 +411,6 @@ class VaspInteractive(Vasp):
         #Ensure outcar & vasprun.xml correctly written
         self.close()
 
-#     @atexit.register
     def __del__(self):
         """Explicit deconstruction, kill the process with no mercy"""
         try:
