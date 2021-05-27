@@ -299,6 +299,7 @@ class VaspInteractive(Vasp):
         
 #         # TODO: Doubt about this part
 #         # maybe something like self.restart() ?
+        # TODO: if input params change, reset the current stream calculator?
         if "numbers" in system_changes:
             self.close()
         
@@ -370,6 +371,10 @@ class VaspInteractive(Vasp):
             }
         # print(self.resort)
         print(self.results)
+        
+        # Allow vasp handle param changes
+        self._store_param_state()
+        return
 
     def __enter__(self):
         return self
