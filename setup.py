@@ -5,13 +5,13 @@ except ImportError:
 
 
 setup(
-    name='vasp-interactive',
-    version='0.0.1',
+    name="vasp-interactive",
+    version="0.0.1",
     packages=[
-        'vasp_interactive',
+        "vasp_interactive",
     ],
     install_requires=[
-        'ase',
-        'pymatgen',
+        "ase",
+        "pymatgen",
     ],
 )

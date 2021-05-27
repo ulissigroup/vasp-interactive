@@ -21,6 +21,12 @@ import sys
 
 
 class VaspInteractive(Vasp):
+    """I/O stream-based VASP calculator.
+    Can be used to speed up structural relaxation when using ASE optimizers.
+    The atomic positions for each ionic step is passed to VASP via stdin.
+    Currently do not support change of unit cell.
+    """
+
     name = "VaspInteractive"
     # In principle the implemented properties can be anything
     # single point Vasp is capable of
@@ -86,17 +92,31 @@ class VaspInteractive(Vasp):
             cmd = cmd.split()
         self._args = cmd
 
+        # Reset counter
+        #         self.steps = 0
+
         return
-    
+
+    #     def reset(self):
+    #         """Force stop the vasp process and reset iteration counter
+    #         """
+    #         if self.process is not None:
+    #             if self.process.poll() is None:
+    #                 # kill a running process
+    #                 self.process.kill()
+    #             self.process = None
+    #         self.steps = 0
+    #         self.atoms = None
+    #         self.clear_results()
+    #         self.final = False
+
     def _ensure_directory(self):
-        """Makesure self.directory exists, if not use `os.makedirs`
-        """
+        """Makesure self.directory exists, if not use `os.makedirs`"""
         # Create the folders where we write the files, if we aren't in the
         # current working directory.
         if self.directory != os.curdir and not os.path.isdir(self.directory):
             os.makedirs(self.directory)
 
-    
     @contextmanager
     def _txt_outstream(self):
         """Overwrites the parent Vasp._txt_outstream, so that the file io uses append mode
@@ -133,7 +153,7 @@ class VaspInteractive(Vasp):
             out = None
         else:
             if isinstance(txt, str):
-                if txt == '-':
+                if txt == "-":
                     # subprocess.call redirects this to stdout
                     out = None
                 else:
@@ -143,27 +163,28 @@ class VaspInteractive(Vasp):
                     # We wait with opening the file, until we are inside the
                     # try/finally
                     open_and_close = True
-            elif hasattr(txt, 'write'):
+            elif hasattr(txt, "write"):
                 out = txt
             else:
-                raise RuntimeError('txt should either be a string'
-                                   'or an I/O stream, got {}'.format(txt))
+                raise RuntimeError(
+                    "txt should either be a string"
+                    "or an I/O stream, got {}".format(txt)
+                )
 
         try:
             if open_and_close:
                 # For interactive vasp mode, the io stream is in append mode
                 # Using multiple stream context would not affect the performance
-                out = open(txt, 'a')
+                out = open(txt, "a")
             yield out
         finally:
             if open_and_close:
                 out.close()
 
-
     def _stdin(self, text, out=None, ending="\n"):
         """Write single line text to `self.process.stdin`
-           if `out` provided, the same input is write to `out` as well.
-           `text` should be a single line input without ending char
+        if `out` provided, the same input is write to `out` as well.
+        `text` should be a single line input without ending char
         """
         if out is not None:
             out.write(text + ending)
@@ -175,22 +196,21 @@ class VaspInteractive(Vasp):
             raise RuntimeError("VaspInteractive does not have the VASP process.")
 
     def _stdout(self, text, out=None):
-        """ 
-        """
+        """ """
         if out is not None:
             out.write(text)
 
     def _run(self, atoms, out):
-        """ Overwrite the Vasp._run method
-            Running pipe-based vasp job
-            `out` is the io stream determined by `_txt_outstream()`
-            Logic: 
-            - If the vasp process not present (either not started or restarted):
-                make inputs and run until stdout captures request for new pos input
-            - Else the vasp process has started and asks for input (2+ ionic step)
-                write new positions to stdin
-            - If the process continues without asking input, check the process return code
-              if returncode != 0 then there is an error
+        """Overwrite the Vasp._run method
+        Running pipe-based vasp job
+        `out` is the io stream determined by `_txt_outstream()`
+        Logic:
+        - If the vasp process not present (either not started or restarted):
+            make inputs and run until stdout captures request for new pos input
+        - Else the vasp process has started and asks for input (2+ ionic step)
+            write new positions to stdin
+        - If the process continues without asking input, check the process return code
+          if returncode != 0 then there is an error
         """
         if self.process is None:
             # Delete STOPCAR left by an unsuccessful run
@@ -203,14 +223,14 @@ class VaspInteractive(Vasp):
             self._stdout("Starting VASP for initial step...\n", out=out)
             # Drop py2 support
             self.process = Popen(
-                        self._args,
-                        stdout=PIPE,
-                        stdin=PIPE,
-                        stderr=PIPE,
-                        cwd=self.directory,
-                        universal_newlines=True,
-                        bufsize=0,
-                    )
+                self._args,
+                stdout=PIPE,
+                stdin=PIPE,
+                stderr=PIPE,
+                cwd=self.directory,
+                universal_newlines=True,
+                bufsize=0,
+            )
         else:
             # Whenever at this point, VASP interactive asks the input
             # write the current atoms positions to the stdin
@@ -240,19 +260,19 @@ class VaspInteractive(Vasp):
                 "".format(self.process.poll())
             )
 
-#     def _close_io(self):
-#         """ Explicitly close io stream of self.txt
-            
-#         """
-#         if hasattr(self.txt, "write"):
-#             if self.txt.closed is False:
-#                 print("closing io stream", self.txt)
-#                 self.txt.close()
-#         return
-        
+    #     def _close_io(self):
+    #         """ Explicitly close io stream of self.txt
+
+    #         """
+    #         if hasattr(self.txt, "write"):
+    #             if self.txt.closed is False:
+    #                 print("closing io stream", self.txt)
+    #                 self.txt.close()
+    #         return
+
     def close(self):
         """Necessary step to stop the stream-based VASP process
-           Works by writing STOPCAR file and runs two dummy scf cycles
+        Works by writing STOPCAR file and runs two dummy scf cycles
         """
         if self.process is None:
             return
@@ -295,17 +315,27 @@ class VaspInteractive(Vasp):
             self.atoms = atoms.copy()
 
         if not system_changes:
+            # No need to calculate, calculator has stored calculated results
             return
-        
-#         # TODO: Doubt about this part
-#         # maybe something like self.restart() ?
-        # TODO: if input params change, reset the current stream calculator?
-        if "numbers" in system_changes:
-            self.close()
-        
+
+        # Currently VaspInteractive only handles change of positions (MD-like)
+        if any([p in system_changes for p in ("numbers", "cell")]):
+            # If not started yet,
+            #             if self.steps == 0:
+            #                 self.close()
+            if self.process is not None:
+                raise NotImplementedError(
+                    (
+                        "VaspInteractive does not support change of "
+                        "chemical formula or lattice parameters. "
+                        "Please create a new calculator instance or use standard Vasp calculator"
+                    )
+                )
+
         # TODO: add the out component
         with self._txt_outstream() as out:
             self._run(self.atoms, out=out)
+        #         self.steps += 1
 
         print("Before reading OUTCAR")
         max_retry = 1
@@ -371,7 +401,7 @@ class VaspInteractive(Vasp):
             }
         # print(self.resort)
         print(self.results)
-        
+
         # Allow vasp handle param changes
         self._store_param_state()
         return
@@ -380,13 +410,14 @@ class VaspInteractive(Vasp):
         return self
 
     def __exit__(self, type, value, traceback):
-        """Close the process and file operators
-        """
+        """Close the process and file operators"""
         self.close()
-#         self._close_io()
+
+    #         self._close_io()
 
     def __del__(self):
-        """Close the process and file operators
-        """
+        """Close the process and file operators"""
         self.close()
+
+
 #         self._close_io()
