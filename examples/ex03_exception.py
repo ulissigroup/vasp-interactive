@@ -19,7 +19,7 @@ h2_root = Atoms("H2", positions=[(d, 0, 0), (0, 0, 0)], cell=[8, 8, 8], pbc=True
 def run_no_context():
     h2 = h2_root.copy()
     with tempfile.TemporaryDirectory() as tmpdir:
-#     tmpdir = "./"
+        #     tmpdir = "./"
         calc = VaspInteractive(
             ismear=0,
             xc="pbe",
@@ -60,9 +60,13 @@ def run_with_exception():
             # Now ASE-BFGS controls the relaxation, not VASP
             # Simulate a single step
             dyn.step()
-#             dyn.run(fmax=0.05)
-            raise RuntimeError(("Simulate error, please check if there are still orphan processes.\n"
-                               "You should see this error message after VaspInteractive closes."))
+            #             dyn.run(fmax=0.05)
+            raise RuntimeError(
+                (
+                    "Simulate error, please check if there are still orphan processes.\n"
+                    "You should see this error message after VaspInteractive closes."
+                )
+            )
     return
 
 

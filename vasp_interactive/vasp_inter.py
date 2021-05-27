@@ -30,9 +30,9 @@ class VaspInteractive(Vasp):
     # Currently limits to e, F and S
     implemented_properties = ["energy", "forces", "stress"]
     mandatory_input = {
-        "potim": 0.0,
+#         "potim": 0.0,
         "ibrion": -1,
-        "iwavpr": 11,
+#         "iwavpr": 11,
         "interactive": True,
     }
     # Enforce the job to be relaxation
@@ -89,23 +89,26 @@ class VaspInteractive(Vasp):
             cmd = cmd.split()
         self._args = cmd
 
-        # Reset counter
-        #         self.steps = 0
+        # Ionic steps counter. Note this number will be 1 more than that in ase.optimize
+        self.steps = 0
+        # Is the relaxation finished?
+        self.final = False
 
         return
 
-    #     def reset(self):
-    #         """Force stop the vasp process and reset iteration counter
-    #         """
-    #         if self.process is not None:
-    #             if self.process.poll() is None:
-    #                 # kill a running process
-    #                 self.process.kill()
-    #             self.process = None
-    #         self.steps = 0
-    #         self.atoms = None
-    #         self.clear_results()
-    #         self.final = False
+    def reset(self):
+        """Rewrite the parent reset function.
+        The calculator is reset only if user set it to final
+        """
+        super(VaspInteractive, self).reset()
+        if self.final:
+            if self.process is not None:
+                if self.process.poll() is None:
+                    # kill a running process
+                    self.process.kill()
+                self.process = None
+            self.steps = 0
+            self.final = False
 
     def _ensure_directory(self):
         """Makesure self.directory exists, if not use `os.makedirs`"""
@@ -231,7 +234,7 @@ class VaspInteractive(Vasp):
         else:
             # Whenever at this point, VASP interactive asks the input
             # write the current atoms positions to the stdin
-            print("Still running", self.process, self.process.poll())
+#             print("Still running", self.process, self.process.poll())
             self._stdout("Inputting positions...\n", out=out)
             for atom in atoms.get_scaled_positions():
                 self._stdin(" ".join(map("{:19.16f}".format, atom)), out=out)
@@ -274,7 +277,7 @@ class VaspInteractive(Vasp):
         if self.process is None:
             return
 
-        print("Waiting to close ", self.process)
+#         print("Waiting to close ", self.process)
         with self._txt_outstream() as out:
             self._stdout("Attemping to close VASP cleanly\n", out=out)
             stopcar = self._indir("STOPCAR")
@@ -286,11 +289,11 @@ class VaspInteractive(Vasp):
             self._run(self.atoms, out=out)
             self._run(self.atoms, out=out)
             # if runs to this stage, process.poll() should be 0
-            print(
-                "Two consequetive runs of vasp for STOPCAR to work",
-                self.process,
-                self.process.poll(),
-            )
+#             print(
+#                 "Two consequetive runs of vasp for STOPCAR to work",
+#                 self.process,
+#                 self.process.poll(),
+#             )
             # TODO: the endless waiting cycle is hand-waving
             # consider add a timeout function
             while self.process.poll() is None:
@@ -332,9 +335,9 @@ class VaspInteractive(Vasp):
         # TODO: add the out component
         with self._txt_outstream() as out:
             self._run(self.atoms, out=out)
-        #         self.steps += 1
+            self.steps += 1
 
-        print("Before reading OUTCAR")
+#         print("Before reading OUTCAR")
         max_retry = 1
         new = None
         outcar = self._indir("OUTCAR")
@@ -397,19 +400,22 @@ class VaspInteractive(Vasp):
                 "forces": forces[self.resort],
             }
         # print(self.resort)
-        print(self.results)
+#         print(self.results)
 
         # Allow vasp handle param changes
         self._store_param_state()
         return
 
     def __enter__(self):
+        # Reset everything
+        self.reset()
         return self
 
     def __exit__(self, type, value, traceback):
         """Exiting the context manager and reset process"""
         #Ensure outcar & vasprun.xml correctly written
         self.close()
+        self.final = True
 
     def __del__(self):
         """Explicit deconstruction, kill the process with no mercy"""
