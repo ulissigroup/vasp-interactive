@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from ase.calculators.calculator import Calculator
 from ase.calculators.vasp import Vasp
 from ase.io import read
+from ase.io.vasp import write_vasp
 
 from ase.calculators.vasp.vasp import check_atoms
 
@@ -319,38 +320,21 @@ class VaspInteractive(Vasp):
         max_retry = 1
         new = None
         outcar = self._indir("OUTCAR")
-        for i in range(max_retry):
-            try:
-                new = read(outcar, index=-1)
-            except Exception as e:
-                print(e)
-                # Just continue the look
-                print("Failed OUTCAR read for time {}".format(i))
-                time.sleep(0.5)
-                # print(read(outcar))
-                with open(outcar, "r") as fd:
-                    print("OUTCAR looks like this (last 25 lines)")
-                    lines = fd.readlines()
-                    print("".join(lines[-25:]))
-                    # for l in lines: print(l)
-                    content = "".join(lines)
-                    # from ase.io.vasp import read_vasp_out
-                    # from io import StringIO
-                    # from tempfile import NamedTemporaryFile
-                    # print(read_vasp_out(outcar))
-                    # from pymatgen.io.vasp import Outcar
-                    # ot = Outcar(outcar)
-                    # print(ot)
-
-                with open(self._indir("OUTCAR.error"), "w") as fd:
-                    print("Writing to OUTCAR.error")
-                    fd.write("".join(lines))
-                # tmp = NamedTemporaryFile()
-                # tmp.write(content)
-                # print(read_vasp_out("OUTCAR.error"))
-                pass
-        #         new = read(os.path.join(self.directory, 'vasprun.xml'), index=-1)
-        # print("Finish reading outcar")
+#         import pdb; pdb.set_trace()
+        try:
+            new = read(outcar, index=-1)
+        # The IndexError is caused due to delayed write of stream VASP calculator
+        # to CONTCAR, which is required for parsing the constraints in OUTCAR
+        # Temporary workaround here is to manually write current atom positions to CONTCAR
+        except IndexError as e:
+            print("Error reading outcar due to contcar")
+            contcar = self._indir("CONTCAR")
+            write_vasp(contcar, self.atoms_sorted, direct=True, symbol_count=self.symbol_count)
+            new = read(outcar, index=-1)
+            # flush contcar
+            with open(contcar, "w") as fd:
+                fd.write("")
+        
         if new:
             self.results = {
                 "free_energy": new.get_potential_energy(force_consistent=True),
@@ -358,25 +342,26 @@ class VaspInteractive(Vasp):
                 "forces": new.get_forces()[self.resort],
             }
         else:
-            # Dirty patch, not using os.path
-            # from https://gist.github.com/gVallverdu/0e232988f32109b5dc6202cf193a49fb
-            from pymatgen.io.vasp import Outcar
-            import numpy as np
+            pass
+#             # Dirty patch, not using os.path
+#             # from https://gist.github.com/gVallverdu/0e232988f32109b5dc6202cf193a49fb
+#             from pymatgen.io.vasp import Outcar
+#             import numpy as np
 
-            ot = Outcar(self._indir("OUTCAR"))
-            forces = ot.read_table_pattern(
-                header_pattern=r"\sPOSITION\s+TOTAL-FORCE \(eV/Angst\)\n\s-+",
-                row_pattern=r"\s+[+-]?\d+\.\d+\s+[+-]?\d+\.\d+\s+[+-]?\d+\.\d+\s+([+-]?\d+\.\d+)\s+([+-]?\d+\.\d+)\s+([+-]?\d+\.\d+)",
-                footer_pattern=r"\s--+",
-                postprocess=lambda x: float(x),
-                last_one_only=False,
-            )
-            forces = np.array(forces[-1])
-            self.results = {
-                "free_energy": ot.final_energy,
-                "energy": ot.final_energy,
-                "forces": forces[self.resort],
-            }
+#             ot = Outcar(self._indir("OUTCAR"))
+#             forces = ot.read_table_pattern(
+#                 header_pattern=r"\sPOSITION\s+TOTAL-FORCE \(eV/Angst\)\n\s-+",
+#                 row_pattern=r"\s+[+-]?\d+\.\d+\s+[+-]?\d+\.\d+\s+[+-]?\d+\.\d+\s+([+-]?\d+\.\d+)\s+([+-]?\d+\.\d+)\s+([+-]?\d+\.\d+)",
+#                 footer_pattern=r"\s--+",
+#                 postprocess=lambda x: float(x),
+#                 last_one_only=False,
+#             )
+#             forces = np.array(forces[-1])
+#             self.results = {
+#                 "free_energy": ot.final_energy,
+#                 "energy": ot.final_energy,
+#                 "forces": forces[self.resort],
+#             }
         # print(self.resort)
 #         print(self.results)
 
