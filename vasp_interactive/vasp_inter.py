@@ -102,11 +102,7 @@ class VaspInteractive(Vasp):
         """
         super(VaspInteractive, self).reset()
         if self.final:
-            if self.process is not None:
-                if self.process.poll() is None:
-                    # kill a running process
-                    self.process.kill()
-                self.process = None
+            self._force_kill_process()
             self.steps = 0
             self.final = False
 
@@ -125,24 +121,6 @@ class VaspInteractive(Vasp):
         writable object.
         If a string is used, a new stream is opened, and automatically closes
         the new stream again when exiting.
-
-        Examples:
-        # Pass a string
-        calc.txt = 'vasp.out'
-        with calc.txt_outstream() as out:
-            calc.run(out=out)   # Redirects the stdout to 'vasp-interactive.out'
-
-        # Use an existing stream
-        mystream = open('vasp.out', 'w')
-        calc.txt = mystream
-        with calc.txt_outstream() as out:
-            calc.run(out=out)
-        mystream.close()
-
-        # Print to stdout
-        calc.txt = '-'
-        with calc.txt_outstream() as out:
-            calc.run(out=out)   # output is written to stdout
         """
 
         txt = self.txt
@@ -271,7 +249,7 @@ class VaspInteractive(Vasp):
     #         return
 
     def close(self):
-        """Necessary step to stop the stream-based VASP process
+        """Soft stop approach for the stream-based VASP process
         Works by writing STOPCAR file and runs two dummy scf cycles
         """
         if self.process is None:
@@ -414,11 +392,18 @@ class VaspInteractive(Vasp):
     def __exit__(self, type, value, traceback):
         """Exiting the context manager and reset process"""
         #Ensure outcar & vasprun.xml correctly written
-        self.close()
+        self._force_kill_process()
         self.final = True
+        return
 
-    def __del__(self):
-        """Explicit deconstruction, kill the process with no mercy"""
+    def finalize(self):
+        """Stop the stream calculator and finalize"""
+        self._force_kill_process()
+        self.final = True
+        return
+    
+    def _force_kill_process(self):
+        """Try to kill the process by soft stop. If fails, force killing it"""
         try:
             self.close()
         # Runtime exceptions can occur when file id missing etc
@@ -432,3 +417,9 @@ class VaspInteractive(Vasp):
             if self.process is not None:
                 if self.process.poll() is None:
                     self.process.kill()
+        return
+        
+    def __del__(self):
+        """Explicit deconstruction, kill the process with no mercy"""
+        self._force_kill_process()
+        return
