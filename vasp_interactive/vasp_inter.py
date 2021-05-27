@@ -5,6 +5,8 @@
 """
 from subprocess import Popen, PIPE
 from contextlib import contextmanager
+import atexit
+from warnings import warn
 
 from ase.calculators.calculator import Calculator
 from ase.calculators.vasp import Vasp
@@ -410,14 +412,23 @@ class VaspInteractive(Vasp):
         return self
 
     def __exit__(self, type, value, traceback):
-        """Close the process and file operators"""
+        """Exiting the context manager and reset process"""
+        #Ensure outcar & vasprun.xml correctly written
         self.close()
 
-    #         self._close_io()
-
+#     @atexit.register
     def __del__(self):
-        """Close the process and file operators"""
-        self.close()
-
-
-#         self._close_io()
+        """Explicit deconstruction, kill the process with no mercy"""
+        try:
+            self.close()
+        # Runtime exceptions can occur when file id missing etc
+        # Normally we don't want this behavior but just for backward-compatibility
+        except Exception as e:
+            # Do not use self.txt as output stream as it may not exist at this moment
+            print((f"Trying to close the VASP stream but encountered error: \n"
+                   f"{e}\n"
+                  "Will now force closing the VASP process. "
+                  "The OUTCAR and vasprun.xml outputs may be incomplete"), file=sys.stderr)
+            if self.process is not None:
+                if self.process.poll() is None:
+                    self.process.kill()
