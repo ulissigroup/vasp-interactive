@@ -13,7 +13,9 @@ from vasp_interactive import VaspInteractive
 from ase.calculators.vasp import Vasp
 
 d = 0.9575
-h2_root = Atoms("H2", positions=[(d, 0, 0), (0, 0, 0)], cell=[8, 8, 8], pbc=True)
+h2_root = Atoms(
+    "H2", positions=[(d, 0, 0), (0, 0, 0)], cell=[8, 8, 8], pbc=True
+)
 
 
 def run_no_context():

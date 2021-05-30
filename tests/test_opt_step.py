@@ -7,7 +7,9 @@ from ase.atoms import Atoms
 from ase.optimize import BFGS
 
 d = 0.9575
-h2_root = Atoms("H2", positions=[(d, 0, 0), (0, 0, 0)], cell=[8, 8, 8], pbc=True)
+h2_root = Atoms(
+    "H2", positions=[(d, 0, 0), (0, 0, 0)], cell=[8, 8, 8], pbc=True
+)
 rootdir = Path(__file__).parents[1] / "sandbox"
 fmax = 0.05
 ediff = 1e-4

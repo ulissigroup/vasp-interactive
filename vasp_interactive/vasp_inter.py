@@ -1,7 +1,7 @@
 """An I/O stream-based VASP calculator
-   Provides additional bug fix to 
-   https://gitlab.com/ase/ase/-/blob/master/ase/calculators/vasp/interactive.py
-   May be merged with upstream by the end of day.
+Provides additional bug fix to
+https://gitlab.com/ase/ase/-/blob/master/ase/calculators/vasp/interactive.py
+May be merged with upstream by the end of day.
 """
 from subprocess import Popen, PIPE
 from contextlib import contextmanager
@@ -29,11 +29,12 @@ class VaspInteractive(Vasp):
     # In principle the implemented properties can be anything
     # single point Vasp is capable of
     # Currently limits to e, F and S
-    implemented_properties = ["energy", "forces", "stress"]
+    #     implemented_properties = ["energy", "forces", "stress"]
+    implemented_properties = Vasp.implemented_properties
     mandatory_input = {
-#         "potim": 0.0,
+        #         "potim": 0.0,
         "ibrion": -1,
-#         "iwavpr": 11,
+        #         "iwavpr": 11,
         "interactive": True,
     }
     # Enforce the job to be relaxation
@@ -49,7 +50,7 @@ class VaspInteractive(Vasp):
         ignore_bad_restart_file=Calculator._deprecated,
         command=None,
         txt="vasp.out",
-        **kwargs
+        **kwargs,
     ):
         """Initialize the calculator object like the normal Vasp object.
         Additional attributes:
@@ -79,7 +80,7 @@ class VaspInteractive(Vasp):
             command=command,
             txt=txt,
             restart=None,
-            **kwargs
+            **kwargs,
         )
         # VaspInteractive can take 1 Popen process to track the VASP job
         self.process = None
@@ -111,7 +112,9 @@ class VaspInteractive(Vasp):
         """Makesure self.directory exists, if not use `os.makedirs`"""
         # Create the folders where we write the files, if we aren't in the
         # current working directory.
-        if self.directory != os.curdir and not os.path.isdir(self.directory):
+        if self.directory != os.curdir and not os.path.isdir(
+            self.directory
+        ):
             os.makedirs(self.directory)
 
     @contextmanager
@@ -172,7 +175,9 @@ class VaspInteractive(Vasp):
             # ASE only supports py3 now, no need for py2 compatibility
             self.process.stdin.flush()
         else:
-            raise RuntimeError("VaspInteractive does not have the VASP process.")
+            raise RuntimeError(
+                "VaspInteractive does not have the VASP process."
+            )
 
     def _stdout(self, text, out=None):
         """ """
@@ -213,10 +218,12 @@ class VaspInteractive(Vasp):
         else:
             # Whenever at this point, VASP interactive asks the input
             # write the current atoms positions to the stdin
-#             print("Still running", self.process, self.process.poll())
+            #             print("Still running", self.process, self.process.poll())
             self._stdout("Inputting positions...\n", out=out)
             for atom in atoms.get_scaled_positions():
-                self._stdin(" ".join(map("{:19.16f}".format, atom)), out=out)
+                self._stdin(
+                    " ".join(map("{:19.16f}".format, atom)), out=out
+                )
 
         while self.process.poll() is None:
             text = self.process.stdout.readline()
@@ -256,7 +263,7 @@ class VaspInteractive(Vasp):
         if self.process is None:
             return
 
-#         print("Waiting to close ", self.process)
+        #         print("Waiting to close ", self.process)
         with self._txt_outstream() as out:
             self._stdout("Attemping to close VASP cleanly\n", out=out)
             stopcar = self._indir("STOPCAR")
@@ -268,11 +275,11 @@ class VaspInteractive(Vasp):
             self._run(self.atoms, out=out)
             self._run(self.atoms, out=out)
             # if runs to this stage, process.poll() should be 0
-#             print(
-#                 "Two consequetive runs of vasp for STOPCAR to work",
-#                 self.process,
-#                 self.process.poll(),
-#             )
+            #             print(
+            #                 "Two consequetive runs of vasp for STOPCAR to work",
+            #                 self.process,
+            #                 self.process.poll(),
+            #             )
             # TODO: the endless waiting cycle is hand-waving
             # consider add a timeout function
             while self.process.poll() is None:
@@ -316,54 +323,67 @@ class VaspInteractive(Vasp):
             self._run(self.atoms, out=out)
             self.steps += 1
 
-#         print("Before reading OUTCAR")
-        max_retry = 1
+        #         print("Before reading OUTCAR")
         new = None
         outcar = self._indir("OUTCAR")
-#         import pdb; pdb.set_trace()
+        #         import pdb; pdb.set_trace()
         try:
             new = read(outcar, index=-1)
         # The IndexError is caused due to delayed write of stream VASP calculator
         # to CONTCAR, which is required for parsing the constraints in OUTCAR
         # Temporary workaround here is to manually write current atom positions to CONTCAR
-        except IndexError as e:
-            print("Error reading outcar due to contcar")
+        except IndexError:
+            print(
+                (
+                    "CONTCAR file seems to be incomplete, "
+                    "try reading constraints from ase inputs. "
+                    "This should not be a concern if it occurs during first ionic step."
+                ),
+                file=sys.stderr,
+            )
             contcar = self._indir("CONTCAR")
-            write_vasp(contcar, self.atoms_sorted, direct=True, symbol_count=self.symbol_count)
+            write_vasp(
+                contcar,
+                self.atoms_sorted,
+                direct=True,
+                symbol_count=self.symbol_count,
+            )
             new = read(outcar, index=-1)
             # flush contcar
             with open(contcar, "w") as fd:
                 fd.write("")
-        
+
         if new:
             self.results = {
-                "free_energy": new.get_potential_energy(force_consistent=True),
+                "free_energy": new.get_potential_energy(
+                    force_consistent=True
+                ),
                 "energy": new.get_potential_energy(),
                 "forces": new.get_forces()[self.resort],
             }
         else:
             pass
-#             # Dirty patch, not using os.path
-#             # from https://gist.github.com/gVallverdu/0e232988f32109b5dc6202cf193a49fb
-#             from pymatgen.io.vasp import Outcar
-#             import numpy as np
+        #             # Dirty patch, not using os.path
+        #             # from https://gist.github.com/gVallverdu/0e232988f32109b5dc6202cf193a49fb
+        #             from pymatgen.io.vasp import Outcar
+        #             import numpy as np
 
-#             ot = Outcar(self._indir("OUTCAR"))
-#             forces = ot.read_table_pattern(
-#                 header_pattern=r"\sPOSITION\s+TOTAL-FORCE \(eV/Angst\)\n\s-+",
-#                 row_pattern=r"\s+[+-]?\d+\.\d+\s+[+-]?\d+\.\d+\s+[+-]?\d+\.\d+\s+([+-]?\d+\.\d+)\s+([+-]?\d+\.\d+)\s+([+-]?\d+\.\d+)",
-#                 footer_pattern=r"\s--+",
-#                 postprocess=lambda x: float(x),
-#                 last_one_only=False,
-#             )
-#             forces = np.array(forces[-1])
-#             self.results = {
-#                 "free_energy": ot.final_energy,
-#                 "energy": ot.final_energy,
-#                 "forces": forces[self.resort],
-#             }
+        #             ot = Outcar(self._indir("OUTCAR"))
+        #             forces = ot.read_table_pattern(
+        #                 header_pattern=r"\sPOSITION\s+TOTAL-FORCE \(eV/Angst\)\n\s-+",
+        #                 row_pattern=r"\s+[+-]?\d+\.\d+\s+[+-]?\d+\.\d+\s+[+-]?\d+\.\d+\s+([+-]?\d+\.\d+)\s+([+-]?\d+\.\d+)\s+([+-]?\d+\.\d+)",
+        #                 footer_pattern=r"\s--+",
+        #                 postprocess=lambda x: float(x),
+        #                 last_one_only=False,
+        #             )
+        #             forces = np.array(forces[-1])
+        #             self.results = {
+        #                 "free_energy": ot.final_energy,
+        #                 "energy": ot.final_energy,
+        #                 "forces": forces[self.resort],
+        #             }
         # print(self.resort)
-#         print(self.results)
+        #         print(self.results)
 
         # Allow vasp handle param changes
         self._store_param_state()
@@ -376,7 +396,7 @@ class VaspInteractive(Vasp):
 
     def __exit__(self, type, value, traceback):
         """Exiting the context manager and reset process"""
-        #Ensure outcar & vasprun.xml correctly written
+        # Ensure outcar & vasprun.xml correctly written
         self._force_kill_process()
         self.final = True
         return
@@ -386,7 +406,7 @@ class VaspInteractive(Vasp):
         self._force_kill_process()
         self.final = True
         return
-    
+
     def _force_kill_process(self):
         """Try to kill the process by soft stop. If fails, force killing it"""
         try:
@@ -395,15 +415,20 @@ class VaspInteractive(Vasp):
         # Normally we don't want this behavior but just for backward-compatibility
         except Exception as e:
             # Do not use self.txt as output stream as it may not exist at this moment
-            print((f"Trying to close the VASP stream but encountered error: \n"
-                   f"{e}\n"
-                  "Will now force closing the VASP process. "
-                  "The OUTCAR and vasprun.xml outputs may be incomplete"), file=sys.stderr)
+            print(
+                (
+                    f"Trying to close the VASP stream but encountered error: \n"
+                    f"{e}\n"
+                    "Will now force closing the VASP process. "
+                    "The OUTCAR and vasprun.xml outputs may be incomplete"
+                ),
+                file=sys.stderr,
+            )
             if self.process is not None:
                 if self.process.poll() is None:
                     self.process.kill()
         return
-        
+
     def __del__(self):
         """Explicit deconstruction, kill the process with no mercy"""
         self._force_kill_process()

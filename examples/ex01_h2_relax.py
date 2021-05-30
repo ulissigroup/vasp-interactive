@@ -20,7 +20,9 @@ def run_with_vasp_interactive():
             directory=tmpdir,
         )
         d = 0.9575
-        h2 = Atoms("H2", positions=[(d, 0, 0), (0, 0, 0)], cell=[8, 8, 8], pbc=True)
+        h2 = Atoms(
+            "H2", positions=[(d, 0, 0), (0, 0, 0)], cell=[8, 8, 8], pbc=True
+        )
         # Best practice of VaspInteractive is to use it as ContextManager
         with calc:
             h2.calc = calc
