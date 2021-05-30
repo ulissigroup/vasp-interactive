@@ -6,7 +6,7 @@ May be merged with upstream by the end of day.
 from subprocess import Popen, PIPE
 from contextlib import contextmanager
 
-from ase.calculators.calculator import Calculator
+from ase.calculators.calculator import Calculator, ReadError
 from ase.calculators.vasp import Vasp
 from ase.io import read
 from ase.io.vasp import write_vasp
@@ -246,15 +246,6 @@ class VaspInteractive(Vasp):
                 "".format(self.process.poll())
             )
 
-    #     def _close_io(self):
-    #         """ Explicitly close io stream of self.txt
-
-    #         """
-    #         if hasattr(self.txt, "write"):
-    #             if self.txt.closed is False:
-    #                 print("closing io stream", self.txt)
-    #                 self.txt.close()
-    #         return
 
     def close(self):
         """Soft stop approach for the stream-based VASP process
@@ -322,47 +313,49 @@ class VaspInteractive(Vasp):
         with self._txt_outstream() as out:
             self._run(self.atoms, out=out)
             self.steps += 1
+            
+        self.read_results()
 
-        #         print("Before reading OUTCAR")
-        new = None
-        outcar = self._indir("OUTCAR")
-        #         import pdb; pdb.set_trace()
-        try:
-            new = read(outcar, index=-1)
-        # The IndexError is caused due to delayed write of stream VASP calculator
-        # to CONTCAR, which is required for parsing the constraints in OUTCAR
-        # Temporary workaround here is to manually write current atom positions to CONTCAR
-        except IndexError:
-            print(
-                (
-                    "CONTCAR file seems to be incomplete, "
-                    "try reading constraints from ase inputs. "
-                    "This should not be a concern if it occurs during first ionic step."
-                ),
-                file=sys.stderr,
-            )
-            contcar = self._indir("CONTCAR")
-            write_vasp(
-                contcar,
-                self.atoms_sorted,
-                direct=True,
-                symbol_count=self.symbol_count,
-            )
-            new = read(outcar, index=-1)
-            # flush contcar
-            with open(contcar, "w") as fd:
-                fd.write("")
+#         #         print("Before reading OUTCAR")
+#         new = None
+#         outcar = self._indir("OUTCAR")
+#         #         import pdb; pdb.set_trace()
+#         try:
+#             new = read(outcar, index=-1)
+#         # The IndexError is caused due to delayed write of stream VASP calculator
+#         # to CONTCAR, which is required for parsing the constraints in OUTCAR
+#         # Temporary workaround here is to manually write current atom positions to CONTCAR
+#         except IndexError:
+#             print(
+#                 (
+#                     "CONTCAR file seems to be incomplete, "
+#                     "try reading constraints from ase inputs. "
+#                     "This should not be a concern if it occurs during first ionic step."
+#                 ),
+#                 file=sys.stderr,
+#             )
+#             contcar = self._indir("CONTCAR")
+#             write_vasp(
+#                 contcar,
+#                 self.atoms_sorted,
+#                 direct=True,
+#                 symbol_count=self.symbol_count,
+#             )
+#             new = read(outcar, index=-1)
+#             # flush contcar
+#             with open(contcar, "w") as fd:
+#                 fd.write("")
 
-        if new:
-            self.results = {
-                "free_energy": new.get_potential_energy(
-                    force_consistent=True
-                ),
-                "energy": new.get_potential_energy(),
-                "forces": new.get_forces()[self.resort],
-            }
-        else:
-            pass
+#         if new:
+#             self.results = {
+#                 "free_energy": new.get_potential_energy(
+#                     force_consistent=True
+#                 ),
+#                 "energy": new.get_potential_energy(),
+#                 "forces": new.get_forces()[self.resort],
+#             }
+#         else:
+#             pass
         #             # Dirty patch, not using os.path
         #             # from https://gist.github.com/gVallverdu/0e232988f32109b5dc6202cf193a49fb
         #             from pymatgen.io.vasp import Outcar
@@ -386,11 +379,79 @@ class VaspInteractive(Vasp):
         #         print(self.results)
 
         # Allow vasp handle param changes
-        self._store_param_state()
+#         self._store_param_state()
         return
+    
+    def read_results(self):
+        """Overwrites the `read_results` from parent class.
+        In the interactive mode, after each ionic SCF cycle,
+        only the OUTCAR content is written, while vasprun.xml
+        is completed after user input. The results are read as 
+        much as possible from the OUTCAR file.
+        """
+        # Temporarily load OUTCAR into memory
+        outcar = self.load_file('OUTCAR')
+
+        # vasprun.xml is only valid iteration when atoms finalized
+        calc_xml = None
+        xml_results = None
+        if self.final:
+            try:
+                calc_xml = self._read_xml()
+                xml_results = calc_xml.results
+            except ReadError:
+                # The xml file is not complete, try using OUTCAR only
+                pass
+
+        # Fix sorting
+        if xml_results:
+            xml_results['forces'] = xml_results['forces'][self.resort]
+            self.results.update(xml_results)
+
+        # OUTCAR handling part
+        self.converged = self.read_convergence(lines=outcar)
+        self.version = self.read_version()
+        
+        # Energy and magmom have multiple return values
+        if "free_energy" not in self.results.keys():
+            try:
+                energy_free, energy_zero = self.read_energy(lines=outcar)
+                self.results.update(dict(free_energy=energy_free,
+                                         energy=energy_zero))
+            except Exception:
+                pass
+            
+        
+        if "magmom" not in self.results.keys():
+            try:
+                magmom, magmoms = self.read_mag(lines=outcar)
+                self.results.update(dict(magmom=magmom, 
+                                         magmoms=magmoms))
+            except Exception:
+                pass
+        
+        # Missing properties that are name-consistent so can use dynamic function loading
+        properties = ["forces", "stress", "fermi", "nbands", "dipole"]
+        for prop in properties:
+            if prop not in self.results.keys():
+                try:
+                    # use read_xxx method to parse outcar
+                    result = getattr(self, f"read_{prop}")(lines=outcar)
+                    self.results[prop] = result
+                except Exception:
+                    # Do not add the key
+                    pass
+                
+        # Manunal old keywords handling
+        self.spinpol = self.read_spinpol(lines=outcar)
+#         self._set_old_keywords()
+
+        # Store the parameters used for this calculation
+        self._store_param_state()
+
 
     def __enter__(self):
-        # Reset everything
+        """Reset everything upon entering the context"""
         self.reset()
         return self
 
