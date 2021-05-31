@@ -87,10 +87,15 @@ The following figure shows the benchmark of `VaspInteractive` vs classic `Vasp`.
 GPAW [optimizer benchmark](https://wiki.fysik.dtu.dk/gpaw/devel/ase_optimize/ase_optimize.html) and BFGS is used as the optimizer in all cases.
 
 Two quantities are compared:
-1) Total electronic scf steps (i.e. sum of scf steps per ionic cycle)
-2) Wall time
+1) Wall time (right panel).
+2) Total electronic scf steps (i.e. sum of scf steps per ionic cycle) (left panel).
 
-Performance of relaxation using pure VASP routines (`IBRION=2`) is used as the reference.
+Performance of relaxation using pure VASP routines (`IBRION=2`) is used as the reference. 
+`VaspInteractive` drastically reduces the wall time and electronic steps compared with the classic VASP+BFGS appraoch.
+
+![benchmark-1](examples/benchmark.png)
+
+
 
 ## More examples
 - [examples/ex01_h2_relax.py](examples/ex01_h2_relax.py): Basic example of structural relaxation
@@ -107,8 +112,8 @@ Performance of relaxation using pure VASP routines (`IBRION=2`) is used as the r
 - For some systems the reduction of electronic scf steps during relaxation is not as much as pure VASP routines.
 
 ## TODO
-- [] Check compatibility with `Fireworks` and `Dask`
-- [] Handle parallel calls to `VaspInteractive`
+- [ ] Check compatibility with `Fireworks` and `Dask`
+- [ ] Handle parallel calls to `VaspInteractive`
 
     
     
