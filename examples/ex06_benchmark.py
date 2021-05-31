@@ -92,7 +92,7 @@ def relax_vasp(atoms):
     return e, n_ion, n_elec, t_wall
 
 
-def main():
+def compute():
     import pickle
     res_file = curdir / "benchmark.pkl"
     if res_file.is_file():
@@ -100,31 +100,86 @@ def main():
             results = pickle.load(fd)
     else:
         results = dict()
+
+    # Collect data
     for i in range(len(systems)):
         atoms = systems[i]
         name = atoms.get_chemical_formula()
         if name in results.keys():
             print(f"Results for {name} loaded from pickle")
-            continue
-        res = dict()
-        print(f"Relaxation for {name}")
-        
-        print("\tVasp Interactive...")
-        res["vasp-inter"] = relax_vasp_interactive(atoms)
-        
-        print("\tVasp BFGS...")
-        res["vasp-bfgs"] = relax_vasp_bfgs(atoms)
-        
-        print("\tVasp only...")
-        res["vasp"] = relax_vasp(atoms)
-        
-        results[name] = res
-        
-        # Save at each epoch
-        with open(res_file, "wb") as fd:
-            pickle.dump(results, fd, protocol=3)
+        else:
+            res = dict()
+            print(f"Relaxation for {name}")
+
+            print("\tVasp Interactive...")
+            res["vasp-inter"] = relax_vasp_interactive(atoms)
+
+            print("\tVasp BFGS...")
+            res["vasp-bfgs"] = relax_vasp_bfgs(atoms)
+
+            print("\tVasp only...")
+            res["vasp"] = relax_vasp(atoms)
+
+            results[name] = res
+
+            # Save at each epoch
+            with open(res_file, "wb") as fd:
+                pickle.dump(results, fd, protocol=3)
+
+    return results
+
+def plot(results):
+    import matplotlib.pyplot as plt
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+    ax1 = axes[0]
+    ax2 = axes[1]
+    w = 0.15
+    # N electronic steps
+    n1s = []
+    n2s = []
     
+    # time
+    t1s = []
+    t2s = []
+    for i, key in enumerate(results.keys()):
+        e, n, n1, t1 = results[key]["vasp-inter"]
+        e, n, n2, t2 = results[key]["vasp-bfgs"]
+        e, n, n3, t3 = results[key]["vasp"]
+        # number of steps
+        n1s.append(np.sum(n1) - np.sum(n3))
+        n2s.append(np.sum(n2) - np.sum(n3))
+        # time
+        t1s.append(t1 / t3)
+        t2s.append(t2 / t3)
+        
+        
+
+    d = np.arange(len(results))
+    w1 = 0.2
+    ax1.bar(d - w, t1s, w * 2, label="VaspInteractive + BFGS")
+    ax1.bar(d + w, t2s, w * 2, label="Vasp + BFGS")
+    ax1.axhline(y=1, ls="--", color="grey")
+    ax1.set_xticks(d)
+    ax1.set_xticklabels(list(results.keys()))
+    ax1.set_title("Rel. Time to Pure VASP")
+    ax1.set_ylabel(r"$t / t_{\mathrm{VASP}}$")
+    ax1.legend()
     
+    # steps plot
+    ax2.bar(d - w, n1s, w * 2, label="VaspInteractive + BFGS")
+    ax2.bar(d + w, n2s, w * 2, label="Vasp + BFGS")
+    ax2.set_xticks(d)
+    ax2.axhline(y=0, ls="--", color="grey")
+    ax2.set_xticklabels(list(results.keys()))
+    ax2.set_title("Rel. Total Electronic SCFs to Pure VASP")
+    ax2.set_ylabel(r"$N^{\mathrm{SCF}} - N^{\mathrm{SCF}}_{\mathrm{VASP}}$")
+    ax2.legend()
+    
+    fig.tight_layout()
+    fig.savefig(curdir / "benchmark.png")
+
+
 
 if __name__ == "__main__":
-    main()
+    results = compute()
+    plot(results)
