@@ -106,6 +106,9 @@ Performance of relaxation using pure VASP routines (`IBRION=2`) is used as the r
 - STOPCAR creates 1 more extra ionic step (1 electronic step as well) before calculation stops. 
 - For some systems the reduction of electronic scf steps during relaxation is not as much as pure VASP routines.
 
+## TODO
+- [] Check compatibility with `Fireworks` and `Dask`
+- [] Handle parallel calls to `VaspInteractive`
 
     
     
