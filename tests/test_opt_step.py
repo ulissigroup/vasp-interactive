@@ -29,7 +29,23 @@ def test_steps():
         assert calc.steps == 0
         dyn = BFGS(h2)
         dyn.run(fmax=fmax)
+        # Dynamics does not count the 1 step
         assert dyn.nsteps == 6
-    #         print(calc.steps)
-
+        assert dyn.nsteps == (calc.steps - 1)
+        
+        # Manually finalize the calculator
+        calc.finalize()
+        
+        # calc.steps does not count the extra dummy ionic scf 
+        print(calc.steps)
+        
+        assert calc.final is True
+        assert dyn.nsteps == (calc.steps - 1)
+        n_ion_scf, n_elec_scf = calc.read_all_iterations()
+        
+        # From OUTCAR there are 8 ionic steps
+        assert calc.steps == n_ion_scf - 1
+    
+        # Last ionic step must be only 1: a dummy step for saving wavefunction
+        assert n_elec_scf[-1] == 1
     return

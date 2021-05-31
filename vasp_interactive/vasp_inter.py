@@ -408,6 +408,12 @@ class VaspInteractive(Vasp):
         with self.load_file_iter("OUTCAR") as lines:
             cpu_time, wall_time = parse_outcar_time(lines)
         return cpu_time, wall_time
+    
+    def finalize(self):
+        """Stop the stream calculator and finalize"""
+        self._force_kill_process()
+        self.final = True
+        return
             
     def __enter__(self):
         """Reset everything upon entering the context"""
@@ -416,15 +422,7 @@ class VaspInteractive(Vasp):
 
     def __exit__(self, type, value, traceback):
         """Exiting the context manager and reset process"""
-        # Ensure outcar & vasprun.xml correctly written
-        self._force_kill_process()
-        self.final = True
-        return
-
-    def finalize(self):
-        """Stop the stream calculator and finalize"""
-        self._force_kill_process()
-        self.final = True
+        self.finalize()
         return
 
     def _force_kill_process(self):
