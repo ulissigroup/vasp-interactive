@@ -34,10 +34,10 @@ class VaspInteractive(Vasp):
     #     implemented_properties = ["energy", "forces", "stress"]
     implemented_properties = Vasp.implemented_properties
     mandatory_input = {
-        #         "potim": 0.0,
-        "ibrion": -1,
-        #         "iwavpr": 11,
-        "interactive": True,
+                "potim": 0.0,
+                "ibrion": -1,
+                "iwavpr": 11,
+                "interactive": True,
     }
     # Enforce the job to be relaxation
     default_input = {
