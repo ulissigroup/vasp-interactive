@@ -128,7 +128,7 @@ def compute():
 
     return results
 
-def plot(results):
+def plot_benchmark(results):
     import matplotlib.pyplot as plt
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
     ax1 = axes[0]
@@ -179,7 +179,25 @@ def plot(results):
     fig.savefig(curdir / "benchmark.png")
 
 
+def plot_details(results):
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    name = "CAu8O"
+    disp_name = {"vasp-inter": "VaspInteractive + BFGS",
+                 "vasp-bfgs": "Vasp + BFGS",
+                 "vasp": "Pure VASP"}
+    for met in ("vasp-inter", "vasp-bfgs", "vasp"):
+        steps = results[name][met][2]
+        ax.plot(steps, "-", label=disp_name[met])
+    ax.legend()
+    ax.set_xlabel("Ionic steps")
+    ax.set_ylabel("Electronic SCF per Ionic Cycle")
+    ax.set_title("CO on Au(111) surface (CAu8O)")
+    
+    fig.tight_layout()
+    fig.savefig(curdir / "details.png")
 
 if __name__ == "__main__":
     results = compute()
-    plot(results)
+    plot_benchmark(results)
+    plot_details(results)
