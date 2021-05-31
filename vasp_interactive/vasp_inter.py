@@ -16,6 +16,8 @@ from ase.calculators.vasp.vasp import check_atoms
 import time
 import os
 import sys
+import re
+import numpy as np
 
 
 class VaspInteractive(Vasp):
@@ -313,73 +315,9 @@ class VaspInteractive(Vasp):
         with self._txt_outstream() as out:
             self._run(self.atoms, out=out)
             self.steps += 1
-            
+        
+        # Use overwritten `read_results` method
         self.read_results()
-
-#         #         print("Before reading OUTCAR")
-#         new = None
-#         outcar = self._indir("OUTCAR")
-#         #         import pdb; pdb.set_trace()
-#         try:
-#             new = read(outcar, index=-1)
-#         # The IndexError is caused due to delayed write of stream VASP calculator
-#         # to CONTCAR, which is required for parsing the constraints in OUTCAR
-#         # Temporary workaround here is to manually write current atom positions to CONTCAR
-#         except IndexError:
-#             print(
-#                 (
-#                     "CONTCAR file seems to be incomplete, "
-#                     "try reading constraints from ase inputs. "
-#                     "This should not be a concern if it occurs during first ionic step."
-#                 ),
-#                 file=sys.stderr,
-#             )
-#             contcar = self._indir("CONTCAR")
-#             write_vasp(
-#                 contcar,
-#                 self.atoms_sorted,
-#                 direct=True,
-#                 symbol_count=self.symbol_count,
-#             )
-#             new = read(outcar, index=-1)
-#             # flush contcar
-#             with open(contcar, "w") as fd:
-#                 fd.write("")
-
-#         if new:
-#             self.results = {
-#                 "free_energy": new.get_potential_energy(
-#                     force_consistent=True
-#                 ),
-#                 "energy": new.get_potential_energy(),
-#                 "forces": new.get_forces()[self.resort],
-#             }
-#         else:
-#             pass
-        #             # Dirty patch, not using os.path
-        #             # from https://gist.github.com/gVallverdu/0e232988f32109b5dc6202cf193a49fb
-        #             from pymatgen.io.vasp import Outcar
-        #             import numpy as np
-
-        #             ot = Outcar(self._indir("OUTCAR"))
-        #             forces = ot.read_table_pattern(
-        #                 header_pattern=r"\sPOSITION\s+TOTAL-FORCE \(eV/Angst\)\n\s-+",
-        #                 row_pattern=r"\s+[+-]?\d+\.\d+\s+[+-]?\d+\.\d+\s+[+-]?\d+\.\d+\s+([+-]?\d+\.\d+)\s+([+-]?\d+\.\d+)\s+([+-]?\d+\.\d+)",
-        #                 footer_pattern=r"\s--+",
-        #                 postprocess=lambda x: float(x),
-        #                 last_one_only=False,
-        #             )
-        #             forces = np.array(forces[-1])
-        #             self.results = {
-        #                 "free_energy": ot.final_energy,
-        #                 "energy": ot.final_energy,
-        #                 "forces": forces[self.resort],
-        #             }
-        # print(self.resort)
-        #         print(self.results)
-
-        # Allow vasp handle param changes
-#         self._store_param_state()
         return
     
     def read_results(self):
@@ -450,6 +388,27 @@ class VaspInteractive(Vasp):
         self._store_param_state()
 
 
+    def read_all_iterations(self):
+        """Parse the ionic & electronic scf cycles from OUTCAR files.
+        Ideas taken from Vasp.read_number_of_iterations and Vasp.read_number_of_ionic_steps
+           returns
+           `n_ion_scf`: number of ionic steps
+           `n_elec_scf`: list of electronic scf steps with length of n_ion
+           
+        """
+        with self.load_file_iter("OUTCAR") as lines:
+            n_ion_scf, n_elec_scf = parse_outcar_iterations(lines)
+        return n_ion_scf, n_elec_scf
+        
+    def read_run_time(self):
+        """Parse processing time from OUTCAR.
+        returns (cpu_time, wall_time)
+        If calculation is not finished, both are None
+        """
+        with self.load_file_iter("OUTCAR") as lines:
+            cpu_time, wall_time = parse_outcar_time(lines)
+        return cpu_time, wall_time
+            
     def __enter__(self):
         """Reset everything upon entering the context"""
         self.reset()
@@ -494,3 +453,41 @@ class VaspInteractive(Vasp):
         """Explicit deconstruction, kill the process with no mercy"""
         self._force_kill_process()
         return
+
+    
+# Following are functions parsing OUTCAR files which are not present in parent
+# Vasp calculator but can he helpful for job diagnosis
+
+def parse_outcar_iterations(lines):
+    """Read the whole iteration information (ionic + electronic) from OUTCAR lines
+    """
+    n_ion_scf = 0
+    n_elec_scf = []
+
+    for line in lines:
+        if '- Iteration' in line:
+            ni_, ne_ = list(map(int, re.findall(r'\d+', line)))
+            if ni_ > n_ion_scf:
+                n_ion_scf = ni_
+                n_elec_scf.append(ne_)
+            else:
+                n_elec_scf[ni_ - 1] = ne_
+    n_elec_scf = np.array(n_elec_scf)
+    return n_ion_scf, n_elec_scf
+
+def parse_outcar_time(lines):
+    """Parse the cpu and wall time from OUTCAR.
+    The mismatch between wall time and cpu time represents 
+    the turn-around time in VaspInteractive
+    
+    returns (cpu_time, wall_time)
+    if the calculation is not finished, both will be None
+    """
+    cpu_time = None
+    wall_time = None
+    for line in lines:
+        if "Total CPU time used (sec):" in line:
+            cpu_time = float(line.split(":")[1].strip())
+        if "Elapsed time (sec):" in line:
+            wall_time = float(line.split(":")[1].strip())
+    return cpu_time, wall_time
