@@ -83,7 +83,29 @@ Only dependency is `ase`. Hopefully in the near future the `VaspInteractive` cal
 
 ## Benchmark
 
+The following figure shows the benchmark of `VaspInteractive` vs classic `Vasp`. The structures for relaxation are taken from the 
+GPAW [optimizer benchmark](https://wiki.fysik.dtu.dk/gpaw/devel/ase_optimize/ase_optimize.html) and BFGS is used as the optimizer in all cases.
+
+Two quantities are compared:
+1) Total electronic scf steps (i.e. sum of scf steps per ionic cycle)
+2) Wall time
+
+Performance of relaxation using pure VASP routines (`IBRION=2`) is used as the reference.
+
+## More examples
+- [examples/ex01_h2_relax.py](examples/ex01_h2_relax.py): Basic example of structural relaxation
+- [examples/ex02_h2_comparison.py](examples/ex02_h2_comparison.py): Comparing `VaspInteractive` with pure VASP and VASP+BFGS
+- [examples/ex03_exception.py](examples/ex03_exception.py): Example of error handling and garbage collection
+- [examples/ex04_reset_calculator.py](examples/ex04_reset_calculator.py): Restarting `VaspInteractive` for various structures (different formulae)
+- [examples/ex05_rattle_atoms.py](examples/ex05_rattle_atoms.py): Apply `VaspInteractive` to sequence of structures (same formula, different positions)
+- [examples/ex06_benchmark.py](examples/ex06_benchmark.py): Running benchmark
+
+
 ## Limitations
+- Currently does not support change of unit cell from stdin. EOS calculations should be performed separatedly.
+- STOPCAR creates 1 more extra ionic step (1 electronic step as well) before calculation stops. 
+- For some systems the reduction of electronic scf steps during relaxation is not as much as pure VASP routines.
+
 
     
     
