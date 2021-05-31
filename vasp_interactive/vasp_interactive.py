@@ -114,9 +114,7 @@ class VaspInteractive(Vasp):
         """Makesure self.directory exists, if not use `os.makedirs`"""
         # Create the folders where we write the files, if we aren't in the
         # current working directory.
-        if self.directory != os.curdir and not os.path.isdir(
-            self.directory
-        ):
+        if self.directory != os.curdir and not os.path.isdir(self.directory):
             os.makedirs(self.directory)
 
     @contextmanager
@@ -177,9 +175,7 @@ class VaspInteractive(Vasp):
             # ASE only supports py3 now, no need for py2 compatibility
             self.process.stdin.flush()
         else:
-            raise RuntimeError(
-                "VaspInteractive does not have the VASP process."
-            )
+            raise RuntimeError("VaspInteractive does not have the VASP process.")
 
     def _stdout(self, text, out=None):
         """ """
@@ -223,9 +219,7 @@ class VaspInteractive(Vasp):
             #             print("Still running", self.process, self.process.poll())
             self._stdout("Inputting positions...\n", out=out)
             for atom in atoms.get_scaled_positions():
-                self._stdin(
-                    " ".join(map("{:19.16f}".format, atom)), out=out
-                )
+                self._stdin(" ".join(map("{:19.16f}".format, atom)), out=out)
 
         while self.process.poll() is None:
             text = self.process.stdout.readline()
@@ -247,7 +241,6 @@ class VaspInteractive(Vasp):
                 "VASP exited unexpectedly with exit code {}"
                 "".format(self.process.poll())
             )
-
 
     def close(self):
         """Soft stop approach for the stream-based VASP process
@@ -315,20 +308,20 @@ class VaspInteractive(Vasp):
         with self._txt_outstream() as out:
             self._run(self.atoms, out=out)
             self.steps += 1
-        
+
         # Use overwritten `read_results` method
         self.read_results()
         return
-    
+
     def read_results(self):
         """Overwrites the `read_results` from parent class.
         In the interactive mode, after each ionic SCF cycle,
         only the OUTCAR content is written, while vasprun.xml
-        is completed after user input. The results are read as 
+        is completed after user input. The results are read as
         much as possible from the OUTCAR file.
         """
         # Temporarily load OUTCAR into memory
-        outcar = self.load_file('OUTCAR')
+        outcar = self.load_file("OUTCAR")
 
         # vasprun.xml is only valid iteration when atoms finalized
         calc_xml = None
@@ -343,31 +336,28 @@ class VaspInteractive(Vasp):
 
         # Fix sorting
         if xml_results:
-            xml_results['forces'] = xml_results['forces'][self.resort]
+            xml_results["forces"] = xml_results["forces"][self.resort]
             self.results.update(xml_results)
 
         # OUTCAR handling part
         self.converged = self.read_convergence(lines=outcar)
         self.version = self.read_version()
-        
+
         # Energy and magmom have multiple return values
         if "free_energy" not in self.results.keys():
             try:
                 energy_free, energy_zero = self.read_energy(lines=outcar)
-                self.results.update(dict(free_energy=energy_free,
-                                         energy=energy_zero))
+                self.results.update(dict(free_energy=energy_free, energy=energy_zero))
             except Exception:
                 pass
-            
-        
+
         if "magmom" not in self.results.keys():
             try:
                 magmom, magmoms = self.read_mag(lines=outcar)
-                self.results.update(dict(magmom=magmom, 
-                                         magmoms=magmoms))
+                self.results.update(dict(magmom=magmom, magmoms=magmoms))
             except Exception:
                 pass
-        
+
         # Missing properties that are name-consistent so can use dynamic function loading
         properties = ["forces", "stress", "fermi", "nbands", "dipole"]
         for prop in properties:
@@ -379,14 +369,13 @@ class VaspInteractive(Vasp):
                 except Exception:
                     # Do not add the key
                     pass
-                
+
         # Manunal old keywords handling
         self.spinpol = self.read_spinpol(lines=outcar)
-#         self._set_old_keywords()
+        #         self._set_old_keywords()
 
         # Store the parameters used for this calculation
         self._store_param_state()
-
 
     def read_all_iterations(self):
         """Parse the ionic & electronic scf cycles from OUTCAR files.
@@ -394,12 +383,12 @@ class VaspInteractive(Vasp):
            returns
            `n_ion_scf`: number of ionic steps
            `n_elec_scf`: list of electronic scf steps with length of n_ion
-           
+
         """
         with self.load_file_iter("OUTCAR") as lines:
             n_ion_scf, n_elec_scf = parse_outcar_iterations(lines)
         return n_ion_scf, n_elec_scf
-        
+
     def read_run_time(self):
         """Parse processing time from OUTCAR.
         returns (cpu_time, wall_time)
@@ -408,13 +397,13 @@ class VaspInteractive(Vasp):
         with self.load_file_iter("OUTCAR") as lines:
             cpu_time, wall_time = parse_outcar_time(lines)
         return cpu_time, wall_time
-    
+
     def finalize(self):
         """Stop the stream calculator and finalize"""
         self._force_kill_process()
         self.final = True
         return
-            
+
     def __enter__(self):
         """Reset everything upon entering the context"""
         self.reset()
@@ -452,19 +441,19 @@ class VaspInteractive(Vasp):
         self._force_kill_process()
         return
 
-    
+
 # Following are functions parsing OUTCAR files which are not present in parent
 # Vasp calculator but can he helpful for job diagnosis
 
+
 def parse_outcar_iterations(lines):
-    """Read the whole iteration information (ionic + electronic) from OUTCAR lines
-    """
+    """Read the whole iteration information (ionic + electronic) from OUTCAR lines"""
     n_ion_scf = 0
     n_elec_scf = []
 
     for line in lines:
-        if '- Iteration' in line:
-            ni_, ne_ = list(map(int, re.findall(r'\d+', line)))
+        if "- Iteration" in line:
+            ni_, ne_ = list(map(int, re.findall(r"\d+", line)))
             if ni_ > n_ion_scf:
                 n_ion_scf = ni_
                 n_elec_scf.append(ne_)
@@ -473,11 +462,12 @@ def parse_outcar_iterations(lines):
     n_elec_scf = np.array(n_elec_scf)
     return n_ion_scf, n_elec_scf
 
+
 def parse_outcar_time(lines):
     """Parse the cpu and wall time from OUTCAR.
-    The mismatch between wall time and cpu time represents 
+    The mismatch between wall time and cpu time represents
     the turn-around time in VaspInteractive
-    
+
     returns (cpu_time, wall_time)
     if the calculation is not finished, both will be None
     """

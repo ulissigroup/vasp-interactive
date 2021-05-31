@@ -12,9 +12,7 @@ from vasp_interactive import VaspInteractive
 from ase.calculators.vasp import Vasp
 
 d = 0.9575
-h2_root = Atoms(
-    "H2", positions=[(d, 0, 0), (0, 0, 0)], cell=[8, 8, 8], pbc=True
-)
+h2_root = Atoms("H2", positions=[(d, 0, 0), (0, 0, 0)], cell=[8, 8, 8], pbc=True)
 
 
 def test_no_context():
@@ -35,13 +33,14 @@ def test_no_context():
         # The vasp process should still be running
         assert calc.process.poll() is None
         assert calc.final is False
-        
+
         # Manual finalizing
         calc.finalize()
         assert calc.final is True
         assert calc.process is None
         assert h2.get_potential_energy() == pytest.approx(-6.44217, 1e-4)
     return
+
 
 def test_context():
     h2 = h2_root.copy()
@@ -67,6 +66,7 @@ def test_context():
         assert calc.process is None
         assert h2.get_potential_energy() == pytest.approx(-6.44217, 1e-4)
     return
+
 
 def test_no_context_with_exception():
     h2 = h2_root.copy()

@@ -24,10 +24,8 @@ for i in range(6):
     mol_seq.append(_mm)
 
 
-
 def seq_run(calc):
-    """Run with calculator on current sequence
-    """
+    """Run with calculator on current sequence"""
     for i, atoms in enumerate(mol_seq):
         atoms.calc = calc
         e = atoms.get_potential_energy()
@@ -37,36 +35,31 @@ def seq_run(calc):
 
 
 def run_vasp_classic():
-    """Run with classic Vasp calculator
-    """
+    """Run with classic Vasp calculator"""
     print("*" * 40)
     print("Running classic VASP calculator on molecule sequence")
     print("*" * 40)
     with tempfile.TemporaryDirectory() as tmpdir:
-        calc = Vasp(istart=0,
-                    xc="pbe",
-                    directory=tmpdir)
+        calc = Vasp(istart=0, xc="pbe", directory=tmpdir)
         t_ = time()
         seq_run(calc)
         print(f"Wall time: {time() - t_:.2f} s")
     return
 
+
 def run_vasp_interactive():
-    """Run with classic Vasp calculator
-    """
+    """Run with classic Vasp calculator"""
     print("*" * 40)
     print("Running interactive VASP calculator on molecule sequence")
     print("*" * 40)
     with tempfile.TemporaryDirectory() as tmpdir:
-        calc = VaspInteractive(istart=0,
-                    xc="pbe",
-                    directory=tmpdir)
+        calc = VaspInteractive(istart=0, xc="pbe", directory=tmpdir)
         t_ = time()
         with calc:
             seq_run(calc)
         print(f"Wall time: {time() - t_:.2f} s")
     return
-    
+
 
 if __name__ == "__main__":
     run_vasp_classic()

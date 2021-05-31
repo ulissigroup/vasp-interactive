@@ -1,1 +1,1 @@
-from .vasp_inter import VaspInteractive
+from .vasp_interactive import VaspInteractive

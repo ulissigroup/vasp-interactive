@@ -1,4 +1,6 @@
 """Example showing how to apply VaspInteractive calculators for different atoms
+   In the no-context (classic) mode, you need to manually finalize the VaspInteractive calculator
+   while in the context mode less coding is needed
 """
 import numpy as np
 import os
