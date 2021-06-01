@@ -121,7 +121,8 @@ than the internal VASP optimizer, although such results can be tuned by paramete
 
 ## TODO
 - [ ] Check compatibility with `Fireworks` and `Dask`
-- [ ] Handle parallel calls to `VaspInteractive`
+- [ ] Correctly handle parallel (MPI) calls to `VaspInteractive`
+- [ ] Implement the `restart` keyword as normal `Vasp` calculator
 
     
     
