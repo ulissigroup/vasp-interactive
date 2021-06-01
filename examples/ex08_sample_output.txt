@@ -1,0 +1,12 @@
+jovyan@amptorch-test-0:~/data/vasp-interactive-test$ python examples/ex08_dask_par.py 
+Creating scheduler pod on cluster. This may take some time.
+distributed.deploy.adaptive - INFO - Adaptive scaling started: minimum=0 maximum=4
+distributed.deploy.adaptive - INFO - Retiring workers [0]
+distributed.deploy.adaptive - INFO - Retiring workers [3]
+distributed.deploy.adaptive - INFO - Retiring workers [1]
+System  Time (s)        Ionic steps
+CH4     22.18   4
+C2H4    34.14   5
+C6H6    59.23   5
+C3H6O   62.58   6
+System wall time (root process): 94.19 s
