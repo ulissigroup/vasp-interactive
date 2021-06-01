@@ -85,15 +85,23 @@ Only dependency is `ase`. Hopefully in the near future the `VaspInteractive` cal
 
 The following figure shows the benchmark of `VaspInteractive` vs classic `Vasp`. The structures for relaxation are taken from the 
 GPAW [optimizer benchmark](https://wiki.fysik.dtu.dk/gpaw/devel/ase_optimize/ase_optimize.html) and BFGS is used as the optimizer in all cases.
+All calculations are done using AMD Ryzen Threadripper 3990X (8 MPI ranks, 4105.948 GHz).
 
 Two quantities are compared:
 1) Wall time (right panel).
 2) Total electronic scf steps (i.e. sum of scf steps per ionic cycle) (left panel).
 
 Performance of relaxation using pure VASP routines (`IBRION=2`) is used as the reference. 
-`VaspInteractive` drastically reduces the wall time and electronic steps compared with the classic VASP+BFGS appraoch.
+`VaspInteractive` reduces the wall time and electronic steps compared with the classic VASP+BFGS appraoch.
 
 ![benchmark-1](examples/benchmark.png)
+
+Below are the details about the ionic and electronic steps (using system CAu8O):
+
+![benchmark-1](examples/details.png)
+
+In the case of CO+Au(111) slab system, `VaspInteractive` seems even to be better
+than the internal VASP optimizer, although such results can be tuned by parameters such as IBRION or IWAVEPR.
 
 
 
@@ -103,7 +111,7 @@ Performance of relaxation using pure VASP routines (`IBRION=2`) is used as the r
 - [examples/ex03_exception.py](examples/ex03_exception.py): Example of error handling and garbage collection
 - [examples/ex04_reset_calculator.py](examples/ex04_reset_calculator.py): Restarting `VaspInteractive` for various structures (different formulae)
 - [examples/ex05_rattle_atoms.py](examples/ex05_rattle_atoms.py): Apply `VaspInteractive` to sequence of structures (same formula, different positions)
-- [examples/ex06_benchmark.py](examples/ex06_benchmark.py): Running benchmark
+- [examples/ex06_benchmark.py](examples/ex06_benchmark.py): Running benchmark. You can delete `examples/benchmark.pkl` if you want to re-run the calculations (takes a few hours).
 
 
 ## Limitations
