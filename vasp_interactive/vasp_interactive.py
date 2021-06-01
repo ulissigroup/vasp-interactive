@@ -269,13 +269,11 @@ class VaspInteractive(Vasp):
         system_changes=["positions", "numbers", "cell"],
     ):
         check_atoms(atoms)
-        self.clear_results()
-        if atoms is not None:
-            self.atoms = atoms.copy()
 
         if not system_changes:
             # No need to calculate, calculator has stored calculated results
             return
+        
 
         # Currently VaspInteractive only handles change of positions (MD-like)
         if any([p in system_changes for p in ("numbers", "cell")]):
@@ -287,6 +285,10 @@ class VaspInteractive(Vasp):
                         "Please create a new calculator instance or use standard Vasp calculator"
                     )
                 )
+        # Need to calculate, clear results and restart
+        self.clear_results()
+        if atoms is not None:
+            self.atoms = atoms.copy()
 
         with self._txt_outstream() as out:
             self._run(self.atoms, out=out)
