@@ -28,10 +28,6 @@ class VaspInteractive(Vasp):
     """
 
     name = "VaspInteractive"
-    # In principle the implemented properties can be anything
-    # single point Vasp is capable of
-    # Currently limits to e, F and S
-    #     implemented_properties = ["energy", "forces", "stress"]
     implemented_properties = Vasp.implemented_properties
     mandatory_input = {
                 "potim": 0.0,
@@ -216,7 +212,6 @@ class VaspInteractive(Vasp):
         else:
             # Whenever at this point, VASP interactive asks the input
             # write the current atoms positions to the stdin
-            #             print("Still running", self.process, self.process.poll())
             self._stdout("Inputting positions...\n", out=out)
             for atom in atoms.get_scaled_positions():
                 self._stdin(" ".join(map("{:19.16f}".format, atom)), out=out)
@@ -249,7 +244,6 @@ class VaspInteractive(Vasp):
         if self.process is None:
             return
 
-        #         print("Waiting to close ", self.process)
         with self._txt_outstream() as out:
             self._stdout("Attemping to close VASP cleanly\n", out=out)
             stopcar = self._indir("STOPCAR")
@@ -260,12 +254,6 @@ class VaspInteractive(Vasp):
             # second is to exit the program
             self._run(self.atoms, out=out)
             self._run(self.atoms, out=out)
-            # if runs to this stage, process.poll() should be 0
-            #             print(
-            #                 "Two consequetive runs of vasp for STOPCAR to work",
-            #                 self.process,
-            #                 self.process.poll(),
-            #             )
             # TODO: the endless waiting cycle is hand-waving
             # consider add a timeout function
             while self.process.poll() is None:
@@ -280,7 +268,6 @@ class VaspInteractive(Vasp):
         properties=["energy"],
         system_changes=["positions", "numbers", "cell"],
     ):
-        # TODO: use base method to handle directory
         check_atoms(atoms)
         self.clear_results()
         if atoms is not None:
@@ -292,9 +279,6 @@ class VaspInteractive(Vasp):
 
         # Currently VaspInteractive only handles change of positions (MD-like)
         if any([p in system_changes for p in ("numbers", "cell")]):
-            # If not started yet,
-            #             if self.steps == 0:
-            #                 self.close()
             if self.process is not None:
                 raise NotImplementedError(
                     (
@@ -304,7 +288,6 @@ class VaspInteractive(Vasp):
                     )
                 )
 
-        # TODO: add the out component
         with self._txt_outstream() as out:
             self._run(self.atoms, out=out)
             self.steps += 1
@@ -372,7 +355,6 @@ class VaspInteractive(Vasp):
 
         # Manunal old keywords handling
         self.spinpol = self.read_spinpol(lines=outcar)
-        #         self._set_old_keywords()
 
         # Store the parameters used for this calculation
         self._store_param_state()
