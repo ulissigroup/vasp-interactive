@@ -91,17 +91,17 @@ Two quantities are compared:
 1) Wall time (right panel).
 2) Total electronic scf steps (i.e. sum of scf steps per ionic cycle) (left panel).
 
-Performance of relaxation using pure VASP routines (`IBRION=2`) is used as the reference. 
+Performance of relaxation using pure VASP routines (`IBRION=2`, conjugate gradient) is used as the reference. 
 `VaspInteractive` reduces the wall time and electronic steps compared with the classic VASP+BFGS appraoch.
 
 ![benchmark-1](examples/benchmark.png)
 
 Below are the details about the ionic and electronic steps (using system CAu8O):
 
-![benchmark-1](examples/details.png)
+![benchmark-2](examples/details.png)
 
 In the case of CO+Au(111) slab system, `VaspInteractive` seems even to be better
-than the internal VASP optimizer, although such results can be tuned by parameters such as IBRION or IWAVEPR.
+than the VASP CG optimizer. Note such results can be tuned by parameters such as IBRION or IWAVEPR.
 
 
 
