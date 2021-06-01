@@ -111,7 +111,8 @@ than the VASP CG optimizer. Note such results can be tuned by parameters such as
 - [examples/ex03_exception.py](examples/ex03_exception.py): Example of error handling and garbage collection
 - [examples/ex04_reset_calculator.py](examples/ex04_reset_calculator.py): Restarting `VaspInteractive` for various structures (different formulae)
 - [examples/ex05_rattle_atoms.py](examples/ex05_rattle_atoms.py): Apply `VaspInteractive` to sequence of structures (same formula, different positions)
-- [examples/ex06_benchmark.py](examples/ex06_benchmark.py): Running benchmark. You can delete `examples/benchmark.pkl` if you want to re-run the calculations (takes a few hours).
+- [examples/ex06_benchmark.py](examples/ex06_benchmark.py): Running benchmark. You can delete `examples/benchmark.pkl` if you want to re-run the calculations (may take up to a few hours).
+- [examples/ex08_dask_par.py](ex08_dask_par.py): Simple example running parallel relaxation jobs using Dask. See `examples/ex08_sample_output.txt` for an example of output.
 
 
 ## Limitations

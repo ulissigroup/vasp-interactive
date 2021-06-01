@@ -6,6 +6,8 @@ adapt `PYTHONPATH`, `volumeMounts` and `volumes` to your situation.
 Ideally, you should see the wall time on the master process to be less than 
 the sum of time in individual Dask pods. Overheads include creating kubernetes pods
 and inter-pod communication.
+
+An example of console output can be seen in `ex08_sample_output.txt`
 """
 import numpy as np
 import os
