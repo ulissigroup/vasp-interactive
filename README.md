@@ -34,7 +34,7 @@ Only dependency is `ase`. Hopefully in the near future the `VaspInteractive` cal
 - Install via `pip`
 
     ```sh
-        pip install git+https://github.com/ulissigroup/vasp-interactive-test.git
+        pip install git+https://github.com/ulissigroup/vasp-interactive.git
     ```
     
 - Minimal example
