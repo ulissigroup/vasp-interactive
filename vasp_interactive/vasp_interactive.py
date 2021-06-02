@@ -424,6 +424,48 @@ class VaspInteractive(Vasp):
         self._force_kill_process()
         return
 
+    def __copy__(self):
+        """Overwrite the shallow copy method
+        this will be the same behavior as standard shallow copy,
+        while we manually put self.process to None.
+
+        Note shallow copying the calculator won't copy the list / dict attributes
+        """
+        from warnings import warn
+
+        new = type(self)()
+        new.__dict__.update(self.__dict__)
+        new.process = None
+        warn(
+            (
+                "Due to thread safty, deepcopy of the VaspInteractive calculator "
+                "will not contain the reference to the VASP process"
+            )
+        )
+        return new
+
+    def __deepcopy__(self, memo):
+        """Overwrite the deepcopy method, use deepcopy to copy every attribute except process
+        see https://stackoverflow.com/questions/1500718/how-to-override-the-copy-deepcopy-operations-for-a-python-object/40484215"""
+        from warnings import warn
+        from copy import deepcopy
+
+        cls = self.__class__
+        new = cls.__new__(cls)
+        memo[id(self)] = new
+        for k, v in self.__dict__.items():
+            if k != "process":
+                setattr(new, k, deepcopy(v, memo))
+            else:
+                setattr(new, k, None)
+        warn(
+            (
+                "Due to thread safty, deepcopy of the VaspInteractive calculator "
+                "will not contain the reference to the VASP process"
+            )
+        )
+        return new
+
 
 # Following are functions parsing OUTCAR files which are not present in parent
 # Vasp calculator but can he helpful for job diagnosis
