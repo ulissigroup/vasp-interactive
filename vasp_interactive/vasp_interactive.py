@@ -438,8 +438,8 @@ class VaspInteractive(Vasp):
         new.process = None
         warn(
             (
-                "Due to thread safty, deepcopy of the VaspInteractive calculator "
-                "will not contain the reference to the VASP process"
+                "Due to thread safety, copy of the VaspInteractive calculator "
+                "does not contain the reference to the VASP process."
             )
         )
         return new
@@ -460,8 +460,8 @@ class VaspInteractive(Vasp):
                 setattr(new, k, None)
         warn(
             (
-                "Due to thread safty, deepcopy of the VaspInteractive calculator "
-                "will not contain the reference to the VASP process"
+                "Due to thread safety, deepcopy of the VaspInteractive calculator "
+                "does not contain the reference to the VASP process"
             )
         )
         return new
