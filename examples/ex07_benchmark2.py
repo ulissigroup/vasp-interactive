@@ -137,8 +137,9 @@ def compute():
     else:
         results = dict()
 
-    # Collect data
-    for i in range(len(systems)):
+    # Collect data, only the first 4 systems
+    selections = ['H2', 'Cu16', 'Cu2', 'CAu8O']
+    for i in range(len(selections)):
         atoms = systems[i]
         name = atoms.get_chemical_formula()
         if name in results.keys():
@@ -171,75 +172,82 @@ def compute():
 
 def plot_benchmark(results):
     import matplotlib.pyplot as plt
-    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-    ax1 = axes[0]
-    ax2 = axes[1]
-    w = 0.15
-    # N electronic steps
-    n1s = []
-    n2s = []
-    
-    # time
-    t1s = []
-    t2s = []
-    for i, key in enumerate(results.keys()):
-        e, n, n1, t1 = results[key]["vasp-inter"]
-        e, n, n2, t2 = results[key]["vasp-bfgs"]
-        e, n, n3, t3 = results[key]["vasp"]
-        # number of steps
-        n1s.append(np.sum(n1) - np.sum(n3))
-        n2s.append(np.sum(n2) - np.sum(n3))
+    selections = ['H2', 'Cu16', 'Cu2', 'CAu8O']
+    fig, axes = plt.subplots(4, 2, figsize=(10, 12))
+    for i, name in enumerate(selections):
+        ax1 = axes[i][0]
+        ax2 = axes[i][1]
+
+        # N electronic steps
+        n1s = []
+        n2s = []
+
         # time
-        t1s.append(t1 / t3)
-        t2s.append(t2 / t3)
-        
-        
-
-    d = np.arange(len(results))
-    w1 = 0.2
-    ax1.bar(d - w, t1s, w * 2, label="VaspInteractive + BFGS")
-    ax1.bar(d + w, t2s, w * 2, label="Vasp + BFGS")
-    ax1.axhline(y=1, ls="--", color="grey")
-    ax1.set_xticks(d)
-    ax1.set_xticklabels(list(results.keys()))
-    ax1.set_title("Rel. Time to Pure VASP")
-    ax1.set_ylabel(r"$t / t_{\mathrm{VASP}}$")
-    ax1.legend()
-    
-    # steps plot
-    ax2.bar(d - w, n1s, w * 2, label="VaspInteractive + BFGS")
-    ax2.bar(d + w, n2s, w * 2, label="Vasp + BFGS")
-    ax2.set_xticks(d)
-    ax2.axhline(y=0, ls="--", color="grey")
-    ax2.set_xticklabels(list(results.keys()))
-    ax2.set_title("Rel. Total Electronic SCFs to Pure VASP")
-    ax2.set_ylabel(r"$N^{\mathrm{SCF}} - N^{\mathrm{SCF}}_{\mathrm{VASP}}$")
-    ax2.legend()
-    
-    fig.tight_layout()
-    fig.savefig(curdir / "benchmark.png")
+        t1s = []
+        t2s = []
+        for method in ["GPMin", "BFGS", "QuasiNewton", "FIRE"]:
+            e, n, n1, t1 = results[name][method]["vasp-inter"]
+            e, n, n2, t2 = results[name][method]["vasp-ase"]
+            # number of steps
+            n1s.append(np.sum(n1))
+            n2s.append(np.sum(n2))
+            # time
+            t1s.append(t1)
+            t2s.append(t2)
+        e, n, nrm, trm = results[name]["RMM-DIIS"]
+        e, n, ncg, tcg = results[name]["CG"]
+        nrm = np.sum(nrm)
+        ncg = np.sum(ncg)
 
 
-def plot_details(results):
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
-    name = "CAu8O"
-    disp_name = {"vasp-inter": "VaspInteractive + BFGS",
-                 "vasp-bfgs": "Vasp + BFGS",
-                 "vasp": "Pure VASP"}
-    for met in ("vasp-inter", "vasp-bfgs", "vasp"):
-        steps = results[name][met][2]
-        ax.plot(steps, "-", label=disp_name[met])
-    ax.legend()
-    ax.set_xlabel("Ionic steps")
-    ax.set_ylabel("Electronic SCF per Ionic Cycle")
-    ax.set_title("CO on Au(111) surface (CAu8O)")
+        d = np.arange(4)
+        w = 0.2
+        ax1.bar(d - w, t1s, w * 2, label="VaspInteractive + ASE")
+        ax1.bar(d + w, t2s, w * 2, label="Vasp + ASE")
+        ax1.bar([4, 5], [trm, tcg], w * 2, label="Pure VASP")
+#         ax1.axhline(y=1, ls="--", color="grey")
+        ax1.set_xticks(np.arange(6))
+        ax1.set_xticklabels(["GPMin", "BFGS", "QuasiNewton", "FIRE", "RMM-DIIS", "CG"])
+#         ax1.set_title("")
+        ax1.set_ylabel("Wall Time (s)")
+        ax1.text(x=0.05, y=0.95, s=f"{name}-Time", ha="left", va="top", transform=ax1.transAxes)
+#         ax1.legend()
+
+        # steps plot
+        ax2.bar(d - w, n1s, w * 2, label="VaspInteractive + ASE")
+        ax2.bar(d + w, n2s, w * 2, label="Vasp + ASE")
+        ax2.bar([4, 5], [nrm, ncg], w * 2, label="Pure VASP")
+        ax2.set_xticks(np.arange(6))
+        ax2.set_xticklabels(["GPMin", "BFGS", "QuasiNewton", "FIRE", "RMM-DIIS", "CG"])
+        ax2.text(x=0.05, y=0.95, s=f"{name}-SCF", ha="left", va="top", transform=ax2.transAxes)
+#         ax2.axhline(y=0, ls="--", color="grey")
+        ax2.set_ylabel(r"Total $N^{\mathrm{SCF}}$")
+        ax2.legend(loc=1)
+
+    fig.tight_layout(pad=0.05)
+    fig.savefig(curdir / "benchmark-large.png")
+
+
+# def plot_details(results):
+#     import matplotlib.pyplot as plt
+#     fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+#     name = "CAu8O"
+#     disp_name = {"vasp-inter": "VaspInteractive + BFGS",
+#                  "vasp-bfgs": "Vasp + BFGS",
+#                  "vasp": "Pure VASP"}
+#     for met in ("vasp-inter", "vasp-bfgs", "vasp"):
+#         steps = results[name][met][2]
+#         ax.plot(steps, "-", label=disp_name[met])
+#     ax.legend()
+#     ax.set_xlabel("Ionic steps")
+#     ax.set_ylabel("Electronic SCF per Ionic Cycle")
+#     ax.set_title("CO on Au(111) surface (CAu8O)")
     
-    fig.tight_layout()
-    fig.savefig(curdir / "details.png")
+#     fig.tight_layout()
+#     fig.savefig(curdir / "details.png")
 
 if __name__ == "__main__":
 #     print(globals())
     results = compute()
-#     plot_benchmark(results)
+    plot_benchmark(results)
 #     plot_details(results)
