@@ -30,10 +30,10 @@ class VaspInteractive(Vasp):
     name = "VaspInteractive"
     implemented_properties = Vasp.implemented_properties
     mandatory_input = {
-                "potim": 0.0,
-                "ibrion": -1,
-                "iwavpr": 11,
-                "interactive": True,
+        "potim": 0.0,
+        "ibrion": -1,
+        "iwavpr": 11,
+        "interactive": True,
     }
     # Enforce the job to be relaxation
     default_input = {
@@ -273,7 +273,6 @@ class VaspInteractive(Vasp):
         if not system_changes:
             # No need to calculate, calculator has stored calculated results
             return
-        
 
         # Currently VaspInteractive only handles change of positions (MD-like)
         if any([p in system_changes for p in ("numbers", "cell")]):

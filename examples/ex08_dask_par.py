@@ -32,7 +32,6 @@ _m3 = molecule("C6H6", vacuum=5, pbc=True)
 _m4 = molecule("CH3COCH3", vacuum=5, pbc=True)
 
 
-
 def _dyn_run(atoms):
     """Run dynamics on atoms in Dask, return the relaxed energy and time"""
     fmax = 0.05
@@ -50,21 +49,19 @@ def _dyn_run(atoms):
 
 
 def run_all():
-    """Using Dask parallelism to split workloads
-    """
+    """Using Dask parallelism to split workloads"""
     # Init dask
     curdir = Path(__file__).parent
     yml_file = (curdir / "worker-cpu-spec.yml").as_posix()
     cluster = KubeCluster(yml_file)
     client = Client(cluster)
     cluster.adapt(minimum=0, maximum=4)
-    
-    
+
     calc = VaspInteractive(
-            ismear=0,
-            xc="pbe",
-            kpts=(1, 1, 1),
-        )
+        ismear=0,
+        xc="pbe",
+        kpts=(1, 1, 1),
+    )
     seq = [_m1.copy(), _m2.copy(), _m3.copy(), _m4.copy()]
     for atoms in seq:
         atoms.calc = calc
@@ -72,7 +69,7 @@ def run_all():
     t_ = time()
     seq_computed = dg.from_sequence(seq).map(_dyn_run).compute()
     t_wall = time() - t_
-    
+
     # Print results
     print("System\tTime (s)\tIonic steps")
     for i in range(len(seq)):

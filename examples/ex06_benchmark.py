@@ -16,7 +16,7 @@ from vasp_interactive import VaspInteractive
 from vasp_interactive.vasp_interactive import parse_outcar_iterations
 from ase.calculators.vasp import Vasp
 
-curdir = Path(__file__).parent 
+curdir = Path(__file__).parent
 systems = []
 with connect(curdir / "systems.db") as conn:
     for row in conn.select():
@@ -30,6 +30,7 @@ default_params = dict(xc="pbe", ismear=0, sigma=0.01, kspacing=0.5, kgamma=True,
 fmax = 0.05
 
 # Following functions do the relaxation and returns ionic / electronic steps with wall time
+
 
 def relax_vasp_interactive(atoms):
     """Vasp Interactive"""
@@ -61,7 +62,7 @@ def relax_vasp_bfgs(atoms):
         dyn = BFGS(atoms, logfile=None)
         n_elec = []
         n_ion = 1
-        
+
         # Use manual force threshold in order to read the iterations
         t_ = time()
         f = np.abs(atoms.get_forces()).max()
@@ -75,6 +76,7 @@ def relax_vasp_bfgs(atoms):
         t_wall = time() - t_
         e = atoms.get_potential_energy()
     return e, n_ion, n_elec, t_wall
+
 
 def relax_vasp(atoms):
     """Classic vasp"""
@@ -94,6 +96,7 @@ def relax_vasp(atoms):
 
 def compute():
     import pickle
+
     res_file = curdir / "benchmark.pkl"
     if res_file.is_file():
         with open(res_file, "rb") as fd:
@@ -128,8 +131,10 @@ def compute():
 
     return results
 
+
 def plot_benchmark(results):
     import matplotlib.pyplot as plt
+
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
     ax1 = axes[0]
     ax2 = axes[1]
@@ -137,7 +142,7 @@ def plot_benchmark(results):
     # N electronic steps
     n1s = []
     n2s = []
-    
+
     # time
     t1s = []
     t2s = []
@@ -151,8 +156,6 @@ def plot_benchmark(results):
         # time
         t1s.append(t1 / t3)
         t2s.append(t2 / t3)
-        
-        
 
     d = np.arange(len(results))
     w1 = 0.2
@@ -164,7 +167,7 @@ def plot_benchmark(results):
     ax1.set_title("Rel. Time to Pure VASP")
     ax1.set_ylabel(r"$t / t_{\mathrm{VASP}}$")
     ax1.legend()
-    
+
     # steps plot
     ax2.bar(d - w, n1s, w * 2, label="VaspInteractive + BFGS")
     ax2.bar(d + w, n2s, w * 2, label="Vasp + BFGS")
@@ -174,18 +177,21 @@ def plot_benchmark(results):
     ax2.set_title("Rel. Total Electronic SCFs to Pure VASP")
     ax2.set_ylabel(r"$N^{\mathrm{SCF}} - N^{\mathrm{SCF}}_{\mathrm{VASP}}$")
     ax2.legend()
-    
+
     fig.tight_layout()
     fig.savefig(curdir / "benchmark.png")
 
 
 def plot_details(results):
     import matplotlib.pyplot as plt
+
     fig, ax = plt.subplots(1, 1, figsize=(6, 4))
     name = "CAu8O"
-    disp_name = {"vasp-inter": "VaspInteractive + BFGS",
-                 "vasp-bfgs": "Vasp + BFGS",
-                 "vasp": "Pure VASP"}
+    disp_name = {
+        "vasp-inter": "VaspInteractive + BFGS",
+        "vasp-bfgs": "Vasp + BFGS",
+        "vasp": "Pure VASP",
+    }
     for met in ("vasp-inter", "vasp-bfgs", "vasp"):
         steps = results[name][met][2]
         ax.plot(steps, "-", label=disp_name[met])
@@ -193,9 +199,10 @@ def plot_details(results):
     ax.set_xlabel("Ionic steps")
     ax.set_ylabel("Electronic SCF per Ionic Cycle")
     ax.set_title("CO on Au(111) surface (CAu8O)")
-    
+
     fig.tight_layout()
     fig.savefig(curdir / "details.png")
+
 
 if __name__ == "__main__":
     results = compute()

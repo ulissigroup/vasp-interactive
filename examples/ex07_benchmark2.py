@@ -27,7 +27,7 @@ from vasp_interactive import VaspInteractive
 from vasp_interactive.vasp_interactive import parse_outcar_iterations
 from ase.calculators.vasp import Vasp
 
-curdir = Path(__file__).parent 
+curdir = Path(__file__).parent
 systems = []
 with connect(curdir / "systems.db") as conn:
     for row in conn.select():
@@ -40,6 +40,7 @@ with connect(curdir / "systems.db") as conn:
 default_params = dict(xc="pbe", ismear=0, sigma=0.01, kspacing=0.5, kgamma=True, npar=4)
 fmax = 0.05
 
+
 def select_optimizer(method):
     """Use the method name to get optimizer. `method` is a string e.g. `GPMin`"""
     try:
@@ -47,6 +48,7 @@ def select_optimizer(method):
     except KeyError:
         opt = None
     return opt
+
 
 def patched_step(obj, opt):
     """Monkey patch of the step method to add record for the steps"""
@@ -56,6 +58,7 @@ def patched_step(obj, opt):
     n_elec = obj.atoms.calc.read_number_of_iterations()
     obj.n_elec_scf.append(n_elec)
     return
+
 
 # Following functions do the relaxation and returns ionic / electronic steps with wall time
 
@@ -107,6 +110,7 @@ def relax_vasp_ase(atoms, method="BFGS"):
         e = atoms.get_potential_energy()
     return e, n_ion, n_elec, t_wall
 
+
 def relax_vasp(atoms, method):
     assert method in ("RMM-DIIS", "CG")
     """Classic vasp"""
@@ -130,6 +134,7 @@ def relax_vasp(atoms, method):
 
 def compute():
     import pickle
+
     res_file = curdir / "benchmark-large.pkl"
     if res_file.is_file():
         with open(res_file, "rb") as fd:
@@ -138,7 +143,7 @@ def compute():
         results = dict()
 
     # Collect data, only the first 4 systems
-    selections = ['H2', 'Cu16', 'Cu2', 'CAu8O']
+    selections = ["H2", "Cu16", "Cu2", "CAu8O"]
     for i in range(len(selections)):
         atoms = systems[i]
         name = atoms.get_chemical_formula()
@@ -150,7 +155,7 @@ def compute():
             for method in ("GPMin", "BFGS", "QuasiNewton", "FIRE"):
                 print(f"\tUsing method {method}")
                 par_res = dict()
-               
+
                 print("\t\tVasp Interactive...")
                 par_res["vasp-inter"] = relax_vasp_interactive(atoms, method)
 
@@ -170,9 +175,11 @@ def compute():
 
     return results
 
+
 def plot_benchmark(results):
     import matplotlib.pyplot as plt
-    selections = ['H2', 'Cu16', 'Cu2', 'CAu8O']
+
+    selections = ["H2", "Cu16", "Cu2", "CAu8O"]
     fig, axes = plt.subplots(4, 2, figsize=(10, 12))
     for i, name in enumerate(selections):
         ax1 = axes[i][0]
@@ -199,19 +206,27 @@ def plot_benchmark(results):
         nrm = np.sum(nrm)
         ncg = np.sum(ncg)
 
-
         d = np.arange(4)
         w = 0.2
         ax1.bar(d - w, t1s, w * 2, label="VaspInteractive + ASE")
         ax1.bar(d + w, t2s, w * 2, label="Vasp + ASE")
         ax1.bar([4, 5], [trm, tcg], w * 2, label="Pure VASP")
-#         ax1.axhline(y=1, ls="--", color="grey")
+        arr = np.hstack([t1s, t2s, [trm, tcg]])
+        ax1.axhline(y=np.min(arr), ls="--", color="grey")
         ax1.set_xticks(np.arange(6))
         ax1.set_xticklabels(["GPMin", "BFGS", "QuasiNewton", "FIRE", "RMM-DIIS", "CG"])
-#         ax1.set_title("")
+        #         ax1.set_title("")
         ax1.set_ylabel("Wall Time (s)")
-        ax1.text(x=0.05, y=0.95, s=f"{name}-Time", ha="left", va="top", transform=ax1.transAxes)
-#         ax1.legend()
+        ax1.text(
+            x=0.05,
+            y=0.95,
+            s=f"{name}-Time",
+            ha="left",
+            va="top",
+            transform=ax1.transAxes,
+            fontweight="bold",
+        )
+        #         ax1.legend()
 
         # steps plot
         ax2.bar(d - w, n1s, w * 2, label="VaspInteractive + ASE")
@@ -219,12 +234,21 @@ def plot_benchmark(results):
         ax2.bar([4, 5], [nrm, ncg], w * 2, label="Pure VASP")
         ax2.set_xticks(np.arange(6))
         ax2.set_xticklabels(["GPMin", "BFGS", "QuasiNewton", "FIRE", "RMM-DIIS", "CG"])
-        ax2.text(x=0.05, y=0.95, s=f"{name}-SCF", ha="left", va="top", transform=ax2.transAxes)
-#         ax2.axhline(y=0, ls="--", color="grey")
+        ax2.text(
+            x=0.95,
+            y=0.95,
+            s=f"{name}-SCF",
+            ha="right",
+            va="top",
+            transform=ax2.transAxes,
+            fontweight="bold",
+        )
+        arr = np.hstack([n1s, n2s, [nrm, ncg]])
+        ax2.axhline(y=np.min(arr), ls="--", color="grey")
         ax2.set_ylabel(r"Total $N^{\mathrm{SCF}}$")
-        ax2.legend(loc=1)
+        ax2.legend(loc=0)
 
-    fig.tight_layout(pad=0.05)
+    fig.tight_layout(pad=1.5)
     fig.savefig(curdir / "benchmark-large.png")
 
 
@@ -242,12 +266,12 @@ def plot_benchmark(results):
 #     ax.set_xlabel("Ionic steps")
 #     ax.set_ylabel("Electronic SCF per Ionic Cycle")
 #     ax.set_title("CO on Au(111) surface (CAu8O)")
-    
+
 #     fig.tight_layout()
 #     fig.savefig(curdir / "details.png")
 
 if __name__ == "__main__":
-#     print(globals())
+    #     print(globals())
     results = compute()
     plot_benchmark(results)
 #     plot_details(results)
