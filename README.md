@@ -103,7 +103,14 @@ Below are the details about the ionic and electronic steps (using system CAu8O):
 In the case of CO+Au(111) slab system, `VaspInteractive` seems even to be better
 than the VASP CG optimizer. Note such results can be tuned by parameters such as IBRION or IWAVEPR.
 
+A more detailed example comparing the wall time and SCF cycles for `VaspInteractive` and classic `Vasp` combined with 
+various ASE-optimizers can be find in the following figure.
 
+![benchmark-2](examples/benchmark-large.png)
+
+In addition to the constant time reduction using `VaspInteractive+ASE` compared with `Vasp+ASE`, 
+`GPMin` seems to be the most reliable optimizer to be combined. In most cases `VaspInteractive+GPMin` 
+outperforms VASP internal CG routine (`IBRION=2`) and gives more consistent results than RMM-DIIS (`IBRION=1`).
 
 ## More examples
 - [examples/ex01_h2_relax.py](examples/ex01_h2_relax.py): Basic example of structural relaxation
