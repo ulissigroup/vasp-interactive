@@ -46,6 +46,7 @@ def test_copy():
             assert new_calc.process is None
             old_e = new_calc.get_potential_energy()
             # Do a second step, shallow copy will leak the calc.results dict
+            # so that new_calc does not maintain the energy
             dyn.step()
             assert new_calc.get_potential_energy() != old_e
             assert new_calc.get_potential_energy() == calc.get_potential_energy()
@@ -76,6 +77,7 @@ def test_deepcopy():
             assert new_calc.process is None
             old_e = new_calc.get_potential_energy()
             # Do a second step, is the energy maintained in the new_calc?
+            # deepcopied calculator will give correct behavior
             dyn.step()
             assert new_calc.get_potential_energy() == old_e
             assert new_calc.get_potential_energy() != calc.get_potential_energy()
