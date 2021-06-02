@@ -104,7 +104,8 @@ In the case of CO+Au(111) slab system, `VaspInteractive` seems even to be better
 than the VASP CG optimizer. Note such results can be tuned by parameters such as IBRION or IWAVEPR.
 
 A more detailed example comparing the wall time and SCF cycles for `VaspInteractive` and classic `Vasp` combined with 
-various ASE-optimizers can be find in the following figure.
+various ASE-optimizers can be find in the following figure. The horizontal broken lines are the lowest value among all optimizers
+for the same structure.
 
 ![benchmark-2](examples/benchmark-large.png)
 
@@ -118,7 +119,7 @@ outperforms VASP internal CG routine (`IBRION=2`) and gives more consistent resu
 - [examples/ex03_exception.py](examples/ex03_exception.py): Example of error handling and garbage collection
 - [examples/ex04_reset_calculator.py](examples/ex04_reset_calculator.py): Restarting `VaspInteractive` for various structures (different formulae)
 - [examples/ex05_rattle_atoms.py](examples/ex05_rattle_atoms.py): Apply `VaspInteractive` to sequence of structures (same formula, different positions)
-- [examples/ex06_benchmark.py](examples/ex06_benchmark.py): Running benchmark. You can delete `examples/benchmark.pkl` if you want to re-run the calculations (may take up to a few hours).
+- [examples/ex06_benchmark.py](examples/ex06_benchmark.py) and [examples/ex07_benchmark.py](examples/ex07_benchmark.py): Running benchmark. You can delete `examples/benchmark.pkl` and `examples/benchmark-large.pkl` if you want to re-run the calculations (may take up to a few hours).
 - [examples/ex08_dask_par.py](ex08_dask_par.py): Simple example running parallel relaxation jobs using Dask. See `examples/ex08_sample_output.txt` for an example of output.
 
 
@@ -130,7 +131,8 @@ outperforms VASP internal CG routine (`IBRION=2`) and gives more consistent resu
 ## TODO
 - [ ] Check compatibility with `Fireworks` and `Dask`
 - [ ] Correctly handle parallel (MPI) calls to `VaspInteractive`
-- [ ] Implement the `restart` keyword as normal `Vasp` calculator
+- [x] Implement the `restart` keyword as normal `Vasp` calculator
+- [ ] Test compatibility with `copy` and `deepcopy`
 
     
     
