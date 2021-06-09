@@ -169,7 +169,7 @@ def run_opt(vasp):
         + str(OAL_image.get_forces())
     )
     print("Steps: ", online_calc.parent_calls, online_calc.parent_electronic_steps)
-    np.save(calc_dir / f"elec_steps_{calc_name}.npy", online_calc.parent_electronic_steps)
+    np.save(example_dir / f"elec_steps_{calc_name}.npy", online_calc.parent_electronic_steps)
     return
 
 if __name__ == "__main__":
