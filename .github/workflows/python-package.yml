@@ -12,12 +12,12 @@ on:
 
 jobs:
   dummy:
-
+    runs-on: ubuntu-latest
     #runs-on: [self-hosted, linux]
     container:
       image: ulissigroup/kubeflow_vasp:beef_vdw
       credentials:
-        username: mona
+        username: zulissi
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
     strategy:
       fail-fast: false
