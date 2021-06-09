@@ -113,10 +113,12 @@ In addition to the constant time reduction using `VaspInteractive+ASE` compared 
 `GPMin` seems to be the most reliable optimizer to be combined. In most cases `VaspInteractive+GPMin` 
 outperforms VASP internal CG routine (`IBRION=2`) and gives more consistent results than RMM-DIIS (`IBRION=1`).
 
-![benchmark-3](examples/mlp_examples/mlp_online.png)
-
 `VaspInteractive` is also possible to combine with some more complex optimizers like `al_mlp+amptorch`, 
-as the benchmark for a 7-atom Cu cluster shows. 
+as the following benchmark for a 7-atom Cu cluster shows.
+
+![benchmark-3](examples/mlp_examples/mlp_online_parent_scf.png)
+
+
 
 ## More examples
 - [examples/ex01_h2_relax.py](examples/ex01_h2_relax.py): Basic example of structural relaxation
@@ -138,7 +140,8 @@ as the benchmark for a 7-atom Cu cluster shows.
 - [ ] Check compatibility with `Fireworks` and `Dask`
 - [ ] Correctly handle parallel (MPI) calls to `VaspInteractive`
 - [x] Implement the `restart` keyword as normal `Vasp` calculator
-- [ ] Test compatibility with `copy` and `deepcopy`
+- [x] Test compatibility with `copy` and `deepcopy`
+- [ ] Test compatibility with other optimizers
 
     
     
