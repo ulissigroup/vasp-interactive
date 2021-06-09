@@ -14,7 +14,7 @@ jobs:
   dummy:
     runs-on: ubuntu-latest
     container:
-      image: ulissigroup/kubeflow_vasp:amptorch
+      image: ulissigroup/vasp:jovyan_base
       env: 
         VASP_COMMAND: "mpirun -np 1 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 --allow-run-as-root /opt/vasp.6.1.2_pgi_mkl_beef/bin/vasp_gam"
       options: --user root
@@ -36,7 +36,8 @@ jobs:
       run: |
         conda create --name actions -c conda-forge \
           python=${{ matrix.python-version }} pip flake8 pytest
-        conda activate actions
+        conda init bash
+        source activate actions
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
