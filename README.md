@@ -113,6 +113,11 @@ In addition to the constant time reduction using `VaspInteractive+ASE` compared 
 `GPMin` seems to be the most reliable optimizer to be combined. In most cases `VaspInteractive+GPMin` 
 outperforms VASP internal CG routine (`IBRION=2`) and gives more consistent results than RMM-DIIS (`IBRION=1`).
 
+![benchmark-3](examples/mlp_examples/mlp_online.png)
+
+`VaspInteractive` is also possible to combine with some more complex optimizers like `al_mlp+amptorch`, 
+as the benchmark for a 7-atom Cu cluster shows. 
+
 ## More examples
 - [examples/ex01_h2_relax.py](examples/ex01_h2_relax.py): Basic example of structural relaxation
 - [examples/ex02_h2_comparison.py](examples/ex02_h2_comparison.py): Comparing `VaspInteractive` with pure VASP and VASP+BFGS
@@ -120,7 +125,8 @@ outperforms VASP internal CG routine (`IBRION=2`) and gives more consistent resu
 - [examples/ex04_reset_calculator.py](examples/ex04_reset_calculator.py): Restarting `VaspInteractive` for various structures (different formulae)
 - [examples/ex05_rattle_atoms.py](examples/ex05_rattle_atoms.py): Apply `VaspInteractive` to sequence of structures (same formula, different positions)
 - [examples/ex06_benchmark.py](examples/ex06_benchmark.py) and [examples/ex07_benchmark.py](examples/ex07_benchmark.py): Running benchmark. You can delete `examples/benchmark.pkl` and `examples/benchmark-large.pkl` if you want to re-run the calculations (may take up to a few hours).
-- [examples/ex08_dask_par.py](ex08_dask_par.py): Simple example running parallel relaxation jobs using Dask. See `examples/ex08_sample_output.txt` for an example of output.
+- [examples/ex08_dask_par.py](examples/ex08_dask_par.py): Simple example running parallel relaxation jobs using Dask. See `examples/ex08_sample_output.txt` for an example of output.
+- [examples/ex10_mlp_online.py](examples/ex10_mlp_online.py): Example with online machine learning potential (`al_mlp` + `amptorch`).
 
 
 ## Limitations
