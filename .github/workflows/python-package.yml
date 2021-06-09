@@ -12,13 +12,13 @@ on:
 
 jobs:
   dummy:
-    #runs-on: ubuntu-latest
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
+    #runs-on: [self-hosted, linux]
     container:
       image: ulissigroup/kubeflow_vasp:beef_vdw
       env:
         WORKDIR: /home/jovyan
-        GITHUB_WORKSPACE: /home/jovyan
+        #GITHUB_WORKSPACE: /home/jovyan
       credentials:
         username: zulissi
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
@@ -29,6 +29,9 @@ jobs:
         
 
     steps:
+    - name: check env
+      run: |
+        echo "${{ github.workspace }}"
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
