@@ -302,6 +302,10 @@ class VaspInteractive(Vasp):
     ):
         check_atoms(atoms)
 
+        if hasattr(self, "system_changes") and self.system_changes is not None:
+            system_changes = self.system_changes
+            self.system_changes = None
+
         if not system_changes:
             # No need to calculate, calculator has stored calculated results
             return
