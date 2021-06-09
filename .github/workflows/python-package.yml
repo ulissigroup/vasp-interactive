@@ -18,6 +18,7 @@ jobs:
       image: ulissigroup/kubeflow_vasp:beef_vdw
       env:
         WORKDIR: /home/jovyan
+        GITHUB_WORKSPACE: /home/jovyan
       credentials:
         username: zulissi
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
