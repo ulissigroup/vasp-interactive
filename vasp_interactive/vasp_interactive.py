@@ -212,9 +212,18 @@ class VaspInteractive(Vasp):
         else:
             # Whenever at this point, VASP interactive asks the input
             # write the current atoms positions to the stdin
-            self._stdout("Inputting positions...\n", out=out)
-            for atom in atoms.get_scaled_positions():
-                self._stdin(" ".join(map("{:19.16f}".format, atom)), out=out)
+            
+            # In special situation where nsw is too small, it can cause process to exit prematurely
+            retcode = self.process.poll()
+            if retcode is None:
+                self._stdout("Inputting positions...\n", out=out)
+                for atom in atoms.get_scaled_positions():
+                    self._stdin(" ".join(map("{:19.16f}".format, atom)), out=out)
+            else:
+                raise RuntimeError((f"The VASP process has exited with code {retcode} but "
+                                    "you're still providing new atom positions. "
+                                   "Most likely the NSW value in your setting is too small,"
+                                    " please consider increase the value."))
 
         while self.process.poll() is None:
             text = self.process.stdout.readline()
@@ -223,9 +232,19 @@ class VaspInteractive(Vasp):
                 return
 
         # Extra condition, vasp exited with 0 (completed)
-        # only happens at second call to _run_vasp when STOPCAR is present
+        # can be 2 situations: completed job due to STOPCAR
+        # or nsw is reached
         if self.process.poll() == 0:
-            self._stdout("VASP successfully terminated\n", out=out)
+            self._stdout("VASP terminated normally\n", out=out)
+            # NSW reached? In this case the output cannot be trusted. Raise error instead
+            # self.steps is still count from last iteration
+            if self.steps > self.int_params["nsw"]:
+                self._stdout(("However the maximum ionic iterations have been reached. "
+                              "Consider increasing NSW number in your calculation."), out=out)
+                raise RuntimeError(("VASP process terminated normally but "
+                                   "your current ionic steps exceeds maximum allowed number. "
+                                   "Consider increase your NSW value in calculator setup."))
+
             return
         else:
             # If we've reached this point, then VASP has exited without asking for
@@ -243,24 +262,37 @@ class VaspInteractive(Vasp):
         """
         if self.process is None:
             return
-
-        with self._txt_outstream() as out:
-            self._stdout("Attemping to close VASP cleanly\n", out=out)
-            stopcar = self._indir("STOPCAR")
-            with open(stopcar, "w") as fd:
-                fd.write("LABORT = .TRUE.")
-
-            # Following two calls to _run_vasp: 1 is to let vasp see STOPCAR and do 1 SCF
-            # second is to exit the program
-            self._run(self.atoms, out=out)
-            self._run(self.atoms, out=out)
-            # TODO: the endless waiting cycle is hand-waving
-            # consider add a timeout function
-            while self.process.poll() is None:
-                time.sleep(1)
-            self._stdout("VASP has been closed\n", out=out)
+        elif self.process.poll() is not None:
+            # For whatever reason the vasp process stops prematurely (possibly too small nsw)
+            # do a clean up
+            retcode = self.process.poll()
+            with self._txt_outstream() as out:
+                self._stdout(f"VASP exited with code {retcode}.", out=out)
             self.process = None
-        return
+            return
+        else:
+            with self._txt_outstream() as out:
+                self._stdout("Attemping to close VASP cleanly\n", out=out)
+                stopcar = self._indir("STOPCAR")
+                with open(stopcar, "w") as fd:
+                    fd.write("LABORT = .TRUE.")
+
+                # Following two calls to _run_vasp: 1 is to let vasp see STOPCAR and do 1 SCF
+                # second is to exit the program
+                # Program may have ended before we can write, if so then cancel the stdin
+                for i in range(2):
+                    self._run(self.atoms, out=out)
+                    if self.process.poll() is not None:
+                        self._stdout(f"VASP exited with code {self.process.poll()}.", out=out)
+                        self.process = None
+                        return
+                # TODO: the endless waiting cycle is hand-waving
+                # consider add a timeout function
+                while self.process.poll() is None:
+                    time.sleep(1)
+                self._stdout("VASP has been closed\n", out=out)
+                self.process = None
+            return
 
     def calculate(
         self,
@@ -438,8 +470,8 @@ class VaspInteractive(Vasp):
         new.process = None
         warn(
             (
-                "Due to thread safty, deepcopy of the VaspInteractive calculator "
-                "will not contain the reference to the VASP process"
+                "Due to thread safety, copy of the VaspInteractive calculator "
+                "does not contain the reference to the VASP process."
             )
         )
         return new
@@ -460,8 +492,8 @@ class VaspInteractive(Vasp):
                 setattr(new, k, None)
         warn(
             (
-                "Due to thread safty, deepcopy of the VaspInteractive calculator "
-                "will not contain the reference to the VASP process"
+                "Due to thread safety, deepcopy of the VaspInteractive calculator "
+                "does not contain the reference to the VASP process"
             )
         )
         return new

@@ -38,7 +38,7 @@ def test_no_context():
         calc.finalize()
         assert calc.final is True
         assert calc.process is None
-        assert h2.get_potential_energy() == pytest.approx(-6.44217, 1e-4)
+        assert h2.get_potential_energy() == pytest.approx(-6.44217, 1e-2)
     return
 
 
@@ -64,7 +64,7 @@ def test_context():
             assert calc.process.poll() is None
         assert calc.final is True
         assert calc.process is None
-        assert h2.get_potential_energy() == pytest.approx(-6.44217, 1e-4)
+        assert h2.get_potential_energy() == pytest.approx(-6.44217, 1e-2)
     return
 
 

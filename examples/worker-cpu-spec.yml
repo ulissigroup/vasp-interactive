@@ -13,13 +13,13 @@ spec:
     - name: PYTHONPATH
       value: "/home/jovyan/data/vasp-interactive-test:/home/jovyan/data/vasp-interactive-test/examples"
     - name: ASE_VASP_COMMAND
-      value: "mpirun -np 4 --mca btl_vader_single_copy_mechanism none /opt/vasp.6.1.2_pgi_mkl/bin/vasp_gam"
+      value: "mpirun -np 4 --mca btl_vader_single_copy_mechanism none /opt/vasp.6.1.2_pgi_mkl/bin/vasp_std"
     resources:
       limits:
-        cpu: "8"
+        cpu: "4"
         memory: 2Gi
       requests:
-        cpu: "8"
+        cpu: "4"
         memory: 2Gi
     volumeMounts:
       - mountPath: /home/jovyan/data
