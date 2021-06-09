@@ -114,7 +114,8 @@ In addition to the constant time reduction using `VaspInteractive+ASE` compared 
 outperforms VASP internal CG routine (`IBRION=2`) and gives more consistent results than RMM-DIIS (`IBRION=1`).
 
 `VaspInteractive` is also possible to combine with some more complex optimizers like `al_mlp+amptorch`, 
-as the following benchmark for a 7-atom Cu cluster shows.
+as the following benchmark for a 7-atom Cu cluster shows, comparing with single point VASP calculators, 
+`VaspInteractive` is capable of reducing the electronic scf steps by 
 
 ![benchmark-3](examples/mlp_examples/mlp_online_parent_scf.png)
 
