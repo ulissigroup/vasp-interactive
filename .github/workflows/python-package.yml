@@ -16,11 +16,9 @@ jobs:
     #runs-on: [self-hosted, linux]
     container:
       image: ulissigroup/kubeflow_vasp:beef_vdw
-      env:
-        WORKDIR: /home/jovyan
-        #GITHUB_WORKSPACE: /home/jovyan
+      options: --user root
       credentials:
-        username: zulissi
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
     strategy:
       fail-fast: false
