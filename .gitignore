@@ -142,3 +142,7 @@ Untitled*
 *#*
 OUTCAR.error
 *.out
+examples/mlp_examples/*_tmp/
+examples/checkpoints/
+*.bak
+sandbox/
