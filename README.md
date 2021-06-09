@@ -115,7 +115,7 @@ outperforms VASP internal CG routine (`IBRION=2`) and gives more consistent resu
 
 `VaspInteractive` is also possible to combine with some more complex optimizers like `al_mlp+amptorch`, 
 as the following benchmark for a 7-atom Cu cluster shows, comparing with single point VASP calculators, 
-`VaspInteractive` is capable of reducing the electronic scf steps by 
+`VaspInteractive` is capable of reducing the electronic scf steps by up to 90%.
 
 ![benchmark-3](examples/mlp_examples/mlp_online_parent_scf.png)
 
