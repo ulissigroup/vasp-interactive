@@ -6,7 +6,7 @@ May be merged with upstream by the end of day.
 from subprocess import Popen, PIPE
 from contextlib import contextmanager
 
-from ase.calculators.calculator import Calculator, ReadError
+from ase.calculators.calculator import Calculator, ReadError, CalculatorSetupError
 from ase.calculators.vasp import Vasp
 from ase.io import read
 from ase.io.vasp import write_vasp
@@ -228,6 +228,10 @@ class VaspInteractive(Vasp):
         while self.process.poll() is None:
             text = self.process.stdout.readline()
             self._stdout(text, out=out)
+            # Read vasp version from stdio, if version < 6 then raise Error
+            if self._read_vasp_version_stream(text):
+                if _int_version(self.version) < 6:
+                    raise CalculatorSetupError("VaspInteractive currently only works with VASP version >= 6.")
             if "POSITIONS: reading from stdin" in text:
                 return
 
@@ -362,6 +366,9 @@ class VaspInteractive(Vasp):
         # OUTCAR handling part
         self.converged = self.read_convergence(lines=outcar)
         self.version = self.read_version()
+        if (self.version is not None):
+            if _int_version(self.version) < 6:
+                raise CalculatorSetupError("VaspInteractive currently only works with VASP version >= 6.")
 
         # Energy and magmom have multiple return values
         if "free_energy" not in self.results.keys():
@@ -416,6 +423,15 @@ class VaspInteractive(Vasp):
         with self.load_file_iter("OUTCAR") as lines:
             cpu_time, wall_time = parse_outcar_time(lines)
         return cpu_time, wall_time
+    
+    def _read_vasp_version_stream(self, line):
+        """Read vasp version from streamed output lines"""
+        if ' vasp.' in line:
+            self.version = line[len(' vasp.'):].split()[0]
+            return True
+        else:
+            return False
+            
 
     def finalize(self):
         """Stop the stream calculator and finalize"""
@@ -540,3 +556,8 @@ def parse_outcar_time(lines):
         if "Elapsed time (sec):" in line:
             wall_time = float(line.split(":")[1].strip())
     return cpu_time, wall_time
+
+def _int_version(version_string):
+    """Get int version string"""
+    major = int(version_string.split(".")[0])
+    return major
