@@ -28,7 +28,9 @@ The ionic cycles of interactive mode VASP can be terminated by any of the follow
 time compared with classic `Vasp` calculator (combined with ASE optimizers such as BFGS), since less electronic steps are
 required and program spin-up time is drastically reduced.
 
-**NOTE**: currently the code only works with VASP version >= 6. In principle older version of VASP can be compatible but user
+**NOTE: currently the code only works with VASP version >= 6.**
+
+In principle older version of VASP can be compatible but user
 needs to make custom patches to `main.F` in VASP source code to disable chunked output.
 
 ## How to use
