@@ -18,7 +18,7 @@ jobs:
     container:
       image: ulissigroup/vasp:jovyan_base
       env: 
-        VASP_COMMAND: "mpirun -np 1 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 --allow-run-as-root /opt/vasp.6.1.2_pgi_mkl_beef/bin/vasp_gam"
+        VASP_PREFIX: "mpirun -np 1 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 --allow-run-as-root"
       options: --user root --entrypoint /bin/bash
       credentials:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
@@ -27,6 +27,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
+        vasp-version: ["vasp.5.4.4.pl2", "vasp.6.1.2_pgi_mkl_beef", "vasp.6.2.0_pgi_mkl"]
         
 
     steps:
@@ -55,4 +56,6 @@ jobs:
     - name: Test with pytest
       run: |
         source activate actions
+        export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_gam"
+        echo $VASP_COMMAND
         python -m pytest -s tests/
