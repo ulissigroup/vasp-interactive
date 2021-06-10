@@ -133,7 +133,7 @@ class VaspInteractive(Vasp):
             if isinstance(txt, str):
                 if txt == "-":
                     # subprocess.call redirects this to stdout
-                    out = None
+                    out = sys.stdout
                 else:
                     # Open the file in the work directory
                     self._ensure_directory()

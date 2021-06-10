@@ -3,6 +3,7 @@ from vasp_interactive import VaspInteractive
 import tempfile
 from pathlib import Path
 import os
+import sys
 
 
 def test_class():
@@ -48,3 +49,25 @@ def test_class():
             pass
         assert calc.process is None
     return
+
+def test_output():
+    from ase.build import molecule
+
+    """Test if VaspInteractive correctly write inputs
+    """
+    atoms = molecule("C2H2", vacuum=5)
+    with tempfile.TemporaryDirectory() as tempdir:
+        # No value provided, default to vasp.out
+        calc = VaspInteractive(xc="pbe", directory=tempdir)
+        with calc._txt_outstream() as out:
+            assert "vasp.out" in out.name
+
+        # use std
+        calc = VaspInteractive(xc="pbe", directory=tempdir, txt="-")
+        with calc._txt_outstream() as out:
+            assert out == sys.stdout
+            
+        # use no output
+        calc = VaspInteractive(xc="pbe", directory=tempdir, txt=None)
+        with calc._txt_outstream() as out:
+            assert out is None
