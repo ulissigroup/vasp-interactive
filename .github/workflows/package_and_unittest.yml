@@ -53,9 +53,17 @@ jobs:
       run: |
         source activate actions
         python -m pip install --upgrade .
-    - name: Test with pytest
+    - name: Test with pytest vasp6+
+      if: ${{ matrix.vasp-version != "vasp.5.4.4.pl2" }}
       run: |
         source activate actions
         export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_gam"
         echo $VASP_COMMAND
-        python -m pytest -s tests/
+        python -m pytest -s tests
+    - name: Test with pytest vasp5
+      if: ${{ matrix.vasp-version == "vasp.5.4.4.pl2" }}
+      run: |
+        source activate actions
+        export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_gam"
+        echo $VASP_COMMAND
+        python -m pytest -s tests/test_vasp_version.py
