@@ -217,7 +217,9 @@ class VaspInteractive(Vasp):
             retcode = self.process.poll()
             if retcode is None:
                 self._stdout("Inputting positions...\n", out=out)
-                for atom in atoms.get_scaled_positions():
+                # ase atoms --> self.sort --> write to position for VASP
+                # use scaled positions wrap back to cell
+                for atom in atoms.get_scaled_positions()[self.sort]:
                     self._stdin(" ".join(map("{:19.16f}".format, atom)), out=out)
             else:
                 raise RuntimeError((f"The VASP process has exited with code {retcode} but "
