@@ -108,6 +108,13 @@ class VaspInteractive(Vasp):
             )
 
         return
+    
+    @property
+    def input_nsw(self):
+        nsw_ = self.int_params["nsw"]
+        if nsw_ == 0:
+            nsw_ = 1
+        return nsw_
 
     def reset(self):
         """Rewrite the parent reset function.
@@ -263,10 +270,10 @@ class VaspInteractive(Vasp):
             self._stdout("VASP terminated normally\n", out=out)
             # NSW reached? In this case the output cannot be trusted. Raise error instead
             # self.steps is still count from last iteration
-            input_nsw = self.int_params["nsw"]
-            if input_nsw == 0:
-                input_nsw = 1
-            if self.steps > input_nsw:
+            # Update Aug.13 
+            # allow the calculator to release the process and
+            # and restart a new process is calculation continues
+            if self.steps > self.input_nsw:
                 self._stdout(
                     (
                         "However the maximum ionic iterations have been reached. "
@@ -367,6 +374,10 @@ class VaspInteractive(Vasp):
         with self._txt_outstream() as out:
             self._run(self.atoms, out=out)
             self.steps += 1
+            # special condition: job runs with nsw limit reached.
+            # vasp interactive knows nothing about the NSW value, so do another dummy run to terminate
+            if self.steps >= self.input_nsw:
+                self._run(self.atoms, out=out)
 
         # Use overwritten `read_results` method
         self.read_results()
