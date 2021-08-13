@@ -110,7 +110,7 @@ class VaspInteractive(Vasp):
             )
 
         return
-    
+
     @property
     def incar_nsw(self):
         nsw_ = self.int_params["nsw"]
@@ -218,11 +218,18 @@ class VaspInteractive(Vasp):
             if (self.process.poll() == 0) and self.allow_restart_process:
                 pid = self.process.pid
                 self.process = None
-                self._stdout("It seems your VASP process exited normally. I'll retart a new one.", out=out)
-                warn((f"VASP process (pid={pid}) exits normally but new positions are still provided. "
-                                  "A new VASP process will be started. "
-                                   "To supress this warning, you may want to increase the NSW number in your settings."))
-        
+                self._stdout(
+                    "It seems your VASP process exited normally. I'll retart a new one.",
+                    out=out,
+                )
+                warn(
+                    (
+                        f"VASP process (pid={pid}) exits normally but new positions are still provided. "
+                        "A new VASP process will be started. "
+                        "To supress this warning, you may want to increase the NSW number in your settings."
+                    )
+                )
+
         if self.process is None:
             # Delete STOPCAR left by an unsuccessful run
             stopcar = self._indir("STOPCAR")

@@ -50,6 +50,7 @@ def test_class():
         assert calc.process is None
     return
 
+
 def test_output():
     from ase.build import molecule
 
@@ -66,7 +67,7 @@ def test_output():
         calc = VaspInteractive(xc="pbe", directory=tempdir, txt="-")
         with calc._txt_outstream() as out:
             assert out == sys.stdout
-            
+
         # use no output
         calc = VaspInteractive(xc="pbe", directory=tempdir, txt=None)
         with calc._txt_outstream() as out:
