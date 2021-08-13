@@ -49,12 +49,13 @@ class VaspInteractive(Vasp):
         ignore_bad_restart_file=Calculator._deprecated,
         command=None,
         txt="vasp.out",
+        allow_restart_process=True,
         **kwargs,
     ):
         """Initialize the calculator object like the normal Vasp object.
         Additional attributes:
             `self.process`: Popen instance to run the VASP calculation
-        At this stage, `VaspInteractive` does not allow restart
+            `allow_restart_process`: if True, will restart the VASP process if it exits before user program ends
         """
 
         # Add the mandatory keywords
@@ -83,6 +84,7 @@ class VaspInteractive(Vasp):
         )
         # VaspInteractive can take 1 Popen process to track the VASP job
         self.process = None
+        self.allow_restart_process = allow_restart_process
 
         # Make command a list of args for Popen
         cmd = self.make_command(self.command)
@@ -97,11 +99,11 @@ class VaspInteractive(Vasp):
 
         # If nsw=0 or 1, the user are using VaspInteractive as normal Vasp single point
         # can generate warning
-        input_nsw = self.int_params["nsw"]
-        if input_nsw in (0, 1):
+        incar_nsw = self.int_params["nsw"]
+        if incar_nsw in (0, 1):
             warn(
                 (
-                    f"You have set NSW={input_nsw} in INCAR. "
+                    f"You have set NSW={incar_nsw} in INCAR. "
                     "VaspInteractive will run as a normal single point calculator. "
                     "If this is what you want, ignore this warning."
                 )
@@ -110,7 +112,7 @@ class VaspInteractive(Vasp):
         return
     
     @property
-    def input_nsw(self):
+    def incar_nsw(self):
         nsw_ = self.int_params["nsw"]
         if nsw_ == 0:
             nsw_ = 1
@@ -210,6 +212,17 @@ class VaspInteractive(Vasp):
         - If the process continues without asking input, check the process return code
           if returncode != 0 then there is an error
         """
+        # VASP process exited (possibly due to NSW limit reached), release the process handle
+        # a bit messy conditions here but works
+        if self.process is not None:
+            if (self.process.poll() == 0) and self.allow_restart_process:
+                pid = self.process.pid
+                self.process = None
+                self._stdout("It seems your VASP process exited normally. I'll retart a new one.", out=out)
+                warn((f"VASP process (pid={pid}) exits normally but new positions are still provided. "
+                                  "A new VASP process will be started. "
+                                   "To supress this warning, you may want to increase the NSW number in your settings."))
+        
         if self.process is None:
             # Delete STOPCAR left by an unsuccessful run
             stopcar = self._indir("STOPCAR")
@@ -229,11 +242,10 @@ class VaspInteractive(Vasp):
                 universal_newlines=True,
                 bufsize=0,
             )
+            self.steps = 0
         else:
             # Whenever at this point, VASP interactive asks the input
             # write the current atoms positions to the stdin
-
-            # In special situation where nsw is too small, it can cause process to exit prematurely
             retcode = self.process.poll()
             if retcode is None:
                 self._stdout("Inputting positions...\n", out=out)
@@ -242,12 +254,13 @@ class VaspInteractive(Vasp):
                 for atom in atoms.get_scaled_positions()[self.sort]:
                     self._stdin(" ".join(map("{:19.16f}".format, atom)), out=out)
             else:
+                # The vasp process stops prematurely
                 raise RuntimeError(
                     (
                         f"The VASP process has exited with code {retcode} but "
                         "you're still providing new atom positions. "
-                        "Most likely the NSW value in your setting is too small,"
-                        " please consider increase the value."
+                        "If the return code is 0, you can try to set allow_restart_process=True "
+                        "to enable auto restart of the VASP process."
                     )
                 )
 
@@ -268,12 +281,10 @@ class VaspInteractive(Vasp):
         # or nsw is reached
         if self.process.poll() == 0:
             self._stdout("VASP terminated normally\n", out=out)
-            # NSW reached? In this case the output cannot be trusted. Raise error instead
-            # self.steps is still count from last iteration
-            # Update Aug.13 
-            # allow the calculator to release the process and
-            # and restart a new process is calculation continues
-            if self.steps > self.input_nsw:
+            # Update Aug. 13 2021
+            # Since we explicitly added the check for self.steps in self.calculate
+            # the following scenario should not happen
+            if self.steps > self.incar_nsw:
                 self._stdout(
                     (
                         "However the maximum ionic iterations have been reached. "
@@ -285,7 +296,8 @@ class VaspInteractive(Vasp):
                     (
                         "VASP process terminated normally but "
                         "your current ionic steps exceeds maximum allowed number. "
-                        "Consider increase your NSW value in calculator setup."
+                        "Consider increase your NSW value in calculator setup, "
+                        "or set allow_process_restart=True"
                     )
                 )
 
@@ -375,8 +387,10 @@ class VaspInteractive(Vasp):
             self._run(self.atoms, out=out)
             self.steps += 1
             # special condition: job runs with nsw limit reached.
-            # vasp interactive knows nothing about the NSW value, so do another dummy run to terminate
-            if self.steps >= self.input_nsw:
+            # In the interactive mode, VASP won't exit until steps > nsw
+            # this can be problematic if the next user input is a different position
+            # so we simply run a dummy step using current positions to gracefully terminate VASP
+            if self.steps >= self.incar_nsw:
                 self._run(self.atoms, out=out)
 
         # Use overwritten `read_results` method
