@@ -14,7 +14,7 @@ from ase.io import Trajectory
 from pathlib import Path
 
 rootdir = Path(__file__).parents[1] / "sandbox"
-curdir = Path(__file__).parent 
+curdir = Path(__file__).parent
 
 # propylene/Au
 traj = Trajectory(curdir / "prop_au_true_relax.traj")
@@ -76,5 +76,3 @@ def test_main():
     for i in range(2):
         assert ec[i] == pytest.approx(ei[i], 0.01)
         assert fc[i] == pytest.approx(fi[i], 0.01)
-
-    

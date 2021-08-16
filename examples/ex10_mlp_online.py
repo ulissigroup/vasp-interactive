@@ -26,8 +26,8 @@ curdir = Path("./").resolve()
 example_dir = curdir / "mlp_examples"
 
 os.environ[
-        "VASP_COMMAND"
-    ] = "mpirun -q -np 8 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 /opt/vasp.6.1.2_pgi_mkl/bin/vasp_gam"
+    "VASP_COMMAND"
+] = "mpirun -q -np 8 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 /opt/vasp.6.1.2_pgi_mkl/bin/vasp_gam"
 
 # Initialize with a Decahedron
 initial_structure = Decahedron("Cu", 2, 1, 0)
@@ -37,17 +37,17 @@ initial_structure.set_cell([15, 15, 15])
 initial_structure.center()
 name = initial_structure.symbols
 
+
 def run_opt(vasp):
-    """ Choose a backend for vasp or VaspInteractive calculator
-    """
+    """Choose a backend for vasp or VaspInteractive calculator"""
     assert vasp in (Vasp, VaspInteractive)
     calc_name = vasp.name
-    
+
     images = []
     elements = np.unique(initial_structure.get_chemical_symbols())
     vasp_flags = {
-#         "ibrion": -1,
-#         "nsw": 0,
+        #         "ibrion": -1,
+        #         "nsw": 0,
         "isif": 0,
         "isym": 0,
         "lreal": "Auto",
@@ -56,13 +56,12 @@ def run_opt(vasp):
         "ncore": 8,
         "xc": "PBE",
     }
-    
+
     parent_calc = vasp(**vasp_flags)
     calc_dir = example_dir / f"{calc_name}_inter_tmp"
     parent_calc.set(directory=calc_dir)
     os.system(f"rm -rf {calc_dir.as_posix()}")
 
-    
     if calc_name == "VaspInteractive":
         context = parent_calc
     else:
@@ -73,17 +72,15 @@ def run_opt(vasp):
     with context:
         # Run relaxation with active learning
         OAL_initial_structure = compute_with_calc(
-            [initial_structure.copy()], 
-            parent_calc
-            )[0]
+            [initial_structure.copy()], parent_calc
+        )[0]
 
     print(OAL_initial_structure)
-    
-    
+
     OAL_relaxation = Relaxation(
-            OAL_initial_structure, BFGS, fmax=0.02, steps=200, maxstep=0.04
-        )
-    
+        OAL_initial_structure, BFGS, fmax=0.02, steps=200, maxstep=0.04
+    )
+
     Gs = {
         "default": {
             "G2": {
@@ -138,14 +135,15 @@ def run_opt(vasp):
         },
     }
 
-    dbname = "reg_" + str(initial_structure.get_chemical_formula()) + "_oal_" + calc_name 
+    dbname = (
+        "reg_" + str(initial_structure.get_chemical_formula()) + "_oal_" + calc_name
+    )
     dbname = (example_dir / dbname).as_posix()
     trainer = AtomsTrainer(config)
 
-#     print("Parent calc process is: ", parent_calc.process)
+    #     print("Parent calc process is: ", parent_calc.process)
     ml_potential = AmptorchEnsembleCalc(trainer, learner_params["n_ensembles"])
-    
-    
+
     with context:
         online_calc = OnlineLearner(
             learner_params,
@@ -156,7 +154,6 @@ def run_opt(vasp):
 
         real_calc = online_calc
 
-    
         OAL_relaxation.run(real_calc, filename=dbname)
 
     OAL_image = OAL_relaxation.get_trajectory(dbname)[-1]
@@ -169,8 +166,11 @@ def run_opt(vasp):
         + str(OAL_image.get_forces())
     )
     print("Steps: ", online_calc.parent_calls, online_calc.parent_electronic_steps)
-    np.save(example_dir / f"elec_steps_{calc_name}.npy", online_calc.parent_electronic_steps)
+    np.save(
+        example_dir / f"elec_steps_{calc_name}.npy", online_calc.parent_electronic_steps
+    )
     return
+
 
 if __name__ == "__main__":
     run_opt(Vasp)

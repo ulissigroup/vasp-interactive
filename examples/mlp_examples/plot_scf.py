@@ -2,6 +2,7 @@
 """
 import matplotlib.pyplot as plt
 import numpy as np
+
 fig, ax = plt.subplots(1, 1, figsize=(6, 3.5))
 d1 = np.load("elec_steps_vasp.npy")
 d2 = np.load("elec_steps_VaspInteractive.npy")

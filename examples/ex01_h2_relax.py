@@ -19,7 +19,7 @@ def run_with_vasp_interactive():
             xc="pbe",
             kpts=(1, 1, 1),  # not important, just keeps it faster
             directory=tmpdir,
-            txt="-"
+            txt="-",
         )
         d = 0.9575
         h2 = Atoms("H2", positions=[(d, 0, 0), (0, 0, 0)], cell=[8, 8, 8], pbc=True)
