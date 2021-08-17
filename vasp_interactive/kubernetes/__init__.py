@@ -1,1 +1,1 @@
-from .remote_calculator import KubeVaspInteractive
+from .kube_calculator import KubeVaspInteractive
