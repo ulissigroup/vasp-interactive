@@ -4,6 +4,7 @@
    
    Be careful when using this module for production purpose.
 """
+import sys
 from pathlib import Path
 from vasp_interactive import VaspInteractive
 from subprocess import run, Popen, PIPE
@@ -118,5 +119,5 @@ class KubeVaspInteractive(VaspInteractive):
                 file=sys.stderr,
             )
             # match all processes in current pod
-            proc = self._kubectl_exec(f"killall -v -r '{proc_pattern}'")
-            return proc.returncode
+            returncode = self._kubectl_exec(f"killall -v -r '{proc_pattern}'")
+            return returncode
