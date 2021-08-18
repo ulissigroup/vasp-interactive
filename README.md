@@ -124,6 +124,24 @@ as the following benchmark for a 7-atom Cu cluster shows, comparing with single 
 
 ![benchmark-3](examples/mlp_examples/mlp_online_parent_scf.png)
 
+[*Experimental*] A special mode `KubeVaspInteractive` makes the interactive vasp process running inside an 
+isolated container on kubernetes pod, with full functioning message communication between the local and remote
+processes. This mode can be quite useful when running an ensemble of relaxations with synchronization between
+individual steps, and required total CPU numbers are high.
+
+One example is to use `KubeVaspInteractive` to boost Nudged Elastic Bands (NEB) calculations, please see
+[examples/ex12_k8s_neb.py](examples/ex12_k8s_neb.py) for more details. 
+3-image NEB relaxation for Au diffusion on 2x2x3-Al(001) surface is chosen for benchmark with the following walltime (all calculators use 8X MPI ranks for VASP)
+- Sequential VASP: 382.52 s
+- Sequential `VaspInteractive` (shared calculator): 532.89 s
+- Parallel `KubeVaspInteractive` (3 workers): 49.91 s
+
+Note in this case, sharing `VaspInteractive` on all NEB images is 
+not beneficial due to big difference of wavefunctions on neighboring images. 
+On the other hand, `KubeVaspInteractive` has nearly linear scaling with worker pod numbers,
+if the workload per pod is balanced (see [examples/ex11_k8s_minimal.py](examples/ex11_k8s_minimal.py)).
+
+
 
 
 ## More examples

@@ -233,6 +233,7 @@ class VaspInteractive(Vasp):
         if self.process is None:
             # Delete STOPCAR left by an unsuccessful run
             stopcar = self._indir("STOPCAR")
+
             if os.path.isfile(stopcar):
                 os.remove(stopcar)
             self._stdout("Writing VASP input files\n", out=out)
