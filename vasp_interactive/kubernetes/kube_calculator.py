@@ -4,6 +4,7 @@
    
    Be careful when using this module for production purpose.
 """
+from pathlib import Path
 from vasp_interactive import VaspInteractive
 from subprocess import run, Popen, PIPE
 
@@ -42,6 +43,7 @@ class KubeVaspInteractive(VaspInteractive):
     `directory`: the directory on local machine, by default where the input files can be generated
     `command`: the command to be run inside the pod. Additional kubectl directives will be added automatically
 
+    `remote_directory`: default the same as on local if not set. The directory inside the pod
     `pod`: dict with keys `name` and `namespace` to work with kubectl exec
 
     Note the calculator does not take care of how the kubernetes pods are created / managed.
@@ -53,6 +55,7 @@ class KubeVaspInteractive(VaspInteractive):
         self,
         atoms=None,
         directory=".",
+        remote_directory=None,
         label="vasp-interactive",
         command="$VASP_COMMAND",
         txt="vasp.out",
@@ -74,12 +77,20 @@ class KubeVaspInteractive(VaspInteractive):
         self.pod_name = pod_name
         self.pod_namespace = pod.get("namespace", None)
 
+        if remote_directory is None:
+            # makesure absolute path
+            self.remote_directory = Path(self.directory).resolve()
+        else:
+            raise NotImplementedError(
+                "KubeVaspInteractive not (yet) supporting remote_directory that differs from local."
+            )
+
         # For running kubectl, the actual command is wrapped around kubectl
         # for lazy testing use the $VASP_COMMAND environ in the pod
 
         # TODO: how about another make_cmds?
         # warning, no verbatim brack needed for this part
-        pod_command = command
+        pod_command = f"cd {self.remote_directory.as_posix()} && {command}"
         self._args = _gen_kubectl_cmd(pod_command, self.pod_name, self.pod_namespace)
 
         return
