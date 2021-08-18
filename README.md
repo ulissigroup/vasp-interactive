@@ -138,6 +138,8 @@ One example is to use `KubeVaspInteractive` to boost Nudged Elastic Bands (NEB) 
 
 Note in this case, sharing `VaspInteractive` on all NEB images is 
 not beneficial due to big difference of wavefunctions on neighboring images. 
+On the other hand, `KubeVaspInteractive` has nearly linear scaling with worker pod numbers,
+if the workload per pod is balanced (see [examples/ex11_k8s_minimal.py](examples/ex11_k8s_minimal.py)).
 
 
 
