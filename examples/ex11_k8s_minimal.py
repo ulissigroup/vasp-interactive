@@ -31,39 +31,6 @@ def _thread_calculate(atoms, energy):
     return
 
 
-def cluster_create(scale=2):
-    # Generate pods
-    pod_spec = generate_kubecluster_spec(cpu=8, memory="2Gi")
-    cluster = KubeCluster(pod_spec, n_workers=scale)
-    print("Created a KubeCluster for scheduling...")
-    image = pod_spec["spec"]["containers"][0]["image"]
-    print(f"Pods running on image {image}")
-
-    #     cluster.scale(scale)
-    print(f"Scale to {scale} worker pods...")
-    # Refresh to get worker status
-    while True:
-        if cluster.workers != {}:
-            for number, pod in cluster.workers.items():
-                print(number, pod)
-            all_running = all(
-                [
-                    pod.status.value == "running"
-                    for number, pod in cluster.workers.items()
-                ]
-            )
-            if all_running:
-                break
-        time.sleep(0.5)
-
-    # Get individual pod name & namespace
-    worker_pods = get_kubecluster_pods(cluster)
-    for number, pod in worker_pods.items():
-        print(f"Pod {number}, name: {pod['name']}, namespace: {pod['namespace']}")
-
-    return cluster, worker_pods
-
-
 def main():
     # Scheduling and deployment part
     scale = 2
