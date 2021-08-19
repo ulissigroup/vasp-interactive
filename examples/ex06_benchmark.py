@@ -55,7 +55,7 @@ def relax_vasp_bfgs(atoms):
     """Classic vasp + bfgs, no wave function reloading"""
     atoms = atoms.copy()
     with tempfile.TemporaryDirectory() as tmpdir:
-        params = dict(istart=0, ibrion=-1, nsw=0, directory=tmpdir)
+        params = dict(ibrion=-1, nsw=0, directory=tmpdir)
         params.update(default_params)
         calc = Vasp(**params)
         atoms.calc = calc
@@ -194,7 +194,7 @@ def plot_details(results):
     }
     for met in ("vasp-inter", "vasp-bfgs", "vasp"):
         steps = results[name][met][2]
-        ax.plot(steps, "-", label=disp_name[met])
+        ax.step(range(1, len(steps) + 1), steps, label=disp_name[met])
     ax.legend()
     ax.set_xlabel("Ionic steps")
     ax.set_ylabel("Electronic SCF per Ionic Cycle")
