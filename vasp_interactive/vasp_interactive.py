@@ -86,12 +86,6 @@ class VaspInteractive(Vasp):
         self.process = None
         self.allow_restart_process = allow_restart_process
 
-        # Make command a list of args for Popen
-        cmd = self.make_command(self.command)
-        if isinstance(cmd, str):
-            cmd = cmd.split()
-        self._args = cmd
-
         # Ionic steps counter. Note this number will be 1 more than that in ase.optimize
         self.steps = 0
         # Is the relaxation finished?
@@ -196,7 +190,6 @@ class VaspInteractive(Vasp):
             raise RuntimeError("VaspInteractive does not have the VASP process.")
 
     def _stdout(self, text, out=None):
-        """ """
         if out is not None:
             out.write(text)
 
@@ -240,9 +233,11 @@ class VaspInteractive(Vasp):
             self.initialize(atoms)
             self.write_input(atoms)
             self._stdout("Starting VASP for initial step...\n", out=out)
-            # Drop py2 support
+            # Dynamic generation of command args
+            command = self.make_command(self.command)
             self.process = Popen(
-                self._args,
+                command,
+                shell=True,
                 stdout=PIPE,
                 stdin=PIPE,
                 stderr=PIPE,

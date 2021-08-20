@@ -5,7 +5,7 @@ metadata:
 spec:
   restartPolicy: Never
   containers:
-  - image: ulissigroup/kubeflow_vasp:amptorch
+  - image: ulissigroup/kubeflow_vasp:beef_vdw
     imagePullPolicy: Always
     args: [dask-worker, --nthreads, '1', --no-dashboard, --memory-limit, 2GB, --death-timeout, '60']
     name: dask
@@ -13,7 +13,7 @@ spec:
     - name: PYTHONPATH
       value: "/home/jovyan/data/vasp-interactive-test:/home/jovyan/data/vasp-interactive-test/examples"
     - name: ASE_VASP_COMMAND
-      value: "mpirun -np 4 --mca btl_vader_single_copy_mechanism none /opt/vasp.6.1.2_pgi_mkl/bin/vasp_std"
+      value: "mpirun -np 4 --mca btl_vader_single_copy_mechanism none /opt/vasp.6.1.2_pgi_mkl/bin/vasp_gam"
     resources:
       limits:
         cpu: "4"
