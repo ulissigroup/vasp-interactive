@@ -59,7 +59,10 @@ jobs:
         source activate actions
         export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_gam"
         echo $VASP_COMMAND
-        python -m pytest -s tests
+	for f in tests/test_*.py
+	do
+	    python -m pytest -s $f
+	done
     - name: Test with pytest vasp5
       if: ${{ matrix.vasp-version == 'vasp.5.4.4.pl2' }}
       run: |
