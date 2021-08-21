@@ -20,7 +20,7 @@ from pathlib import Path
 
 d = 0.9575
 h2_root = Atoms("H2", positions=[(d, 0, 0), (0, 0, 0)], cell=[8, 8, 8], pbc=True)
-rootdir = Path(__file__).parents[1] / "sandbox"
+rootdir = Path(__file__).resolve().parents[1] / "sandbox"
 fmax = 0.005
 ediff = 1e-7
 

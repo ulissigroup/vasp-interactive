@@ -11,7 +11,7 @@ def test_class():
 
     """Test if VaspInteractive correctly write inputs
     """
-    atoms = molecule("C2H2", vacuum=5)
+    atoms = molecule("C2H2", vacuum=5, pbc=True)
     with tempfile.TemporaryDirectory() as tempdir:
         tempdir = Path(tempdir)
         calc = VaspInteractive(xc="pbe", directory=tempdir)
@@ -56,7 +56,7 @@ def test_output():
 
     """Test if VaspInteractive correctly write inputs
     """
-    atoms = molecule("C2H2", vacuum=5)
+    atoms = molecule("C2H2", vacuum=5, pbc=True)
     with tempfile.TemporaryDirectory() as tempdir:
         # No value provided, default to vasp.out
         calc = VaspInteractive(xc="pbe", directory=tempdir)
