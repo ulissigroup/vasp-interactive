@@ -2,11 +2,9 @@
    Need https://github.com/ulissigroup/al_mlp as dependency.
    This example requires CPU >= 8.0
 """
-from al_mlp.utils import compute_with_calc
-from al_mlp.atomistic_methods import Relaxation
+from al_mlp.atomistic_methods import Relaxation, replay_trajectory
 from al_mlp.online_learner.online_learner import OnlineLearner
-from al_mlp.ml_potentials.amptorch_ensemble_calc import AmptorchEnsembleCalc
-from amptorch.trainer import AtomsTrainer
+from al_mlp.ml_potentials.flare_pp_calc import FlarePPCalc
 from ase.calculators.vasp import Vasp
 from vasp_interactive import VaspInteractive
 from ase.io import Trajectory
@@ -37,15 +35,30 @@ initial_structure.set_cell([15, 15, 15])
 initial_structure.center()
 name = initial_structure.symbols
 
+# OAL_example configs
+flare_config  = {
+        "sigma": 4.5,
+        "power": 2,
+        "cutoff_function": "quadratic",
+        "cutoff": 5.0,
+        "radial_basis": "chebyshev",
+        "cutoff_hyps": [],
+        "sigma_e": 0.009,
+        "sigma_f": 0.005,
+        "sigma_s": 0.0006,
+        "hpo_max_iterations": 50,
+        "freeze_hyps": 0,
+}
 
-def run_opt(vasp):
-    """Choose a backend for vasp or VaspInteractive calculator"""
-    assert vasp in (Vasp, VaspInteractive)
-    calc_name = vasp.name
+learner_params = {
+        "filename": "relax_example",
+        "file_dir": "mlp_examples/",
+        "stat_uncertain_tol": 0.08,
+        "dyn_uncertain_tol": 0.1,
+        "fmax_verify_threshold": 0.05,  # eV/AA
+}
 
-    images = []
-    elements = np.unique(initial_structure.get_chemical_symbols())
-    vasp_flags = {
+vasp_flags = {
         #         "ibrion": -1,
         #         "nsw": 0,
         "isif": 0,
@@ -55,7 +68,17 @@ def run_opt(vasp):
         "encut": 350.0,
         "ncore": 8,
         "xc": "PBE",
-    }
+}
+
+
+def run_opt(vasp, optimizer=BFGS, use_al=True):
+    """Choose a backend for vasp or VaspInteractive calculator"""
+    assert vasp in (Vasp, VaspInteractive)
+    calc_name = vasp.name
+
+    images = [initial_structure.copy()]
+    elements = np.unique(initial_structure.get_chemical_symbols())
+
 
     parent_calc = vasp(**vasp_flags)
     calc_dir = example_dir / f"{calc_name}_inter_tmp"
@@ -69,109 +92,29 @@ def run_opt(vasp):
         context = contextlib.suppress()
         parent_calc.set(ibrion=-1, nsw=0, istart=0)
 
-    with context:
-        # Run relaxation with active learning
-        OAL_initial_structure = compute_with_calc(
-            [initial_structure.copy()], parent_calc
-        )[0]
-
-    print(OAL_initial_structure)
-
-    OAL_relaxation = Relaxation(
-        OAL_initial_structure, BFGS, fmax=0.02, steps=200, maxstep=0.04
-    )
-
-    Gs = {
-        "default": {
-            "G2": {
-                "etas": np.logspace(np.log10(0.05), np.log10(5.0), num=4),
-                "rs_s": [0],
-            },
-            "G4": {"etas": [0.005], "zetas": [1.0, 4.0], "gammas": [1.0, -1.0]},
-            "cutoff": 6,
-        },
-    }
-
-    learner_params = {
-        "max_iterations": 10,
-        "samples_to_retrain": 1,
-        "filename": "relax_example",
-        "file_dir": "./",
-        "stat_uncertain_tol": 0.1,
-        "dyn_uncertain_tol": 0.5,
-        "fmax_verify_threshold": 0.05,  # eV/AA
-        "relative_variance": True,
-        "n_ensembles": 2,
-        "use_dask": False,
-    }
-
-    config = {
-        "model": {"get_forces": True, "num_layers": 3, "num_nodes": 5},
-        "optim": {
-            "device": "cpu",
-            "force_coefficient": 4.0,
-            "lr": 1,
-            "batch_size": 10,
-            "epochs": 100,
-            "optimizer": torch.optim.LBFGS,
-            "optimizer_args": {"optimizer__line_search_fn": "strong_wolfe"},
-        },
-        "dataset": {
-            "raw_data": images,
-            "val_split": 0,
-            "elements": elements,
-            "fp_params": Gs,
-            "save_fps": False,
-            "scaling": {"type": "standardize"},
-        },
-        "cmd": {
-            "debug": False,
-            "run_dir": "./",
-            "seed": 1,
-            "identifier": "test",
-            "verbose": False,
-            # "logger": True,
-            "single-threaded": True,
-        },
-    }
-
-    dbname = (
-        "reg_" + str(initial_structure.get_chemical_formula()) + "_oal_" + calc_name
-    )
-    dbname = (example_dir / dbname).as_posix()
-    trainer = AtomsTrainer(config)
-
-    #     print("Parent calc process is: ", parent_calc.process)
-    ml_potential = AmptorchEnsembleCalc(trainer, learner_params["n_ensembles"])
+    ml_potential = FlarePPCalc(flare_config, images)
 
     with context:
-        online_calc = OnlineLearner(
-            learner_params,
-            images,
-            ml_potential,
-            parent_calc,
-        )
+        if use_al:
+            real_calc = OnlineLearner(
+                learner_params,
+                images,
+                ml_potential,
+                parent_calc
+            )
+        else:
+            real_calc = parent_calc
+        images[0].calc = real_calc
+        dyn = optimizer(images[0], trajectory = (example_dir / f'oal_{vasp.name}_{use_al}.traj').as_posix())
+        if use_al:
+            dyn.attach(replay_trajectory, 1, images[0].calc, dyn)
+        dyn.run(fmax=0.05, steps=1000) 
+        
 
-        real_calc = online_calc
-
-        OAL_relaxation.run(real_calc, filename=dbname)
-
-    OAL_image = OAL_relaxation.get_trajectory(dbname)[-1]
-
-    print(
-        "Final Image Results:"
-        + "\nEnergy:\n"
-        + str(OAL_image.get_potential_energy())
-        + "\nForces:\n"
-        + str(OAL_image.get_forces())
-    )
-    print("Steps: ", online_calc.parent_calls, online_calc.parent_electronic_steps)
-    np.save(
-        example_dir / f"elec_steps_{calc_name}.npy", online_calc.parent_electronic_steps
-    )
+#     print(onlinecalc.parent_calls)
     return
 
 
 if __name__ == "__main__":
-    run_opt(Vasp)
-    run_opt(VaspInteractive)
+#     run_opt(Vasp)
+    run_opt(VaspInteractive, use_al=False)
