@@ -39,6 +39,7 @@ class VaspInteractive(Vasp):
     # Enforce the job to be relaxation
     default_input = {
         "nsw": 2000,
+        "isym": 0,
     }
 
     def __init__(
@@ -101,6 +102,18 @@ class VaspInteractive(Vasp):
                     "VaspInteractive will run as a normal single point calculator. "
                     "If this is what you want, ignore this warning."
                 )
+            )
+
+        # Recommend to use isym=0 like in MD calculations, otherwise energy can be wrong
+        incar_isym = self.int_params["isym"]
+        if incar_isym > 0:
+            # If user defines isym to another value, use at their risk
+            warn(
+                "It is recommended to use ISYM=0 to "
+                "overcome convergence issue when input symmetry changes. \n"
+                f"However, you provided ISYM={incar_isym}. "
+                "In some cases the energy and forces can be wrong. "
+                "Use such settings at your own risk."
             )
 
         return
