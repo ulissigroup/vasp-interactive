@@ -118,9 +118,10 @@ In addition to the constant time reduction using `VaspInteractive+ASE` compared 
 `GPMin` seems to be the most reliable optimizer to be combined. In most cases `VaspInteractive+GPMin` 
 outperforms VASP internal CG routine (`IBRION=2`) and gives more consistent results than RMM-DIIS (`IBRION=1`).
 
-`VaspInteractive` is also possible to combine with some more complex optimizers like `al_mlp+amptorch`, 
-as the following benchmark for a 7-atom Cu cluster shows, comparing with single point VASP calculators, 
-`VaspInteractive` is capable of reducing the electronic scf steps by up to 90%.
+`VaspInteractive` is also possible to combine with some more complex optimizers like `al_mlp` 
+(with `flare` as underlying machine learnin potential). Online learning optimizer in combination with `VaspInteractive`
+can greatly save computation time as compared with direct DFT + BFGS approaches,
+as shown in the following benchmark for a 7-atom Cu cluster.
 
 ![benchmark-3](examples/mlp_examples/mlp_online_parent_scf.png)
 
