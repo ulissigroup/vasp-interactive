@@ -1,0 +1,835 @@
+****************************************
+Running with BFGS + vasp -- cache
+      Step     Time          Energy         fmax
+BFGS:    0 08:12:48      -15.153278        1.4588
+ running on    8 total cores
+ distrk:  each k-point on    8 cores,    1 groups
+ distr:  one band on    8 cores,    1 groups
+ using from now: INCAR     
+ vasp.6.1.2 22Jul20 (build Aug  2 2021 21:04:21) gamma-only                      
+ POSCAR found type information on POSCAR Cu
+ POSCAR found :  1 types and       7 ions
+ scaLAPACK will be used
+ -----------------------------------------------------------------------------
+|                                                                             |
+|           W    W    AA    RRRRR   N    N  II  N    N   GGGG   !!!           |
+|           W    W   A  A   R    R  NN   N  II  NN   N  G    G  !!!           |
+|           W    W  A    A  R    R  N N  N  II  N N  N  G       !!!           |
+|           W WW W  AAAAAA  RRRRR   N  N N  II  N  N N  G  GGG   !            |
+|           WW  WW  A    A  R   R   N   NN  II  N   NN  G    G                |
+|           W    W  A    A  R    R  N    N  II  N    N   GGGG   !!!           |
+|                                                                             |
+|     For optimal performance we recommend to set                             |
+|       NCORE = 4 - approx SQRT(number of cores).                             |
+|     NCORE specifies how many cores store one orbital (NPAR=cpu/NCORE).      |
+|     This setting can greatly improve the performance of VASP for DFT.       |
+|     The default, NCORE=1 might be grossly inefficient on modern             |
+|     multi-core architectures or massively parallel machines. Do your        |
+|     own testing!!!!                                                         |
+|     Unfortunately you need to use the default for GW and RPA                |
+|     calculations (for HF NCORE is supported but not extensively tested      |
+|     yet).                                                                   |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ -----------------------------------------------------------------------------
+|                                                                             |
+|               ----> ADVICE to this user running VASP <----                  |
+|                                                                             |
+|     You have a (more or less) 'small supercell' and for smaller cells       |
+|     it is recommended to use the reciprocal-space projection scheme!        |
+|     The real-space optimization is not efficient for small cells and it     |
+|     is also less accurate ...                                               |
+|     Therefore, set LREAL=.FALSE. in the INCAR file.                         |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ LDA part: xc-table for Pade appr. of Perdew
+ found WAVECAR, reading the header
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ...
+ reading WAVECAR
+ the WAVECAR file was read successfully
+ initial charge from wavefunction
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1    -0.154653851874E+02   -0.15465E+02   -0.11753E+01   130   0.205E+01    0.194E+00
+DAV:   2    -0.153198632567E+02    0.14552E+00   -0.79547E-01   146   0.252E+01    0.153E+00
+DAV:   3    -0.152904028591E+02    0.29460E-01   -0.33770E-01    98   0.220E+01    0.815E-01
+DAV:   4    -0.152844101969E+02    0.59927E-02   -0.12988E-01   146   0.818E+00    0.345E-01
+DAV:   5    -0.152846479528E+02   -0.23776E-03   -0.19854E-02   144   0.231E+00    0.181E-01
+DAV:   6    -0.152846722862E+02   -0.24333E-04   -0.64654E-03   130   0.248E+00    0.949E-02
+DAV:   7    -0.152846253179E+02    0.46968E-04   -0.12837E-03   104   0.144E+00    0.314E-02
+DAV:   8    -0.152847190237E+02   -0.93706E-04   -0.41422E-04    84   0.448E-01
+   1 F= -.15284719E+02 E0= -.15265918E+02  d E =-.564033E-01
+ writing wavefunctions
+BFGS:    1 08:13:06      -15.265918        1.3898
+ running on    8 total cores
+ distrk:  each k-point on    8 cores,    1 groups
+ distr:  one band on    8 cores,    1 groups
+ using from now: INCAR     
+ vasp.6.1.2 22Jul20 (build Aug  2 2021 21:04:21) gamma-only                      
+ POSCAR found type information on POSCAR Cu
+ POSCAR found :  1 types and       7 ions
+ scaLAPACK will be used
+ -----------------------------------------------------------------------------
+|                                                                             |
+|           W    W    AA    RRRRR   N    N  II  N    N   GGGG   !!!           |
+|           W    W   A  A   R    R  NN   N  II  NN   N  G    G  !!!           |
+|           W    W  A    A  R    R  N N  N  II  N N  N  G       !!!           |
+|           W WW W  AAAAAA  RRRRR   N  N N  II  N  N N  G  GGG   !            |
+|           WW  WW  A    A  R   R   N   NN  II  N   NN  G    G                |
+|           W    W  A    A  R    R  N    N  II  N    N   GGGG   !!!           |
+|                                                                             |
+|     For optimal performance we recommend to set                             |
+|       NCORE = 4 - approx SQRT(number of cores).                             |
+|     NCORE specifies how many cores store one orbital (NPAR=cpu/NCORE).      |
+|     This setting can greatly improve the performance of VASP for DFT.       |
+|     The default, NCORE=1 might be grossly inefficient on modern             |
+|     multi-core architectures or massively parallel machines. Do your        |
+|     own testing!!!!                                                         |
+|     Unfortunately you need to use the default for GW and RPA                |
+|     calculations (for HF NCORE is supported but not extensively tested      |
+|     yet).                                                                   |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ -----------------------------------------------------------------------------
+|                                                                             |
+|               ----> ADVICE to this user running VASP <----                  |
+|                                                                             |
+|     You have a (more or less) 'small supercell' and for smaller cells       |
+|     it is recommended to use the reciprocal-space projection scheme!        |
+|     The real-space optimization is not efficient for small cells and it     |
+|     is also less accurate ...                                               |
+|     Therefore, set LREAL=.FALSE. in the INCAR file.                         |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ LDA part: xc-table for Pade appr. of Perdew
+ found WAVECAR, reading the header
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ...
+ reading WAVECAR
+ the WAVECAR file was read successfully
+ initial charge from wavefunction
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1    -0.787292050723E+02   -0.78729E+02   -0.20067E+03    98   0.782E+02    0.545E+01
+DAV:   2    -0.240414214150E+02    0.54688E+02   -0.92462E+02   122   0.261E+02    0.223E+01
+DAV:   3    -0.220031008263E+02    0.20383E+01   -0.11973E+02   136   0.204E+02    0.169E+01
+DAV:   4    -0.169113634624E+02    0.50917E+01   -0.28954E+01   130   0.864E+01    0.820E+00
+DAV:   5    -0.163169293809E+02    0.59443E+00   -0.16785E+01   170   0.101E+02    0.572E+00
+DAV:   6    -0.157739987300E+02    0.54293E+00   -0.37406E+00   138   0.566E+01    0.232E+00
+DAV:   7    -0.157630285451E+02    0.10970E-01   -0.23338E+00   136   0.445E+01    0.184E+00
+DAV:   8    -0.157261676047E+02    0.36861E-01   -0.64680E-01   120   0.199E+01    0.122E+00
+DAV:   9    -0.156786734669E+02    0.47494E-01   -0.23463E-01   128   0.149E+01    0.351E-01
+DAV:  10    -0.156805830090E+02   -0.19095E-02   -0.11260E-01   138   0.752E+00    0.425E-01
+DAV:  11    -0.156736363575E+02    0.69467E-02   -0.34110E-02   100   0.546E+00    0.294E-01
+DAV:  12    -0.156716177293E+02    0.20186E-02   -0.32338E-02   148   0.400E+00    0.247E-01
+DAV:  13    -0.156806484556E+02   -0.90307E-02   -0.85265E-03   146   0.283E+00    0.149E-01
+DAV:  14    -0.156903403716E+02   -0.96919E-02   -0.42050E-03   146   0.199E+00    0.710E-02
+DAV:  15    -0.157012050947E+02   -0.10865E-01   -0.47742E-03   154   0.178E+00    0.104E-01
+DAV:  16    -0.157059799269E+02   -0.47748E-02   -0.18479E-03   128   0.133E+00    0.797E-02
+DAV:  17    -0.157102784702E+02   -0.42985E-02   -0.16976E-03   132   0.932E-01    0.197E-02
+DAV:  18    -0.157113889425E+02   -0.11105E-02   -0.44211E-04    90   0.351E-01    0.214E-02
+DAV:  19    -0.157122790076E+02   -0.89007E-03   -0.19213E-04    60   0.251E-01    0.194E-02
+DAV:  20    -0.157126430362E+02   -0.36403E-03   -0.75799E-05    66   0.219E-01    0.810E-03
+DAV:  21    -0.157129250806E+02   -0.28204E-03   -0.66550E-05    66   0.103E-01    0.103E-02
+DAV:  22    -0.157130740051E+02   -0.14892E-03   -0.30361E-05    60   0.148E-01    0.359E-03
+DAV:  23    -0.157131833193E+02   -0.10931E-03   -0.24571E-05    60   0.419E-02    0.372E-03
+DAV:  24    -0.157132141647E+02   -0.30845E-04   -0.96578E-06    64   0.589E-02
+   1 F= -.15713214E+02 E0= -.15694408E+02  d E =-.564190E-01
+ writing wavefunctions
+BFGS:    2 08:13:38      -15.694408        1.4742
+ running on    8 total cores
+ distrk:  each k-point on    8 cores,    1 groups
+ distr:  one band on    8 cores,    1 groups
+ using from now: INCAR     
+ vasp.6.1.2 22Jul20 (build Aug  2 2021 21:04:21) gamma-only                      
+ POSCAR found type information on POSCAR Cu
+ POSCAR found :  1 types and       7 ions
+ scaLAPACK will be used
+ -----------------------------------------------------------------------------
+|                                                                             |
+|           W    W    AA    RRRRR   N    N  II  N    N   GGGG   !!!           |
+|           W    W   A  A   R    R  NN   N  II  NN   N  G    G  !!!           |
+|           W    W  A    A  R    R  N N  N  II  N N  N  G       !!!           |
+|           W WW W  AAAAAA  RRRRR   N  N N  II  N  N N  G  GGG   !            |
+|           WW  WW  A    A  R   R   N   NN  II  N   NN  G    G                |
+|           W    W  A    A  R    R  N    N  II  N    N   GGGG   !!!           |
+|                                                                             |
+|     For optimal performance we recommend to set                             |
+|       NCORE = 4 - approx SQRT(number of cores).                             |
+|     NCORE specifies how many cores store one orbital (NPAR=cpu/NCORE).      |
+|     This setting can greatly improve the performance of VASP for DFT.       |
+|     The default, NCORE=1 might be grossly inefficient on modern             |
+|     multi-core architectures or massively parallel machines. Do your        |
+|     own testing!!!!                                                         |
+|     Unfortunately you need to use the default for GW and RPA                |
+|     calculations (for HF NCORE is supported but not extensively tested      |
+|     yet).                                                                   |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ -----------------------------------------------------------------------------
+|                                                                             |
+|               ----> ADVICE to this user running VASP <----                  |
+|                                                                             |
+|     You have a (more or less) 'small supercell' and for smaller cells       |
+|     it is recommended to use the reciprocal-space projection scheme!        |
+|     The real-space optimization is not efficient for small cells and it     |
+|     is also less accurate ...                                               |
+|     Therefore, set LREAL=.FALSE. in the INCAR file.                         |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ LDA part: xc-table for Pade appr. of Perdew
+ found WAVECAR, reading the header
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ...
+ reading WAVECAR
+ the WAVECAR file was read successfully
+ initial charge from wavefunction
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1    -0.170472020197E+02   -0.17047E+02   -0.67715E+01   138   0.673E+01    0.549E+00
+DAV:   2    -0.161254554736E+02    0.92175E+00   -0.66857E+00   154   0.912E+01    0.451E+00
+DAV:   3    -0.157095200214E+02    0.41594E+00   -0.19154E+00   122   0.504E+01    0.174E+00
+DAV:   4    -0.157962539138E+02   -0.86734E-01   -0.17197E+00   130   0.127E+01    0.142E+00
+DAV:   5    -0.157705877919E+02    0.25666E-01   -0.41076E-01   112   0.235E+01    0.808E-01
+DAV:   6    -0.157842901835E+02   -0.13702E-01   -0.16910E-01   132   0.646E+00    0.918E-01
+DAV:   7    -0.157674571891E+02    0.16833E-01   -0.94773E-02   114   0.120E+01    0.122E-01
+DAV:   8    -0.157709774495E+02   -0.35203E-02   -0.31089E-02   122   0.312E+00    0.662E-02
+DAV:   9    -0.157715920176E+02   -0.61457E-03   -0.23287E-03   100   0.964E-01    0.484E-02
+DAV:  10    -0.157725444026E+02   -0.95239E-03   -0.11310E-03    92   0.793E-01    0.480E-02
+DAV:  11    -0.157738307314E+02   -0.12863E-02   -0.92537E-04   100   0.550E-01    0.419E-02
+DAV:  12    -0.157742507248E+02   -0.41999E-03   -0.53149E-04    90   0.797E-01    0.389E-02
+DAV:  13    -0.157745081346E+02   -0.25741E-03   -0.49033E-04   106   0.949E-01    0.301E-02
+DAV:  14    -0.157747548813E+02   -0.24675E-03   -0.23457E-04    66   0.562E-01    0.175E-02
+DAV:  15    -0.157748478409E+02   -0.92960E-04   -0.58824E-05    72   0.148E-01
+   1 F= -.15774848E+02 E0= -.15756042E+02  d E =-.564189E-01
+ writing wavefunctions
+BFGS:    3 08:14:01      -15.756042        0.7399
+ running on    8 total cores
+ distrk:  each k-point on    8 cores,    1 groups
+ distr:  one band on    8 cores,    1 groups
+ using from now: INCAR     
+ vasp.6.1.2 22Jul20 (build Aug  2 2021 21:04:21) gamma-only                      
+ POSCAR found type information on POSCAR Cu
+ POSCAR found :  1 types and       7 ions
+ scaLAPACK will be used
+ -----------------------------------------------------------------------------
+|                                                                             |
+|           W    W    AA    RRRRR   N    N  II  N    N   GGGG   !!!           |
+|           W    W   A  A   R    R  NN   N  II  NN   N  G    G  !!!           |
+|           W    W  A    A  R    R  N N  N  II  N N  N  G       !!!           |
+|           W WW W  AAAAAA  RRRRR   N  N N  II  N  N N  G  GGG   !            |
+|           WW  WW  A    A  R   R   N   NN  II  N   NN  G    G                |
+|           W    W  A    A  R    R  N    N  II  N    N   GGGG   !!!           |
+|                                                                             |
+|     For optimal performance we recommend to set                             |
+|       NCORE = 4 - approx SQRT(number of cores).                             |
+|     NCORE specifies how many cores store one orbital (NPAR=cpu/NCORE).      |
+|     This setting can greatly improve the performance of VASP for DFT.       |
+|     The default, NCORE=1 might be grossly inefficient on modern             |
+|     multi-core architectures or massively parallel machines. Do your        |
+|     own testing!!!!                                                         |
+|     Unfortunately you need to use the default for GW and RPA                |
+|     calculations (for HF NCORE is supported but not extensively tested      |
+|     yet).                                                                   |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ -----------------------------------------------------------------------------
+|                                                                             |
+|               ----> ADVICE to this user running VASP <----                  |
+|                                                                             |
+|     You have a (more or less) 'small supercell' and for smaller cells       |
+|     it is recommended to use the reciprocal-space projection scheme!        |
+|     The real-space optimization is not efficient for small cells and it     |
+|     is also less accurate ...                                               |
+|     Therefore, set LREAL=.FALSE. in the INCAR file.                         |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ LDA part: xc-table for Pade appr. of Perdew
+ found WAVECAR, reading the header
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ...
+ reading WAVECAR
+ the WAVECAR file was read successfully
+ initial charge from wavefunction
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1    -0.158497870380E+02   -0.15850E+02   -0.62810E+00   138   0.153E+01    0.135E+00
+DAV:   2    -0.158246662811E+02    0.25121E-01   -0.25609E-01   146   0.211E+01    0.110E+00
+DAV:   3    -0.158096870535E+02    0.14979E-01   -0.12739E-01   104   0.149E+01    0.546E-01
+DAV:   4    -0.158095401263E+02    0.14693E-03   -0.46736E-02   146   0.308E+00    0.242E-01
+DAV:   5    -0.158087704956E+02    0.76963E-03   -0.62341E-03   128   0.302E+00    0.118E-01
+DAV:   6    -0.158088031186E+02   -0.32623E-04   -0.36453E-03   154   0.129E+00    0.544E-02
+DAV:   7    -0.158088633124E+02   -0.60194E-04   -0.66360E-04    90   0.829E-01
+   1 F= -.15808863E+02 E0= -.15790057E+02  d E =-.564190E-01
+ writing wavefunctions
+BFGS:    4 08:14:18      -15.790057        0.6625
+ running on    8 total cores
+ distrk:  each k-point on    8 cores,    1 groups
+ distr:  one band on    8 cores,    1 groups
+ using from now: INCAR     
+ vasp.6.1.2 22Jul20 (build Aug  2 2021 21:04:21) gamma-only                      
+ POSCAR found type information on POSCAR Cu
+ POSCAR found :  1 types and       7 ions
+ scaLAPACK will be used
+ -----------------------------------------------------------------------------
+|                                                                             |
+|           W    W    AA    RRRRR   N    N  II  N    N   GGGG   !!!           |
+|           W    W   A  A   R    R  NN   N  II  NN   N  G    G  !!!           |
+|           W    W  A    A  R    R  N N  N  II  N N  N  G       !!!           |
+|           W WW W  AAAAAA  RRRRR   N  N N  II  N  N N  G  GGG   !            |
+|           WW  WW  A    A  R   R   N   NN  II  N   NN  G    G                |
+|           W    W  A    A  R    R  N    N  II  N    N   GGGG   !!!           |
+|                                                                             |
+|     For optimal performance we recommend to set                             |
+|       NCORE = 4 - approx SQRT(number of cores).                             |
+|     NCORE specifies how many cores store one orbital (NPAR=cpu/NCORE).      |
+|     This setting can greatly improve the performance of VASP for DFT.       |
+|     The default, NCORE=1 might be grossly inefficient on modern             |
+|     multi-core architectures or massively parallel machines. Do your        |
+|     own testing!!!!                                                         |
+|     Unfortunately you need to use the default for GW and RPA                |
+|     calculations (for HF NCORE is supported but not extensively tested      |
+|     yet).                                                                   |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ -----------------------------------------------------------------------------
+|                                                                             |
+|               ----> ADVICE to this user running VASP <----                  |
+|                                                                             |
+|     You have a (more or less) 'small supercell' and for smaller cells       |
+|     it is recommended to use the reciprocal-space projection scheme!        |
+|     The real-space optimization is not efficient for small cells and it     |
+|     is also less accurate ...                                               |
+|     Therefore, set LREAL=.FALSE. in the INCAR file.                         |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ LDA part: xc-table for Pade appr. of Perdew
+ found WAVECAR, reading the header
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ...
+ reading WAVECAR
+ the WAVECAR file was read successfully
+ initial charge from wavefunction
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1    -0.258679768694E+02   -0.25868E+02   -0.41853E+02   138   0.263E+02    0.205E+01
+DAV:   2    -0.168384469093E+02    0.90295E+01   -0.88505E+01   136   0.166E+02    0.113E+01
+DAV:   3    -0.161071433806E+02    0.73130E+00   -0.19355E+01   114   0.128E+02    0.611E+00
+DAV:   4    -0.157885217620E+02    0.31862E+00   -0.51195E+00   144   0.576E+01    0.296E+00
+DAV:   5    -0.159228159187E+02   -0.13429E+00   -0.26037E+00   128   0.315E+01    0.183E+00
+DAV:   6    -0.159150131649E+02    0.78028E-02   -0.78822E-01    98   0.277E+01    0.603E-01
+DAV:   7    -0.159240525749E+02   -0.90394E-02   -0.16189E-01   144   0.106E+01    0.546E-01
+DAV:   8    -0.159248025606E+02   -0.74999E-03   -0.50270E-02   100   0.709E+00    0.186E-01
+DAV:   9    -0.159278269718E+02   -0.30244E-02   -0.16786E-02   116   0.374E+00    0.211E-01
+DAV:  10    -0.159294479158E+02   -0.16209E-02   -0.72270E-03   100   0.316E+00    0.666E-02
+DAV:  11    -0.159343808288E+02   -0.49329E-02   -0.61285E-03   132   0.170E+00    0.175E-01
+DAV:  12    -0.159365401955E+02   -0.21594E-02   -0.29362E-03   124   0.187E+00    0.632E-02
+DAV:  13    -0.159392100666E+02   -0.26699E-02   -0.19256E-03   152   0.770E-01    0.447E-02
+DAV:  14    -0.159409114338E+02   -0.17014E-02   -0.31758E-04    66   0.548E-01    0.258E-02
+DAV:  15    -0.159421948692E+02   -0.12834E-02   -0.27208E-04    72   0.315E-01    0.147E-02
+DAV:  16    -0.159431816180E+02   -0.98675E-03   -0.18495E-04    72   0.254E-01    0.145E-02
+DAV:  17    -0.159437003608E+02   -0.51874E-03   -0.10168E-04    72   0.263E-01    0.892E-03
+DAV:  18    -0.159440146665E+02   -0.31431E-03   -0.78170E-05    72   0.122E-01    0.896E-03
+DAV:  19    -0.159441444506E+02   -0.12978E-03   -0.49273E-05    72   0.169E-01    0.611E-03
+DAV:  20    -0.159442139721E+02   -0.69522E-04   -0.20673E-05    64   0.752E-02
+   1 F= -.15944214E+02 E0= -.15925408E+02  d E =-.564190E-01
+ writing wavefunctions
+BFGS:    5 08:14:45      -15.925408        0.3490
+ running on    8 total cores
+ distrk:  each k-point on    8 cores,    1 groups
+ distr:  one band on    8 cores,    1 groups
+ using from now: INCAR     
+ vasp.6.1.2 22Jul20 (build Aug  2 2021 21:04:21) gamma-only                      
+ POSCAR found type information on POSCAR Cu
+ POSCAR found :  1 types and       7 ions
+ scaLAPACK will be used
+ -----------------------------------------------------------------------------
+|                                                                             |
+|           W    W    AA    RRRRR   N    N  II  N    N   GGGG   !!!           |
+|           W    W   A  A   R    R  NN   N  II  NN   N  G    G  !!!           |
+|           W    W  A    A  R    R  N N  N  II  N N  N  G       !!!           |
+|           W WW W  AAAAAA  RRRRR   N  N N  II  N  N N  G  GGG   !            |
+|           WW  WW  A    A  R   R   N   NN  II  N   NN  G    G                |
+|           W    W  A    A  R    R  N    N  II  N    N   GGGG   !!!           |
+|                                                                             |
+|     For optimal performance we recommend to set                             |
+|       NCORE = 4 - approx SQRT(number of cores).                             |
+|     NCORE specifies how many cores store one orbital (NPAR=cpu/NCORE).      |
+|     This setting can greatly improve the performance of VASP for DFT.       |
+|     The default, NCORE=1 might be grossly inefficient on modern             |
+|     multi-core architectures or massively parallel machines. Do your        |
+|     own testing!!!!                                                         |
+|     Unfortunately you need to use the default for GW and RPA                |
+|     calculations (for HF NCORE is supported but not extensively tested      |
+|     yet).                                                                   |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ -----------------------------------------------------------------------------
+|                                                                             |
+|               ----> ADVICE to this user running VASP <----                  |
+|                                                                             |
+|     You have a (more or less) 'small supercell' and for smaller cells       |
+|     it is recommended to use the reciprocal-space projection scheme!        |
+|     The real-space optimization is not efficient for small cells and it     |
+|     is also less accurate ...                                               |
+|     Therefore, set LREAL=.FALSE. in the INCAR file.                         |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ LDA part: xc-table for Pade appr. of Perdew
+ found WAVECAR, reading the header
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ...
+ reading WAVECAR
+ the WAVECAR file was read successfully
+ initial charge from wavefunction
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1    -0.160162017081E+02   -0.16016E+02   -0.96064E+00   138   0.204E+01    0.178E+00
+DAV:   2    -0.159741296199E+02    0.42072E-01   -0.40495E-01   138   0.282E+01    0.131E+00
+DAV:   3    -0.159517899089E+02    0.22340E-01   -0.18297E-01   120   0.187E+01    0.667E-01
+DAV:   4    -0.159549782540E+02   -0.31883E-02   -0.95138E-02   144   0.401E+00    0.311E-01
+DAV:   5    -0.159533304642E+02    0.16478E-02   -0.10107E-02   120   0.375E+00    0.162E-01
+DAV:   6    -0.159539836289E+02   -0.65316E-03   -0.13133E-02   170   0.194E+00    0.140E-01
+DAV:   7    -0.159535075748E+02    0.47605E-03   -0.39916E-03   138   0.228E+00    0.307E-02
+DAV:   8    -0.159537389661E+02   -0.23139E-03   -0.72084E-04   108   0.525E-01    0.168E-02
+DAV:   9    -0.159539082487E+02   -0.16928E-03   -0.92163E-05    64   0.324E-01    0.168E-02
+DAV:  10    -0.159540979619E+02   -0.18971E-03   -0.83509E-05    60   0.272E-01    0.780E-03
+DAV:  11    -0.159543384777E+02   -0.24052E-03   -0.58062E-05    72   0.124E-01    0.753E-03
+DAV:  12    -0.159545284950E+02   -0.19002E-03   -0.58703E-05    72   0.144E-01    0.103E-02
+DAV:  13    -0.159546011300E+02   -0.72635E-04   -0.28403E-05    64   0.107E-01
+   1 F= -.15954601E+02 E0= -.15935795E+02  d E =-.564189E-01
+ writing wavefunctions
+BFGS:    6 08:15:07      -15.935795        0.2670
+ running on    8 total cores
+ distrk:  each k-point on    8 cores,    1 groups
+ distr:  one band on    8 cores,    1 groups
+ using from now: INCAR     
+ vasp.6.1.2 22Jul20 (build Aug  2 2021 21:04:21) gamma-only                      
+ POSCAR found type information on POSCAR Cu
+ POSCAR found :  1 types and       7 ions
+ scaLAPACK will be used
+ -----------------------------------------------------------------------------
+|                                                                             |
+|           W    W    AA    RRRRR   N    N  II  N    N   GGGG   !!!           |
+|           W    W   A  A   R    R  NN   N  II  NN   N  G    G  !!!           |
+|           W    W  A    A  R    R  N N  N  II  N N  N  G       !!!           |
+|           W WW W  AAAAAA  RRRRR   N  N N  II  N  N N  G  GGG   !            |
+|           WW  WW  A    A  R   R   N   NN  II  N   NN  G    G                |
+|           W    W  A    A  R    R  N    N  II  N    N   GGGG   !!!           |
+|                                                                             |
+|     For optimal performance we recommend to set                             |
+|       NCORE = 4 - approx SQRT(number of cores).                             |
+|     NCORE specifies how many cores store one orbital (NPAR=cpu/NCORE).      |
+|     This setting can greatly improve the performance of VASP for DFT.       |
+|     The default, NCORE=1 might be grossly inefficient on modern             |
+|     multi-core architectures or massively parallel machines. Do your        |
+|     own testing!!!!                                                         |
+|     Unfortunately you need to use the default for GW and RPA                |
+|     calculations (for HF NCORE is supported but not extensively tested      |
+|     yet).                                                                   |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ -----------------------------------------------------------------------------
+|                                                                             |
+|               ----> ADVICE to this user running VASP <----                  |
+|                                                                             |
+|     You have a (more or less) 'small supercell' and for smaller cells       |
+|     it is recommended to use the reciprocal-space projection scheme!        |
+|     The real-space optimization is not efficient for small cells and it     |
+|     is also less accurate ...                                               |
+|     Therefore, set LREAL=.FALSE. in the INCAR file.                         |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ LDA part: xc-table for Pade appr. of Perdew
+ found WAVECAR, reading the header
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ...
+ reading WAVECAR
+ the WAVECAR file was read successfully
+ initial charge from wavefunction
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1    -0.159870926926E+02   -0.15987E+02   -0.52405E+00   122   0.136E+01    0.118E+00
+DAV:   2    -0.159652299452E+02    0.21863E-01   -0.18525E-01   154   0.144E+01    0.790E-01
+DAV:   3    -0.159602427729E+02    0.49872E-02   -0.65475E-02   120   0.113E+01    0.503E-01
+DAV:   4    -0.159593262992E+02    0.91647E-03   -0.33156E-02   168   0.463E+00    0.161E-01
+DAV:   5    -0.159592553931E+02    0.70906E-04   -0.64792E-03   168   0.252E+00    0.110E-01
+DAV:   6    -0.159593804284E+02   -0.12504E-03   -0.25608E-03   152   0.126E+00    0.453E-02
+DAV:   7    -0.159593712913E+02    0.91371E-05   -0.30766E-04    72   0.552E-01
+   1 F= -.15959371E+02 E0= -.15940565E+02  d E =-.564189E-01
+ writing wavefunctions
+BFGS:    7 08:15:24      -15.940565        0.2297
+ running on    8 total cores
+ distrk:  each k-point on    8 cores,    1 groups
+ distr:  one band on    8 cores,    1 groups
+ using from now: INCAR     
+ vasp.6.1.2 22Jul20 (build Aug  2 2021 21:04:21) gamma-only                      
+ POSCAR found type information on POSCAR Cu
+ POSCAR found :  1 types and       7 ions
+ scaLAPACK will be used
+ -----------------------------------------------------------------------------
+|                                                                             |
+|           W    W    AA    RRRRR   N    N  II  N    N   GGGG   !!!           |
+|           W    W   A  A   R    R  NN   N  II  NN   N  G    G  !!!           |
+|           W    W  A    A  R    R  N N  N  II  N N  N  G       !!!           |
+|           W WW W  AAAAAA  RRRRR   N  N N  II  N  N N  G  GGG   !            |
+|           WW  WW  A    A  R   R   N   NN  II  N   NN  G    G                |
+|           W    W  A    A  R    R  N    N  II  N    N   GGGG   !!!           |
+|                                                                             |
+|     For optimal performance we recommend to set                             |
+|       NCORE = 4 - approx SQRT(number of cores).                             |
+|     NCORE specifies how many cores store one orbital (NPAR=cpu/NCORE).      |
+|     This setting can greatly improve the performance of VASP for DFT.       |
+|     The default, NCORE=1 might be grossly inefficient on modern             |
+|     multi-core architectures or massively parallel machines. Do your        |
+|     own testing!!!!                                                         |
+|     Unfortunately you need to use the default for GW and RPA                |
+|     calculations (for HF NCORE is supported but not extensively tested      |
+|     yet).                                                                   |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ -----------------------------------------------------------------------------
+|                                                                             |
+|               ----> ADVICE to this user running VASP <----                  |
+|                                                                             |
+|     You have a (more or less) 'small supercell' and for smaller cells       |
+|     it is recommended to use the reciprocal-space projection scheme!        |
+|     The real-space optimization is not efficient for small cells and it     |
+|     is also less accurate ...                                               |
+|     Therefore, set LREAL=.FALSE. in the INCAR file.                         |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ LDA part: xc-table for Pade appr. of Perdew
+ found WAVECAR, reading the header
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ...
+ reading WAVECAR
+ the WAVECAR file was read successfully
+ initial charge from wavefunction
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1    -0.159697787982E+02   -0.15970E+02   -0.20154E+00    98   0.790E+00    0.661E-01
+DAV:   2    -0.159645870169E+02    0.51918E-02   -0.75701E-02   146   0.597E+00    0.452E-01
+DAV:   3    -0.159640783520E+02    0.50866E-03   -0.16893E-02   120   0.508E+00    0.275E-01
+DAV:   4    -0.159636257475E+02    0.45260E-03   -0.72040E-03   136   0.336E+00    0.752E-02
+DAV:   5    -0.159637641372E+02   -0.13839E-03   -0.18554E-03   144   0.923E-01    0.485E-02
+DAV:   6    -0.159637660843E+02   -0.19471E-05   -0.21509E-04    64   0.590E-01
+   1 F= -.15963766E+02 E0= -.15944960E+02  d E =-.564189E-01
+ writing wavefunctions
+BFGS:    8 08:15:39      -15.944960        0.2154
+ running on    8 total cores
+ distrk:  each k-point on    8 cores,    1 groups
+ distr:  one band on    8 cores,    1 groups
+ using from now: INCAR     
+ vasp.6.1.2 22Jul20 (build Aug  2 2021 21:04:21) gamma-only                      
+ POSCAR found type information on POSCAR Cu
+ POSCAR found :  1 types and       7 ions
+ scaLAPACK will be used
+ -----------------------------------------------------------------------------
+|                                                                             |
+|           W    W    AA    RRRRR   N    N  II  N    N   GGGG   !!!           |
+|           W    W   A  A   R    R  NN   N  II  NN   N  G    G  !!!           |
+|           W    W  A    A  R    R  N N  N  II  N N  N  G       !!!           |
+|           W WW W  AAAAAA  RRRRR   N  N N  II  N  N N  G  GGG   !            |
+|           WW  WW  A    A  R   R   N   NN  II  N   NN  G    G                |
+|           W    W  A    A  R    R  N    N  II  N    N   GGGG   !!!           |
+|                                                                             |
+|     For optimal performance we recommend to set                             |
+|       NCORE = 4 - approx SQRT(number of cores).                             |
+|     NCORE specifies how many cores store one orbital (NPAR=cpu/NCORE).      |
+|     This setting can greatly improve the performance of VASP for DFT.       |
+|     The default, NCORE=1 might be grossly inefficient on modern             |
+|     multi-core architectures or massively parallel machines. Do your        |
+|     own testing!!!!                                                         |
+|     Unfortunately you need to use the default for GW and RPA                |
+|     calculations (for HF NCORE is supported but not extensively tested      |
+|     yet).                                                                   |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ -----------------------------------------------------------------------------
+|                                                                             |
+|               ----> ADVICE to this user running VASP <----                  |
+|                                                                             |
+|     You have a (more or less) 'small supercell' and for smaller cells       |
+|     it is recommended to use the reciprocal-space projection scheme!        |
+|     The real-space optimization is not efficient for small cells and it     |
+|     is also less accurate ...                                               |
+|     Therefore, set LREAL=.FALSE. in the INCAR file.                         |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ LDA part: xc-table for Pade appr. of Perdew
+ found WAVECAR, reading the header
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ...
+ reading WAVECAR
+ the WAVECAR file was read successfully
+ initial charge from wavefunction
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1    -0.159899902816E+02   -0.15990E+02   -0.54225E+00   108   0.132E+01    0.115E+00
+DAV:   2    -0.159734831760E+02    0.16507E-01   -0.18475E-01   146   0.118E+01    0.757E-01
+DAV:   3    -0.159708024305E+02    0.26807E-02   -0.49271E-02   112   0.101E+01    0.484E-01
+DAV:   4    -0.159697730220E+02    0.10294E-02   -0.23921E-02   144   0.503E+00    0.134E-01
+DAV:   5    -0.159700694375E+02   -0.29642E-03   -0.51610E-03   152   0.170E+00    0.874E-02
+DAV:   6    -0.159700597701E+02    0.96674E-05   -0.12488E-03   112   0.140E+00    0.405E-02
+DAV:   7    -0.159701616599E+02   -0.10189E-03   -0.50171E-04    96   0.484E-01    0.142E-02
+DAV:   8    -0.159702137620E+02   -0.52102E-04   -0.75663E-05    64   0.245E-01
+   1 F= -.15970214E+02 E0= -.15951407E+02  d E =-.564189E-01
+ writing wavefunctions
+BFGS:    9 08:15:56      -15.951407        0.1531
+ running on    8 total cores
+ distrk:  each k-point on    8 cores,    1 groups
+ distr:  one band on    8 cores,    1 groups
+ using from now: INCAR     
+ vasp.6.1.2 22Jul20 (build Aug  2 2021 21:04:21) gamma-only                      
+ POSCAR found type information on POSCAR Cu
+ POSCAR found :  1 types and       7 ions
+ scaLAPACK will be used
+ -----------------------------------------------------------------------------
+|                                                                             |
+|           W    W    AA    RRRRR   N    N  II  N    N   GGGG   !!!           |
+|           W    W   A  A   R    R  NN   N  II  NN   N  G    G  !!!           |
+|           W    W  A    A  R    R  N N  N  II  N N  N  G       !!!           |
+|           W WW W  AAAAAA  RRRRR   N  N N  II  N  N N  G  GGG   !            |
+|           WW  WW  A    A  R   R   N   NN  II  N   NN  G    G                |
+|           W    W  A    A  R    R  N    N  II  N    N   GGGG   !!!           |
+|                                                                             |
+|     For optimal performance we recommend to set                             |
+|       NCORE = 4 - approx SQRT(number of cores).                             |
+|     NCORE specifies how many cores store one orbital (NPAR=cpu/NCORE).      |
+|     This setting can greatly improve the performance of VASP for DFT.       |
+|     The default, NCORE=1 might be grossly inefficient on modern             |
+|     multi-core architectures or massively parallel machines. Do your        |
+|     own testing!!!!                                                         |
+|     Unfortunately you need to use the default for GW and RPA                |
+|     calculations (for HF NCORE is supported but not extensively tested      |
+|     yet).                                                                   |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ -----------------------------------------------------------------------------
+|                                                                             |
+|               ----> ADVICE to this user running VASP <----                  |
+|                                                                             |
+|     You have a (more or less) 'small supercell' and for smaller cells       |
+|     it is recommended to use the reciprocal-space projection scheme!        |
+|     The real-space optimization is not efficient for small cells and it     |
+|     is also less accurate ...                                               |
+|     Therefore, set LREAL=.FALSE. in the INCAR file.                         |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ LDA part: xc-table for Pade appr. of Perdew
+ found WAVECAR, reading the header
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ...
+ reading WAVECAR
+ the WAVECAR file was read successfully
+ initial charge from wavefunction
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1    -0.160010902784E+02   -0.16001E+02   -0.68622E+00   106   0.148E+01    0.132E+00
+DAV:   2    -0.159785559268E+02    0.22534E-01   -0.29526E-01   144   0.129E+01    0.879E-01
+DAV:   3    -0.159747043775E+02    0.38515E-02   -0.68020E-02   112   0.114E+01    0.576E-01
+DAV:   4    -0.159731421219E+02    0.15623E-02   -0.29339E-02   136   0.559E+00    0.197E-01
+DAV:   5    -0.159734312059E+02   -0.28908E-03   -0.67995E-03   144   0.190E+00    0.867E-02
+DAV:   6    -0.159734542251E+02   -0.23019E-04   -0.15870E-03   120   0.146E+00    0.533E-02
+DAV:   7    -0.159735182713E+02   -0.64046E-04   -0.56535E-04   104   0.681E-01
+   1 F= -.15973518E+02 E0= -.15954712E+02  d E =-.564189E-01
+ writing wavefunctions
+BFGS:   10 08:16:13      -15.954712        0.0741
+ running on    8 total cores
+ distrk:  each k-point on    8 cores,    1 groups
+ distr:  one band on    8 cores,    1 groups
+ using from now: INCAR     
+ vasp.6.1.2 22Jul20 (build Aug  2 2021 21:04:21) gamma-only                      
+ POSCAR found type information on POSCAR Cu
+ POSCAR found :  1 types and       7 ions
+ scaLAPACK will be used
+ -----------------------------------------------------------------------------
+|                                                                             |
+|           W    W    AA    RRRRR   N    N  II  N    N   GGGG   !!!           |
+|           W    W   A  A   R    R  NN   N  II  NN   N  G    G  !!!           |
+|           W    W  A    A  R    R  N N  N  II  N N  N  G       !!!           |
+|           W WW W  AAAAAA  RRRRR   N  N N  II  N  N N  G  GGG   !            |
+|           WW  WW  A    A  R   R   N   NN  II  N   NN  G    G                |
+|           W    W  A    A  R    R  N    N  II  N    N   GGGG   !!!           |
+|                                                                             |
+|     For optimal performance we recommend to set                             |
+|       NCORE = 4 - approx SQRT(number of cores).                             |
+|     NCORE specifies how many cores store one orbital (NPAR=cpu/NCORE).      |
+|     This setting can greatly improve the performance of VASP for DFT.       |
+|     The default, NCORE=1 might be grossly inefficient on modern             |
+|     multi-core architectures or massively parallel machines. Do your        |
+|     own testing!!!!                                                         |
+|     Unfortunately you need to use the default for GW and RPA                |
+|     calculations (for HF NCORE is supported but not extensively tested      |
+|     yet).                                                                   |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ -----------------------------------------------------------------------------
+|                                                                             |
+|               ----> ADVICE to this user running VASP <----                  |
+|                                                                             |
+|     You have a (more or less) 'small supercell' and for smaller cells       |
+|     it is recommended to use the reciprocal-space projection scheme!        |
+|     The real-space optimization is not efficient for small cells and it     |
+|     is also less accurate ...                                               |
+|     Therefore, set LREAL=.FALSE. in the INCAR file.                         |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ LDA part: xc-table for Pade appr. of Perdew
+ found WAVECAR, reading the header
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ...
+ reading WAVECAR
+ the WAVECAR file was read successfully
+ initial charge from wavefunction
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1    -0.159761001242E+02   -0.15976E+02   -0.21859E-01   100   0.247E+00    0.226E-01
+DAV:   2    -0.159749034312E+02    0.11967E-02   -0.98887E-03   144   0.155E+00    0.146E-01
+DAV:   3    -0.159747783625E+02    0.12507E-03   -0.18438E-03   112   0.136E+00    0.848E-02
+DAV:   4    -0.159747414997E+02    0.36863E-04   -0.95789E-04   128   0.119E+00
+   1 F= -.15974741E+02 E0= -.15955935E+02  d E =-.564189E-01
+ writing wavefunctions
+BFGS:   11 08:16:26      -15.955935        0.0629
+ running on    8 total cores
+ distrk:  each k-point on    8 cores,    1 groups
+ distr:  one band on    8 cores,    1 groups
+ using from now: INCAR     
+ vasp.6.1.2 22Jul20 (build Aug  2 2021 21:04:21) gamma-only                      
+ POSCAR found type information on POSCAR Cu
+ POSCAR found :  1 types and       7 ions
+ scaLAPACK will be used
+ -----------------------------------------------------------------------------
+|                                                                             |
+|           W    W    AA    RRRRR   N    N  II  N    N   GGGG   !!!           |
+|           W    W   A  A   R    R  NN   N  II  NN   N  G    G  !!!           |
+|           W    W  A    A  R    R  N N  N  II  N N  N  G       !!!           |
+|           W WW W  AAAAAA  RRRRR   N  N N  II  N  N N  G  GGG   !            |
+|           WW  WW  A    A  R   R   N   NN  II  N   NN  G    G                |
+|           W    W  A    A  R    R  N    N  II  N    N   GGGG   !!!           |
+|                                                                             |
+|     For optimal performance we recommend to set                             |
+|       NCORE = 4 - approx SQRT(number of cores).                             |
+|     NCORE specifies how many cores store one orbital (NPAR=cpu/NCORE).      |
+|     This setting can greatly improve the performance of VASP for DFT.       |
+|     The default, NCORE=1 might be grossly inefficient on modern             |
+|     multi-core architectures or massively parallel machines. Do your        |
+|     own testing!!!!                                                         |
+|     Unfortunately you need to use the default for GW and RPA                |
+|     calculations (for HF NCORE is supported but not extensively tested      |
+|     yet).                                                                   |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ -----------------------------------------------------------------------------
+|                                                                             |
+|               ----> ADVICE to this user running VASP <----                  |
+|                                                                             |
+|     You have a (more or less) 'small supercell' and for smaller cells       |
+|     it is recommended to use the reciprocal-space projection scheme!        |
+|     The real-space optimization is not efficient for small cells and it     |
+|     is also less accurate ...                                               |
+|     Therefore, set LREAL=.FALSE. in the INCAR file.                         |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ LDA part: xc-table for Pade appr. of Perdew
+ found WAVECAR, reading the header
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ...
+ reading WAVECAR
+ the WAVECAR file was read successfully
+ initial charge from wavefunction
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1    -0.159817432702E+02   -0.15982E+02   -0.62333E-01   138   0.507E+00    0.419E-01
+DAV:   2    -0.159763219687E+02    0.54213E-02   -0.26289E-02   154   0.523E+00    0.295E-01
+DAV:   3    -0.159753070237E+02    0.10149E-02   -0.10107E-02   112   0.431E+00    0.177E-01
+DAV:   4    -0.159751917659E+02    0.11526E-03   -0.59997E-03   160   0.178E+00    0.685E-02
+DAV:   5    -0.159751458096E+02    0.45956E-04   -0.66706E-04   112   0.579E-01
+   1 F= -.15975146E+02 E0= -.15956339E+02  d E =-.564189E-01
+ writing wavefunctions
+BFGS:   12 08:16:41      -15.956339        0.0634
+ running on    8 total cores
+ distrk:  each k-point on    8 cores,    1 groups
+ distr:  one band on    8 cores,    1 groups
+ using from now: INCAR     
+ vasp.6.1.2 22Jul20 (build Aug  2 2021 21:04:21) gamma-only                      
+ POSCAR found type information on POSCAR Cu
+ POSCAR found :  1 types and       7 ions
+ scaLAPACK will be used
+ -----------------------------------------------------------------------------
+|                                                                             |
+|           W    W    AA    RRRRR   N    N  II  N    N   GGGG   !!!           |
+|           W    W   A  A   R    R  NN   N  II  NN   N  G    G  !!!           |
+|           W    W  A    A  R    R  N N  N  II  N N  N  G       !!!           |
+|           W WW W  AAAAAA  RRRRR   N  N N  II  N  N N  G  GGG   !            |
+|           WW  WW  A    A  R   R   N   NN  II  N   NN  G    G                |
+|           W    W  A    A  R    R  N    N  II  N    N   GGGG   !!!           |
+|                                                                             |
+|     For optimal performance we recommend to set                             |
+|       NCORE = 4 - approx SQRT(number of cores).                             |
+|     NCORE specifies how many cores store one orbital (NPAR=cpu/NCORE).      |
+|     This setting can greatly improve the performance of VASP for DFT.       |
+|     The default, NCORE=1 might be grossly inefficient on modern             |
+|     multi-core architectures or massively parallel machines. Do your        |
+|     own testing!!!!                                                         |
+|     Unfortunately you need to use the default for GW and RPA                |
+|     calculations (for HF NCORE is supported but not extensively tested      |
+|     yet).                                                                   |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ -----------------------------------------------------------------------------
+|                                                                             |
+|               ----> ADVICE to this user running VASP <----                  |
+|                                                                             |
+|     You have a (more or less) 'small supercell' and for smaller cells       |
+|     it is recommended to use the reciprocal-space projection scheme!        |
+|     The real-space optimization is not efficient for small cells and it     |
+|     is also less accurate ...                                               |
+|     Therefore, set LREAL=.FALSE. in the INCAR file.                         |
+|                                                                             |
+ -----------------------------------------------------------------------------
+
+ LDA part: xc-table for Pade appr. of Perdew
+ found WAVECAR, reading the header
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ...
+ reading WAVECAR
+ the WAVECAR file was read successfully
+ initial charge from wavefunction
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1    -0.159763196813E+02   -0.15976E+02   -0.10532E-01   138   0.248E+00    0.183E-01
+DAV:   2    -0.159757958834E+02    0.52380E-03   -0.50983E-03   168   0.318E+00    0.140E-01
+DAV:   3    -0.159755344658E+02    0.26142E-03   -0.18748E-03   112   0.197E+00    0.701E-02
+DAV:   4    -0.159755350037E+02   -0.53792E-06   -0.82638E-04   128   0.367E-01
+   1 F= -.15975535E+02 E0= -.15956729E+02  d E =-.564190E-01
+ writing wavefunctions
+BFGS:   13 08:16:55      -15.956729        0.0494
+wall time: 275.2614119052887 s

@@ -36,42 +36,43 @@ initial_structure.center()
 name = initial_structure.symbols
 
 # OAL_example configs
-flare_config  = {
-        "sigma": 4.5,
-        "power": 2,
-        "cutoff_function": "quadratic",
-        "cutoff": 5.0,
-        "radial_basis": "chebyshev",
-        "cutoff_hyps": [],
-        "sigma_e": 0.009,
-        "sigma_f": 0.005,
-        "sigma_s": 0.0006,
-        "hpo_max_iterations": 50,
-        "freeze_hyps": 0,
+flare_config = {
+    "sigma": 4.5,
+    "power": 2,
+    "cutoff_function": "quadratic",
+    "cutoff": 5.0,
+    "radial_basis": "chebyshev",
+    "cutoff_hyps": [],
+    "sigma_e": 0.009,
+    "sigma_f": 0.005,
+    "sigma_s": 0.0006,
+    "hpo_max_iterations": 50,
+    "freeze_hyps": 0,
 }
 
 learner_params = {
-        "filename": "relax_example",
-        "file_dir": "mlp_examples/",
-        "stat_uncertain_tol": 0.08,
-        "dyn_uncertain_tol": 0.1,
-        "fmax_verify_threshold": 0.05,  # eV/AA
+    "filename": "relax_example",
+    "file_dir": "mlp_examples/",
+    "stat_uncertain_tol": 0.08,
+    "dyn_uncertain_tol": 0.1,
+    "fmax_verify_threshold": 0.05,  # eV/AA
 }
 
 vasp_flags = {
-        #         "ibrion": -1,
-        #         "nsw": 0,
-        "isif": 0,
-        "isym": 0,
-        "lreal": "Auto",
-        "symprec": 1e-10,
-        "encut": 350.0,
-        "ncore": 8,
-        "xc": "PBE",
+    #         "ibrion": -1,
+    #         "nsw": 0,
+    "isif": 0,
+    "isym": 0,
+    "lreal": "Auto",
+    "symprec": 1e-10,
+    "encut": 350.0,
+    "ncore": 8,
+    "xc": "PBE",
+    "txt": "-",
 }
 
 
-def run_opt(vasp, optimizer=BFGS, use_al=True):
+def run_opt(vasp, optimizer=BFGS, use_al=True, store_wf=True, traj_name="oal.traj"):
     """Choose a backend for vasp or VaspInteractive calculator"""
     assert vasp in (Vasp, VaspInteractive)
     calc_name = vasp.name
@@ -79,42 +80,94 @@ def run_opt(vasp, optimizer=BFGS, use_al=True):
     images = [initial_structure.copy()]
     elements = np.unique(initial_structure.get_chemical_symbols())
 
-
     parent_calc = vasp(**vasp_flags)
     calc_dir = example_dir / f"{calc_name}_inter_tmp"
     parent_calc.set(directory=calc_dir)
-    os.system(f"rm -rf {calc_dir.as_posix()}")
+    os.system(f"rm -rf {calc_dir.as_posix()}/*")
 
     if calc_name == "VaspInteractive":
         context = parent_calc
     else:
         # For normal vasp use a dummy context
         context = contextlib.suppress()
-        parent_calc.set(ibrion=-1, nsw=0, istart=0)
+        parent_calc.set(ibrion=-1, nsw=0)
+        if not store_wf:
+            parent_calc.set(istart=0, lwave=False)
 
     ml_potential = FlarePPCalc(flare_config, images)
 
     with context:
         if use_al:
-            real_calc = OnlineLearner(
-                learner_params,
-                images,
-                ml_potential,
-                parent_calc
-            )
+            real_calc = OnlineLearner(learner_params, images, ml_potential, parent_calc)
         else:
             real_calc = parent_calc
         images[0].calc = real_calc
-        dyn = optimizer(images[0], trajectory = (example_dir / f'oal_{vasp.name}_{use_al}.traj').as_posix())
+        dyn = optimizer(images[0], trajectory=(example_dir / traj_name).as_posix())
         if use_al:
             dyn.attach(replay_trajectory, 1, images[0].calc, dyn)
-        dyn.run(fmax=0.05, steps=1000) 
-        
+        dyn.run(fmax=0.05, steps=1000)
 
-#     print(onlinecalc.parent_calls)
+    #     print(onlinecalc.parent_calls)
     return
 
 
 if __name__ == "__main__":
+    import time
+
+    times = []
+    print("*" * 40)
+    print("Running with BFGS + vasp -- no cache")
+    # force sync of output
+    time.sleep(5)
+    t_ = time.time()
+    run_opt(Vasp, use_al=False, store_wf=False, traj_name="vasp_bfgs_nocache.traj")
+    time.sleep(5)
+    t_ = time.time() - t_
+    print(f"wall time: {t_} s")
+    times.append(t_)
+
+    print("*" * 40)
+    print("Running with BFGS + vasp -- cache")
+    time.sleep(5)
+    t_ = time.time()
+    run_opt(Vasp, use_al=False, store_wf=True, traj_name="vasp_bfgs_cache.traj")
+    t_ = time.time() - t_
+    time.sleep(5)
+    print(f"wall time: {t_} s")
+    times.append(t_)
+
+    print("*" * 40)
+    print("Running with BFGS + vasp inter")
+    time.sleep(5)
+    t_ = time.time()
+    run_opt(VaspInteractive, use_al=False, traj_name="vpi_bfgs.traj")
+    t_ = time.time() - t_
+    time.sleep(5)
+    print(f"wall time: {t_} s")
+    times.append(t_)
+
+    print("*" * 40)
+    print("Running with OAL + vasp")
+    time.sleep(5)
+    t_ = time.time()
+    run_opt(Vasp, use_al=True, store_wf=True, traj_name="vasp_al.traj")
+    t_ = time.time() - t_
+    time.sleep(5)
+    print(f"wall time: {t_} s")
+    times.append(t_)
+
+    print("*" * 40)
+    print("Running with OAL + vasp inter")
+    time.sleep(5)
+    t_ = time.time()
+    run_opt(VaspInteractive, use_al=True, store_wf=True, traj_name="vpi_al.traj")
+    t_ = time.time() - t_
+    time.sleep(5)
+    print(f"wall time: {t_} s")
+    times.append(t_)
+
+    np.save(example_dir / "times.npy", times)
+
+
 #     run_opt(Vasp)
-    run_opt(VaspInteractive, use_al=False)
+#     run_opt(VaspInteractive, use_al=False)
