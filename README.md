@@ -1,4 +1,6 @@
 # Interactive Vasp calculator
+![workflow](https://github.com/ulissigroup/vasp-interactive/actions/workflows/package_and_unittest.yml/badge.svg)
+
 This repo provides a patched version of the `VaspInteractive` calculator, 
 originally from Atomic Simulation Environment (`ase`).
 
