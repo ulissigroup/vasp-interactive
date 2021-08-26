@@ -5,6 +5,10 @@ name: Package installation and test
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'examples/**'
+      - 'tutorials/**'
   pull_request:
     branches: [ main ]
   workflow_dispatch:
