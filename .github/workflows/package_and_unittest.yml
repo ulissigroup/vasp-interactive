@@ -57,13 +57,13 @@ jobs:
       if: ${{ matrix.vasp-version != 'vasp.5.4.4.pl2' }}
       run: |
         source activate actions
-        export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_gam"
+        export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_std"
         echo $VASP_COMMAND
-        for f in tests/test*.py; do python -m pytest -s $f; killall vasp_std vasp_gam || echo "pass"; done
+        for f in tests/test*.py; do python -m pytest -s $f; killall vasp_std || echo "pass"; done
     - name: Test with pytest vasp5
       if: ${{ matrix.vasp-version == 'vasp.5.4.4.pl2' }}
       run: |
         source activate actions
         export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_gam"
         echo $VASP_COMMAND
-        python -m pytest -s tests/test_vasp_version.py && killall vasp_std vasp_gam
+        python -m pytest -s tests/test_vasp_version.py && killall vasp_gam
