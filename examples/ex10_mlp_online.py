@@ -2,41 +2,19 @@
    Need https://github.com/ulissigroup/al_mlp as dependency.
    This example requires CPU >= 8.0
 """
-from al_mlp.atomistic_methods import Relaxation, replay_trajectory
-from al_mlp.online_learner.online_learner import OnlineLearner
-from al_mlp.ml_potentials.flare_pp_calc import FlarePPCalc
+from al_mlp.atomistic_methods import replay_trajectory
 from ase.calculators.vasp import Vasp
 from vasp_interactive import VaspInteractive
 from ase.io import Trajectory
 import numpy as np
-from ase.cluster.decahedron import Decahedron
 from ase.optimize import BFGS
+from pathlib import Path
 import torch
 import os
 import copy
-
 import contextlib
 
-
-from pathlib import Path
-
-curdir = Path("./").resolve()
-example_dir = curdir / "mlp_examples"
-
-os.environ[
-    "VASP_COMMAND"
-] = "mpirun -q -np 8 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 /opt/vasp.6.1.2_pgi_mkl/bin/vasp_gam"
-
-# Initialize with a Decahedron
-initial_structure = Decahedron("Cu", 2, 1, 0)
-initial_structure.rattle(0.1)
-initial_structure.set_pbc(True)
-initial_structure.set_cell([15, 15, 15])
-initial_structure.center()
-name = initial_structure.symbols
-
-# OAL_example configs
-flare_config = {
+default_flare_config = {
     "sigma": 4.5,
     "power": 2,
     "cutoff_function": "quadratic",
@@ -50,13 +28,57 @@ flare_config = {
     "freeze_hyps": 0,
 }
 
-learner_params = {
+default_learner_params = {
     "filename": "relax_example",
     "file_dir": "mlp_examples/",
     "stat_uncertain_tol": 0.08,
     "dyn_uncertain_tol": 0.1,
     "fmax_verify_threshold": 0.05,  # eV/AA
 }
+
+
+def gen_online_calc(
+    images,
+    parent_calc,
+    flare_config=default_flare_config,
+    learner_params=default_learner_params,
+):
+    """Use default parameters to generate online calc"""
+    from al_mlp.ml_potentials.flare_pp_calc import FlarePPCalc
+    from al_mlp.online_learner.online_learner import OnlineLearner
+
+    ml_potential = FlarePPCalc(flare_config, images)
+    calc = OnlineLearner(learner_params, images, ml_potential, parent_calc)
+    return calc
+
+
+def gen_cluster(metal="Cu", number=10):
+    """Use random code in cluster_mlp to generate a cluster"""
+    from cluster_mlp.fillPool import fillPool
+    from ase.data import atomic_numbers, covalent_radii
+
+    eleNames = [metal]
+    eleNums = [number]
+    eleRadii = [covalent_radii[atomic_numbers[ele]] for ele in eleNames]
+    return fillPool(eleNames, eleNums, eleRadii, None)
+
+
+curdir = Path("./").resolve()
+example_dir = curdir / "mlp_examples"
+
+os.environ[
+    "VASP_COMMAND"
+] = "mpirun -q -np 8 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 /opt/vasp.6.1.2_pgi_mkl/bin/vasp_gam"
+
+# Initialize with a Decahedron
+# initial_structure = Decahedron("Cu", 2, 1, 0)
+# initial_structure.rattle(0.1)
+# initial_structure.set_pbc(True)
+# initial_structure.set_cell([15, 15, 15])
+# initial_structure.center()
+# name = initial_structure.symbols
+
+# OAL_example configs
 
 vasp_flags = {
     #         "ibrion": -1,
@@ -76,7 +98,7 @@ def run_opt(vasp, optimizer=BFGS, use_al=True, store_wf=True, traj_name="oal.tra
     """Choose a backend for vasp or VaspInteractive calculator"""
     assert vasp in (Vasp, VaspInteractive)
     calc_name = vasp.name
-
+    initial_structure = gen_cluster("Cu", 10)
     images = [initial_structure.copy()]
     elements = np.unique(initial_structure.get_chemical_symbols())
 
@@ -94,11 +116,10 @@ def run_opt(vasp, optimizer=BFGS, use_al=True, store_wf=True, traj_name="oal.tra
         if not store_wf:
             parent_calc.set(istart=0, lwave=False)
 
-    ml_potential = FlarePPCalc(flare_config, images)
-
     with context:
         if use_al:
-            real_calc = OnlineLearner(learner_params, images, ml_potential, parent_calc)
+            #             real_calc = OnlineLearner(learner_params, images, ml_potential, parent_calc)
+            real_calc = gen_online_calc(images, parent_calc)
         else:
             real_calc = parent_calc
         images[0].calc = real_calc
@@ -107,7 +128,6 @@ def run_opt(vasp, optimizer=BFGS, use_al=True, store_wf=True, traj_name="oal.tra
             dyn.attach(replay_trajectory, 1, images[0].calc, dyn)
         dyn.run(fmax=0.05, steps=1000)
 
-    #     print(onlinecalc.parent_calls)
     return
 
 
