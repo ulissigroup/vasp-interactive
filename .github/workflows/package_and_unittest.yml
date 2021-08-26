@@ -16,7 +16,7 @@ jobs:
         shell: bash
     runs-on: ubuntu-latest
     container:
-      image: ulissigroup/kubeflow_vasp:beef_vdw
+      image: ulissigroup/vasp:jovyan_base
       env: 
         VASP_PREFIX: "mpirun -np 1 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 --allow-run-as-root"
       options: --user root --entrypoint /bin/bash
@@ -59,11 +59,11 @@ jobs:
         source activate actions
         export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_std"
         echo $VASP_COMMAND
-        for f in tests/test*.py; do python -m pytest -s $f; killall vasp_std || echo "pass"; done
+        for f in tests/test*.py; do python -m pytest -s $f; killall vasp_std || echo ""; done
     - name: Test with pytest vasp5
       if: ${{ matrix.vasp-version == 'vasp.5.4.4.pl2' }}
       run: |
         source activate actions
         export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_gam"
         echo $VASP_COMMAND
-        python -m pytest -s tests/test_vasp_version.py && killall vasp_gam
+        python -m pytest -s tests/test_vasp_version.py
