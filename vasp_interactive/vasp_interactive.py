@@ -51,6 +51,7 @@ class VaspInteractive(Vasp):
         command=None,
         txt="vasp.out",
         allow_restart_process=True,
+        cell_tolerance=1e-8,
         **kwargs,
     ):
         """Initialize the calculator object like the normal Vasp object.
@@ -114,6 +115,14 @@ class VaspInteractive(Vasp):
                 f"However, you provided ISYM={incar_isym}. "
                 "In some cases the energy and forces can be wrong. "
                 "Use such settings at your own risk."
+            )
+            
+        # Cell tolerance parameter
+        self.cell_tolerance = abs(cell_tolerance)
+        if self.cell_tolerance > 1e-3:
+            warn(
+                f"Your cell tolerace of {self.cell_tolerance} is probably too high. "
+                "Make sure your results make sense"
             )
 
         return
@@ -367,6 +376,17 @@ class VaspInteractive(Vasp):
                 self._stdout("VASP has been closed\n", out=out)
                 self.process = None
             return
+        
+    def check_state(self, atoms, tol=1e-15):
+        """Modified check_state method to allow separate check for cell tolerance"""
+        old_system_changes = super(VaspInteractive, self).check_state(atoms, tol=1e-15)
+        if ("cell" in old_system_changes) and (self.atoms is not None):
+            max_cell_change = np.max(np.abs(atoms.cell - self.atoms.cell))
+            # Do not set cell change
+            if max_cell_change < self.cell_tolerance:
+                old_system_changes = [sc for sc in old_system_changes if sc != "cell"]
+        return old_system_changes
+
 
     def calculate(
         self,
@@ -385,16 +405,24 @@ class VaspInteractive(Vasp):
             return
 
         # Currently VaspInteractive only handles change of positions (MD-like)
-        if any([p in system_changes for p in ("numbers", "cell")]):
+        if "numbers" in system_changes:
             if self.process is not None:
                 raise NotImplementedError(
                     (
-                        "VaspInteractive does not support change of "
-                        "chemical formula or lattice parameters. "
+                        "VaspInteractive does not support change of chemical formula. "
                         "Please create a new calculator instance or use standard Vasp calculator"
                     )
                 )
-        # Need to calculate, clear results and restart
+        elif "cell" in system_changes:
+            if self.process is not None:
+                raise NotImplementedError(
+                    (
+                        "VaspInteractive does not support change of lattice parameters. "
+                        "Set VaspInteractive.cell_tolerance to a higher value if you think it's caused by round-off error. "
+                        "Otherwise, please create a new calculator instance or use standard Vasp calculator"
+                    )
+                )
+
         self.clear_results()
         if atoms is not None:
             self.atoms = atoms.copy()
