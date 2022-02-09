@@ -1,18 +1,22 @@
 """Running online al_mlp learner using VaspInteractive
-   Need https://github.com/ulissigroup/al_mlp as dependency.
-   This example requires CPU >= 8.0
+   Dependency:
+   - https://github.com/ulissigroup/al_mlp
+   - https://github.com/ulissigroup/cluster_mlp
+   This example requires CPU cores >= 8.0
 """
 from al_mlp.atomistic_methods import replay_trajectory
 from ase.calculators.vasp import Vasp
 from vasp_interactive import VaspInteractive
 from ase.io import Trajectory
 import numpy as np
+import time
 from ase.optimize import BFGS
 from pathlib import Path
 import torch
 import os
 import copy
 import contextlib
+import io
 
 default_flare_config = {
     "sigma": 4.5,
@@ -36,158 +40,145 @@ default_learner_params = {
     "fmax_verify_threshold": 0.05,  # eV/AA
 }
 
-
-def gen_online_calc(
-    images,
-    parent_calc,
-    flare_config=default_flare_config,
-    learner_params=default_learner_params,
-):
-    """Use default parameters to generate online calc"""
-    from al_mlp.ml_potentials.flare_pp_calc import FlarePPCalc
-    from al_mlp.online_learner.online_learner import OnlineLearner
-
-    ml_potential = FlarePPCalc(flare_config, images)
-    calc = OnlineLearner(learner_params, images, ml_potential, parent_calc)
-    return calc
-
-
-def gen_cluster(metal="Cu", number=10):
-    """Use random code in cluster_mlp to generate a cluster"""
-    from cluster_mlp.fillPool import fillPool
-    from ase.data import atomic_numbers, covalent_radii
-
-    eleNames = [metal]
-    eleNums = [number]
-    eleRadii = [covalent_radii[atomic_numbers[ele]] for ele in eleNames]
-    return fillPool(eleNames, eleNums, eleRadii, None)
-
-
-curdir = Path("./").resolve()
-example_dir = curdir / "mlp_examples"
-
-os.environ[
-    "VASP_COMMAND"
-] = "mpirun -q -np 8 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 /opt/vasp.6.1.2_pgi_mkl/bin/vasp_gam"
-
-# Initialize with a Decahedron
-# initial_structure = Decahedron("Cu", 2, 1, 0)
-# initial_structure.rattle(0.1)
-# initial_structure.set_pbc(True)
-# initial_structure.set_cell([15, 15, 15])
-# initial_structure.center()
-# name = initial_structure.symbols
-
-# OAL_example configs
-
 vasp_flags = {
-    #         "ibrion": -1,
-    #         "nsw": 0,
     "isif": 0,
-    "isym": 0,
     "lreal": "Auto",
-    "symprec": 1e-10,
     "encut": 350.0,
     "ncore": 8,
     "xc": "PBE",
     "txt": "-",
 }
 
+def gen_online_calc(images, parent_calc, 
+                    flare_config=default_flare_config, 
+                    learner_params=default_learner_params):
+    """Use default parameters to generate online calc
+    """
+    from al_mlp.ml_potentials.flare_pp_calc import FlarePPCalc
+    from al_mlp.online_learner.online_learner import OnlineLearner
+    ml_potential = FlarePPCalc(flare_config, images)
+    calc = OnlineLearner(learner_params, images, ml_potential, parent_calc)
+    return calc
 
-def run_opt(vasp, optimizer=BFGS, use_al=True, store_wf=True, traj_name="oal.traj"):
+def gen_cluster(metal="Cu", number=10):
+    """Use random code in cluster_mlp to generate a cluster
+    """
+    from cluster_mlp.fillPool import fillPool
+    from ase.data import atomic_numbers, covalent_radii
+    eleNames = [metal]
+    eleNums = [number]
+    eleRadii = [covalent_radii[atomic_numbers[ele]] for ele in eleNames]
+    return fillPool(eleNames, eleNums, eleRadii, None)
+
+# curdir = Path("./").resolve()
+# example_dir = curdir / "mlp_benchmark"
+
+def parse_scf(output):
+    """Parse scf lines from stdout
+    """
+    import re
+    lines = output.split("\n")
+    pat = r"DAV\:\s+([\d]+)"
+    prev = -1
+    elec_steps = []
+    for l in lines:
+        m = re.match(pat, l)
+        if m:
+            nex = int(m[1])
+            if nex > prev:
+                prev = nex
+            else:
+                elec_steps.append(prev)
+                prev = -1
+    elec_steps.append(nex)
+    return elec_steps
+
+def run_opt(initial_structure, vasp, optimizer=BFGS, 
+            use_al=True, 
+            store_wf=True, 
+            traj_name="oal_relax.traj"):
     """Choose a backend for vasp or VaspInteractive calculator"""
-    assert vasp in (Vasp, VaspInteractive)
-    calc_name = vasp.name
-    initial_structure = gen_cluster("Cu", 10)
+    os.system("rm -rf WAVECAR INCAR POTCAR POSCAR POTCAR")
+    assert vasp.lower() in ("vasp", "vaspinteractive")
+    calc_name = vasp.lower()
     images = [initial_structure.copy()]
-    elements = np.unique(initial_structure.get_chemical_symbols())
 
-    parent_calc = vasp(**vasp_flags)
-    calc_dir = example_dir / f"{calc_name}_inter_tmp"
-    parent_calc.set(directory=calc_dir)
-    os.system(f"rm -rf {calc_dir.as_posix()}/*")
+    parent_calc = VaspInteractive(**vasp_flags)
 
-    if calc_name == "VaspInteractive":
+    if calc_name == "vaspinteractive":
         context = parent_calc
     else:
-        # For normal vasp use a dummy context
         context = contextlib.suppress()
         parent_calc.set(ibrion=-1, nsw=0)
         if not store_wf:
             parent_calc.set(istart=0, lwave=False)
-
-    with context:
-        if use_al:
-            #             real_calc = OnlineLearner(learner_params, images, ml_potential, parent_calc)
-            real_calc = gen_online_calc(images, parent_calc)
-        else:
-            real_calc = parent_calc
-        images[0].calc = real_calc
-        dyn = optimizer(images[0], trajectory=(example_dir / traj_name).as_posix())
-        if use_al:
-            dyn.attach(replay_trajectory, 1, images[0].calc, dyn)
-        dyn.run(fmax=0.05, steps=1000)
-
-    return
+    
+    t_ = time.time()
+    output = io.StringIO()
+    # Use context lib to redirect output
+    with contextlib.redirect_stdout(output):
+        with context:
+            if use_al:
+                real_calc = gen_online_calc(images, parent_calc)
+            else:
+                real_calc = parent_calc
+            images[0].calc = real_calc
+            
+            
+            dyn = optimizer(images[0], 
+                            trajectory=traj_name)
+            if use_al:
+                dyn.attach(replay_trajectory, 1, images[0].calc, dyn)
+            dyn.run(fmax=0.05, steps=1000)
+    t_elaps = time.time() - t_
+        
+    
+    output_string = output.getvalue()
+    elec_steps = parse_scf(output_string)
+    final_image = Trajectory(traj_name)[-1]
+    return t_elaps, elec_steps, final_image, output_string
 
 
 if __name__ == "__main__":
-    import time
-
-    times = []
+    initial_structure = gen_cluster("Cu", 7)
     print("*" * 40)
     print("Running with BFGS + vasp -- no cache")
-    # force sync of output
-    time.sleep(5)
-    t_ = time.time()
-    run_opt(Vasp, use_al=False, store_wf=False, traj_name="vasp_bfgs_nocache.traj")
-    time.sleep(5)
-    t_ = time.time() - t_
-    print(f"wall time: {t_} s")
-    times.append(t_)
-
+    t, steps, fin, _ = run_opt(initial_structure,
+                          "VASP", 
+                          use_al=False, 
+                          store_wf=False, )
+    print(f"Time: {t:.4s}")
+    
     print("*" * 40)
     print("Running with BFGS + vasp -- cache")
-    time.sleep(5)
-    t_ = time.time()
-    run_opt(Vasp, use_al=False, store_wf=True, traj_name="vasp_bfgs_cache.traj")
-    t_ = time.time() - t_
-    time.sleep(5)
-    print(f"wall time: {t_} s")
-    times.append(t_)
+    t, steps, fin, _ = run_opt(initial_structure,
+                          "VASP", 
+                          use_al=False, 
+                          store_wf=True, )
+    print(f"Time: {t:.4s}")
 
     print("*" * 40)
     print("Running with BFGS + vasp inter")
-    time.sleep(5)
-    t_ = time.time()
-    run_opt(VaspInteractive, use_al=False, traj_name="vpi_bfgs.traj")
-    t_ = time.time() - t_
-    time.sleep(5)
-    print(f"wall time: {t_} s")
-    times.append(t_)
+    t, steps, fin, _ = run_opt(initial_structure,
+                          "VaspInteractive", 
+                          use_al=False, )
+    print(f"Time: {t:.4s}")
+
+
 
     print("*" * 40)
     print("Running with OAL + vasp")
-    time.sleep(5)
-    t_ = time.time()
-    run_opt(Vasp, use_al=True, store_wf=True, traj_name="vasp_al.traj")
-    t_ = time.time() - t_
-    time.sleep(5)
-    print(f"wall time: {t_} s")
-    times.append(t_)
+    t, steps, fin, _ = run_opt(initial_structure,
+                          "VASP", 
+                          use_al=True, 
+                          store_wf=True, )
+    print(f"Time: {t:.4s}")
+    
 
     print("*" * 40)
     print("Running with OAL + vasp inter")
-    time.sleep(5)
-    t_ = time.time()
-    run_opt(VaspInteractive, use_al=True, store_wf=True, traj_name="vpi_al.traj")
-    t_ = time.time() - t_
-    time.sleep(5)
-    print(f"wall time: {t_} s")
-    times.append(t_)
+    t, steps, fin, _ = run_opt(initial_structure,
+                          "VaspInteractive", 
+                          use_al=True, )
+    print(f"Time: {t:.4s}")
 
-    np.save(example_dir / "times.npy", times)
-
-
-#     run_opt(Vasp)
-#     run_opt(VaspInteractive, use_al=False)
