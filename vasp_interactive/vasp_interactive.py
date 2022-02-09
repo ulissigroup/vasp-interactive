@@ -17,8 +17,27 @@ from warnings import warn
 import time
 import os
 import sys
+import psutil
+import signal
 import re
 import numpy as np
+
+
+def _find_mpi_process(pid):
+    """Recursively search children processes with PID=pid and return the one 
+    that mpirun (or synonyms) are the main command
+    """
+    allowed_names = ["mpirun", "mpiexec", "orterun", "oshrun", "shmemrun"]
+    process_list = [psutil.Process(pid)]
+    process_list.extend(process_list[0].children(recursive=True))
+    mpi_proc = None
+    for proc in process_list:
+        # print(proc, proc.name())
+        if proc.name() in allowed_names:
+            mpi_proc = proc
+            break
+    return mpi_proc
+    
 
 
 class VaspInteractive(Vasp):
@@ -134,6 +153,7 @@ class VaspInteractive(Vasp):
             self._force_kill_process()
             self.steps = 0
             self.final = False
+    
 
     def _ensure_directory(self):
         """Makesure self.directory exists, if not use `os.makedirs`"""
@@ -367,6 +387,28 @@ class VaspInteractive(Vasp):
                 self._stdout("VASP has been closed\n", out=out)
                 self.process = None
             return
+        
+    def pause_calc(self, sig=signal.SIGTSTP):
+        """Pause the vasp processes by sending SIGTSTP to the master mpirun process
+        """
+        pid = self.process.pid
+        mpi_process = _find_mpi_process(pid)
+        if mpi_process is None:
+            warn("Cannot find the mpi process. Will not send stop signal to mpi.")
+            return
+        mpi_process.send_signal(sig)
+        return
+    
+    def resume_calc(self, sig=signal.SIGCONT):
+        """Resumt the vasp processes by sending SIGCONT to the master mpirun process
+        """
+        pid = self.process.pid
+        mpi_process = _find_mpi_process(pid)
+        if mpi_process is None:
+            warn("Cannot find the mpi process. Will not send continue signal to mpi.")
+            return
+        mpi_process.send_signal(sig)
+        
 
     def calculate(
         self,
