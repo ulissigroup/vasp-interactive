@@ -18,30 +18,32 @@ h2_2 = molecule("H2", cell=[8, 8, 8 + 1e-7], pbc=True)
 # all default settings
 vasp_params = dict(xc="pbe", kpts=(1, 1, 1), gamma=True)
 
+
 def test_check_state():
-    """Unit test for check_state function """
+    """Unit test for check_state function"""
     vasp = Vasp(**vasp_params)
     vpi = VaspInteractive(**vasp_params)
-    
+
     vasp.atoms = h2_origin
     # Both will report a cell change
     system_changes = vasp.check_state(h2_1)
     assert "positions" not in system_changes
     assert "cell" in system_changes
-    
+
     system_changes = vasp.check_state(h2_2)
     assert "positions" not in system_changes
     assert "cell" in system_changes
-    
+
     # for VaspInteractive, h2_1 is accepted
     vpi.atoms = h2_origin
     system_changes = vpi.check_state(h2_1)
     assert "positions" not in system_changes
     assert "cell" not in system_changes
-    
+
     system_changes = vpi.check_state(h2_2)
     assert "positions" not in system_changes
     assert "cell" in system_changes
+
 
 def test_calculation():
     vpi = VaspInteractive(**vasp_params)
@@ -56,9 +58,5 @@ def test_calculation():
         h2_2.calc = vpi
         with pytest.raises(Exception):
             e3 = h2_2.get_potential_energy()
-        
+
         assert pytest.approx(e1) == e2
-    
-    
-    
-    

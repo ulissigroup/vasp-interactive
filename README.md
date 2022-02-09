@@ -144,6 +144,11 @@ not beneficial due to big difference of wavefunctions on neighboring images.
 On the other hand, `KubeVaspInteractive` has nearly linear scaling with worker pod numbers,
 if the workload per pod is balanced (see [examples/ex11_k8s_minimal.py](examples/ex11_k8s_minimal.py)).
 
+By default, the MPI processes that run the VASP calculations will occupy 100% cpu on the allocated cores / slots, even when waiting for the inputs. 
+This can lead to undesired effects when other CPU-expensive codes are running between two `VaspInteractive` ionic steps. 
+Starting from version `0.0.5` we add the `pause_calc` and `resume_calc` methods to `VaspInteractive`, so the user can temporarily free the resources occupied by VASP processes between two ionic steps. 
+An example can be found in [ex13_pause_mpi.py](examples/ex13_pause_mpi.py). Note currently the functionality is only tested for OpenMPI > 1.3.0. You may need to explicitly add the flag `--mca orte_forward_job_control 1` to your vasp command, or setting via environmental variable `export OMPI_MCA_orte_forward_job_control=1`.
+
 
 
 

@@ -49,34 +49,41 @@ vasp_flags = {
     "txt": "-",
 }
 
-def gen_online_calc(images, parent_calc, 
-                    flare_config=default_flare_config, 
-                    learner_params=default_learner_params):
-    """Use default parameters to generate online calc
-    """
+
+def gen_online_calc(
+    images,
+    parent_calc,
+    flare_config=default_flare_config,
+    learner_params=default_learner_params,
+):
+    """Use default parameters to generate online calc"""
     from al_mlp.ml_potentials.flare_pp_calc import FlarePPCalc
     from al_mlp.online_learner.online_learner import OnlineLearner
+
     ml_potential = FlarePPCalc(flare_config, images)
     calc = OnlineLearner(learner_params, images, ml_potential, parent_calc)
     return calc
 
+
 def gen_cluster(metal="Cu", number=10):
-    """Use random code in cluster_mlp to generate a cluster
-    """
+    """Use random code in cluster_mlp to generate a cluster"""
     from cluster_mlp.fillPool import fillPool
     from ase.data import atomic_numbers, covalent_radii
+
     eleNames = [metal]
     eleNums = [number]
     eleRadii = [covalent_radii[atomic_numbers[ele]] for ele in eleNames]
     return fillPool(eleNames, eleNums, eleRadii, None)
 
+
 # curdir = Path("./").resolve()
 # example_dir = curdir / "mlp_benchmark"
 
+
 def parse_scf(output):
-    """Parse scf lines from stdout
-    """
+    """Parse scf lines from stdout"""
     import re
+
     lines = output.split("\n")
     pat = r"DAV\:\s+([\d]+)"
     prev = -1
@@ -93,10 +100,15 @@ def parse_scf(output):
     elec_steps.append(nex)
     return elec_steps
 
-def run_opt(initial_structure, vasp, optimizer=BFGS, 
-            use_al=True, 
-            store_wf=True, 
-            traj_name="oal_relax.traj"):
+
+def run_opt(
+    initial_structure,
+    vasp,
+    optimizer=BFGS,
+    use_al=True,
+    store_wf=True,
+    traj_name="oal_relax.traj",
+):
     """Choose a backend for vasp or VaspInteractive calculator"""
     os.system("rm -rf WAVECAR INCAR POTCAR POSCAR POTCAR")
     assert vasp.lower() in ("vasp", "vaspinteractive")
@@ -112,7 +124,7 @@ def run_opt(initial_structure, vasp, optimizer=BFGS,
         parent_calc.set(ibrion=-1, nsw=0)
         if not store_wf:
             parent_calc.set(istart=0, lwave=False)
-    
+
     t_ = time.time()
     output = io.StringIO()
     # Use context lib to redirect output
@@ -123,16 +135,13 @@ def run_opt(initial_structure, vasp, optimizer=BFGS,
             else:
                 real_calc = parent_calc
             images[0].calc = real_calc
-            
-            
-            dyn = optimizer(images[0], 
-                            trajectory=traj_name)
+
+            dyn = optimizer(images[0], trajectory=traj_name)
             if use_al:
                 dyn.attach(replay_trajectory, 1, images[0].calc, dyn)
             dyn.run(fmax=0.05, steps=1000)
     t_elaps = time.time() - t_
-        
-    
+
     output_string = output.getvalue()
     elec_steps = parse_scf(output_string)
     final_image = Trajectory(traj_name)[-1]
@@ -143,42 +152,48 @@ if __name__ == "__main__":
     initial_structure = gen_cluster("Cu", 7)
     print("*" * 40)
     print("Running with BFGS + vasp -- no cache")
-    t, steps, fin, _ = run_opt(initial_structure,
-                          "VASP", 
-                          use_al=False, 
-                          store_wf=False, )
+    t, steps, fin, _ = run_opt(
+        initial_structure,
+        "VASP",
+        use_al=False,
+        store_wf=False,
+    )
     print(f"Time: {t:.4s}")
-    
+
     print("*" * 40)
     print("Running with BFGS + vasp -- cache")
-    t, steps, fin, _ = run_opt(initial_structure,
-                          "VASP", 
-                          use_al=False, 
-                          store_wf=True, )
+    t, steps, fin, _ = run_opt(
+        initial_structure,
+        "VASP",
+        use_al=False,
+        store_wf=True,
+    )
     print(f"Time: {t:.4s}")
 
     print("*" * 40)
     print("Running with BFGS + vasp inter")
-    t, steps, fin, _ = run_opt(initial_structure,
-                          "VaspInteractive", 
-                          use_al=False, )
+    t, steps, fin, _ = run_opt(
+        initial_structure,
+        "VaspInteractive",
+        use_al=False,
+    )
     print(f"Time: {t:.4s}")
-
-
 
     print("*" * 40)
     print("Running with OAL + vasp")
-    t, steps, fin, _ = run_opt(initial_structure,
-                          "VASP", 
-                          use_al=True, 
-                          store_wf=True, )
+    t, steps, fin, _ = run_opt(
+        initial_structure,
+        "VASP",
+        use_al=True,
+        store_wf=True,
+    )
     print(f"Time: {t:.4s}")
-    
 
     print("*" * 40)
     print("Running with OAL + vasp inter")
-    t, steps, fin, _ = run_opt(initial_structure,
-                          "VaspInteractive", 
-                          use_al=True, )
+    t, steps, fin, _ = run_opt(
+        initial_structure,
+        "VaspInteractive",
+        use_al=True,
+    )
     print(f"Time: {t:.4s}")
-

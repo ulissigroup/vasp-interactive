@@ -22,13 +22,13 @@ curdir = Path(__file__).parent
 random_seeds = [133, 357, 274, 331, 140]
 vasp_params = dict(xc="pbe", encut=250, istart=0, lwave=False)
 
-mol = molecule("C2H4", vacuum=5, pbc=True)
+mol = molecule("CH3CH2NH2", vacuum=5, pbc=True)
+
 
 def expensive_function(seed=42):
-    """Useless function only to consume cpu
-    """
+    """Useless function only to consume cpu"""
     # t_start = time.time()
-    size = 2048
+    size = 1024
     A = np.random.random((size, size))
     B = np.random.random((size, size))
     C = np.dot(A, B)
@@ -37,9 +37,16 @@ def expensive_function(seed=42):
     t_elasp = timeit.timeit(lambda: np.dot(A, B), number=4)
     return t_elasp
 
+
 def multiproc_expensive_function(nprocs=8, seed=42):
     with Pool(nprocs) as pool:
-        t_list = pool.map(expensive_function, [seed, ] * nprocs)
+        t_list = pool.map(
+            expensive_function,
+            [
+                seed,
+            ]
+            * nprocs,
+        )
     return t_list
 
 
@@ -67,16 +74,9 @@ def run_calc(pause=False):
     t_end = time.time()
     print(f"Total computation time {t_end - t_start} s.")
     return
-        
-                
-    
-
-
-    
-
-
 
 
 if __name__ == "__main__":
     run_calc(pause=False)
+    time.sleep(3)
     run_calc(pause=True)

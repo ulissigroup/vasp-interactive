@@ -24,7 +24,7 @@ import numpy as np
 
 
 def _find_mpi_process(pid):
-    """Recursively search children processes with PID=pid and return the one 
+    """Recursively search children processes with PID=pid and return the one
     that mpirun (or synonyms) are the main command
     """
     allowed_names = ["mpirun", "mpiexec", "orterun", "oshrun", "shmemrun"]
@@ -37,7 +37,6 @@ def _find_mpi_process(pid):
             mpi_proc = proc
             break
     return mpi_proc
-    
 
 
 class VaspInteractive(Vasp):
@@ -135,7 +134,7 @@ class VaspInteractive(Vasp):
                 "In some cases the energy and forces can be wrong. "
                 "Use such settings at your own risk."
             )
-            
+
         # Cell tolerance parameter
         self.cell_tolerance = abs(cell_tolerance)
         if self.cell_tolerance > 1e-3:
@@ -162,7 +161,6 @@ class VaspInteractive(Vasp):
             self._force_kill_process()
             self.steps = 0
             self.final = False
-    
 
     def _ensure_directory(self):
         """Makesure self.directory exists, if not use `os.makedirs`"""
@@ -396,11 +394,9 @@ class VaspInteractive(Vasp):
                 self._stdout("VASP has been closed\n", out=out)
                 self.process = None
             return
-        
 
     def pause_calc(self, sig=signal.SIGTSTP):
-        """Pause the vasp processes by sending SIGTSTP to the master mpirun process
-        """
+        """Pause the vasp processes by sending SIGTSTP to the master mpirun process"""
         pid = self.process.pid
         mpi_process = _find_mpi_process(pid)
         if mpi_process is None:
@@ -408,17 +404,15 @@ class VaspInteractive(Vasp):
             return
         mpi_process.send_signal(sig)
         return
-    
+
     def resume_calc(self, sig=signal.SIGCONT):
-        """Resumt the vasp processes by sending SIGCONT to the master mpirun process
-        """
+        """Resumt the vasp processes by sending SIGCONT to the master mpirun process"""
         pid = self.process.pid
         mpi_process = _find_mpi_process(pid)
         if mpi_process is None:
             warn("Cannot find the mpi process. Will not send continue signal to mpi.")
             return
         mpi_process.send_signal(sig)
-        
 
     def check_state(self, atoms, tol=1e-15):
         """Modified check_state method to allow separate check for cell tolerance"""
@@ -429,7 +423,6 @@ class VaspInteractive(Vasp):
             if max_cell_change < self.cell_tolerance:
                 old_system_changes = [sc for sc in old_system_changes if sc != "cell"]
         return old_system_changes
-
 
     def calculate(
         self,
