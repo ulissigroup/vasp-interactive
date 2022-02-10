@@ -46,17 +46,18 @@ def test_check_state():
 
 
 def test_calculation():
-    vpi = VaspInteractive(**vasp_params)
-    with vpi:
-        h2_origin.calc = vpi
-        e1 = h2_origin.get_potential_energy()
-        h2_1.calc = vpi
-        try:
-            e2 = h2_1.get_potential_energy()
-        except Exception:
-            pytest.fail("h2_1 cell tolerance should be accepted")
-        h2_2.calc = vpi
-        with pytest.raises(Exception):
-            e3 = h2_2.get_potential_energy()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        vpi = VaspInteractive(directory=tmpdir, **vasp_params)
+        with vpi:
+            h2_origin.calc = vpi
+            e1 = h2_origin.get_potential_energy()
+            h2_1.calc = vpi
+            try:
+                e2 = h2_1.get_potential_energy()
+            except Exception:
+                pytest.fail("h2_1 cell tolerance should be accepted")
+            h2_2.calc = vpi
+            with pytest.raises(Exception):
+                e3 = h2_2.get_potential_energy()
 
-        assert pytest.approx(e1) == e2
+            assert pytest.approx(e1) == e2
