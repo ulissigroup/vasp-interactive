@@ -29,7 +29,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
 def test_sym_on():
     """Test if symmetry is set to on"""
     with tempfile.TemporaryDirectory() as tmpdir:
-        calc_vpi = VaspInteractive(directory="./", isym=2, **vasp_params)
+        calc_vpi = VaspInteractive(directory=tmpdir, isym=2, **vasp_params)
         # First run wavefunction on high sym and then low sym
         with calc_vpi:
             e0 = calc_vpi.get_potential_energy(gr.copy())
@@ -52,7 +52,7 @@ def test_sym_on():
 def test_sym_off():
     """Test if symmetry is set to on"""
     with tempfile.TemporaryDirectory() as tmpdir:
-        calc_vpi = VaspInteractive(directory="./", **vasp_params)
+        calc_vpi = VaspInteractive(directory=tmpdir, **vasp_params)
         # First run wavefunction on high sym and then low sym
         with calc_vpi:
             e0 = calc_vpi.get_potential_energy(gr.copy())

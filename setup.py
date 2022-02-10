@@ -6,10 +6,11 @@ except ImportError:
 
 setup(
     name="vasp-interactive",
-    version="0.0.4",
+    version="0.0.5",
     packages=["vasp_interactive", "vasp_interactive.kubernetes"],
     install_requires=[
         "ase",
+        "psutil",
         # "pymatgen",
     ],
 )
