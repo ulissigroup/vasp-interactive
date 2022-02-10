@@ -65,9 +65,8 @@ def run_calc(pause=False):
                 t_vpi_end = time.time()
                 print(f"DFT: loop {i}, {t_vpi_end - t_vpi_start} s.")
                 if pause:
-                    calc.pause_calc()
-                    t_list = multiproc_expensive_function(8, seed)
-                    calc.resume_calc()
+                    with calc.pause():
+                        t_list = multiproc_expensive_function(8, seed)
                 else:
                     t_list = multiproc_expensive_function(8, seed)
                 print(f"Expensive computation: loop {i}, {np.max(t_list)} s.")

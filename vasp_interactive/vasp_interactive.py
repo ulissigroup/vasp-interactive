@@ -25,7 +25,7 @@ import numpy as np
 
 def _find_mpi_process(pid):
     """Recursively search children processes with PID=pid and return the one
-    that mpirun (or synonyms) are the main command
+    that mpirun (or synonyms) are the main command.
     """
     allowed_names = ["mpirun", "mpiexec", "orterun", "oshrun", "shmemrun"]
     process_list = [psutil.Process(pid)]
@@ -395,7 +395,7 @@ class VaspInteractive(Vasp):
                 self.process = None
             return
 
-    def pause_calc(self, sig=signal.SIGTSTP):
+    def _pause_calc(self, sig=signal.SIGTSTP):
         """Pause the vasp processes by sending SIGTSTP to the master mpirun process"""
         pid = self.process.pid
         mpi_process = _find_mpi_process(pid)
@@ -405,7 +405,7 @@ class VaspInteractive(Vasp):
         mpi_process.send_signal(sig)
         return
 
-    def resume_calc(self, sig=signal.SIGCONT):
+    def _resume_calc(self, sig=signal.SIGCONT):
         """Resumt the vasp processes by sending SIGCONT to the master mpirun process"""
         pid = self.process.pid
         mpi_process = _find_mpi_process(pid)
@@ -413,6 +413,20 @@ class VaspInteractive(Vasp):
             warn("Cannot find the mpi process. Will not send continue signal to mpi.")
             return
         mpi_process.send_signal(sig)
+        return
+
+    @contextmanager
+    def pause(self):
+        """Context wrapper for pause / resume MPI process. To avoid accidentally forgetting the resume.
+        Usage:
+        with calc.pause():
+            # Do some CPU expensive job here
+        """
+        try:
+            self._pause_calc()
+            yield
+        finally:
+            self._resume_calc()
 
     def check_state(self, atoms, tol=1e-15):
         """Modified check_state method to allow separate check for cell tolerance"""
