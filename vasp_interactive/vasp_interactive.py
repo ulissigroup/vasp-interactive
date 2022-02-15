@@ -23,19 +23,32 @@ import re
 import numpy as np
 
 
-def _find_mpi_process(pid):
+def _find_mpi_process(pid, mpi_program="mpirun", vasp_program="vasp_std"):
     """Recursively search children processes with PID=pid and return the one
     that mpirun (or synonyms) are the main command.
     """
-    allowed_names = ["mpirun", "mpiexec", "orterun", "oshrun", "shmemrun"]
+    allowed_names = set(["mpirun", "mpiexec", "orterun", "oshrun", "shmemrun"])
+    allowed_vasp_names = set(["vasp_std", "vasp_gam", "vasp_ncl"])
+    if mpi_program:
+        allowed_names.add(mpi_program)
+    if vasp_program:
+        allowed_vasp_names.add(vasp_program)
     process_list = [psutil.Process(pid)]
     process_list.extend(process_list[0].children(recursive=True))
-    mpi_proc = None
+    mpi_candidates = []
     for proc in process_list:
         # print(proc, proc.name())
         if proc.name() in allowed_names:
-            mpi_proc = proc
-            break
+            # is the mpi process's direct children are vasp_std?
+            children = proc.children()
+            if len(children) > 0:
+                if children[0].name() in allowed_vasp_names:
+                    mpi_candidates.append(proc)
+    if len(mpi_candidates) > 1:
+        warn(
+            "More than 1 mpi processes are created. This may be a bug. I'll use the last one"
+        )
+    mpi_proc = mpi_candidates[-1]
     return mpi_proc
 
 
@@ -69,6 +82,7 @@ class VaspInteractive(Vasp):
         command=None,
         txt="vasp.out",
         allow_restart_process=True,
+        allow_mpi_pause=True,
         cell_tolerance=1e-8,
         **kwargs,
     ):
@@ -76,6 +90,7 @@ class VaspInteractive(Vasp):
         Additional attributes:
             `self.process`: Popen instance to run the VASP calculation
             `allow_restart_process`: if True, will restart the VASP process if it exits before user program ends
+            `allow_mpi_pause`: If disabled, do not interfere with the vasp program but let system load balancing handle CPU requests.
         """
 
         # Add the mandatory keywords
@@ -143,6 +158,8 @@ class VaspInteractive(Vasp):
                 "Make sure your results make sense"
             )
 
+        # Add pause function
+        self.pause_mpi = allow_mpi_pause
         return
 
     @property
@@ -397,6 +414,8 @@ class VaspInteractive(Vasp):
 
     def _pause_calc(self, sig=signal.SIGTSTP):
         """Pause the vasp processes by sending SIGTSTP to the master mpirun process"""
+        if not self.process:
+            return
         pid = self.process.pid
         mpi_process = _find_mpi_process(pid)
         if mpi_process is None:
@@ -407,6 +426,8 @@ class VaspInteractive(Vasp):
 
     def _resume_calc(self, sig=signal.SIGCONT):
         """Resumt the vasp processes by sending SIGCONT to the master mpirun process"""
+        if not self.process:
+            return
         pid = self.process.pid
         mpi_process = _find_mpi_process(pid)
         if mpi_process is None:
@@ -421,12 +442,28 @@ class VaspInteractive(Vasp):
         Usage:
         with calc.pause():
             # Do some CPU expensive job here
+        This context wrapper can be disabled by setting self.pause_mpi = False
+        """
+        if self.pause_mpi:
+            try:
+                self._pause_calc()
+                yield
+            finally:
+                self._resume_calc()
+        else:
+            # Do nothing
+            yield
+
+    @contextmanager
+    def _ensure_mpi(self):
+        """Opposite to the pause context manager,
+        _ensure_mpi ensures the MPI process is running only within the block
         """
         try:
-            self._pause_calc()
+            self._resume_calc()
             yield
         finally:
-            self._resume_calc()
+            self._pause_calc()
 
     def check_state(self, atoms, tol=1e-15):
         """Modified check_state method to allow separate check for cell tolerance"""
