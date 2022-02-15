@@ -6,7 +6,7 @@ except ImportError:
 
 setup(
     name="vasp-interactive",
-    version="0.0.5",
+    version="0.0.6",
     packages=["vasp_interactive", "vasp_interactive.kubernetes"],
     install_requires=[
         "ase",
