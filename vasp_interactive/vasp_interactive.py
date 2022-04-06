@@ -66,8 +66,10 @@ class VaspInteractive(Vasp):
         "ibrion": -1,
         "iwavpr": 11,
         "interactive": True,
+        # Disable stopping criteria but just rely on nsw
+        "ediffg": 0,
     }
-    # Enforce the job to be relaxation
+    # Enforce the job to run infinitely untill killed
     default_input = {
         "nsw": 2000,
         "isym": 0,
@@ -83,6 +85,7 @@ class VaspInteractive(Vasp):
         txt="vasp.out",
         allow_restart_process=True,
         allow_mpi_pause=True,
+        allow_default_param_overwrite=True,
         cell_tolerance=1e-8,
         **kwargs,
     ):
@@ -91,16 +94,24 @@ class VaspInteractive(Vasp):
             `self.process`: Popen instance to run the VASP calculation
             `allow_restart_process`: if True, will restart the VASP process if it exits before user program ends
             `allow_mpi_pause`: If disabled, do not interfere with the vasp program but let system load balancing handle CPU requests.
+            `allow_default_param_overwrite`: If True, use mandatory input parameters to overwrite (but give warnings)
         """
 
         # Add the mandatory keywords
         for kw, val in VaspInteractive.mandatory_input.items():
             if kw in kwargs and val != kwargs[kw]:
-                raise ValueError(
-                    "Keyword {} cannot be overridden! "
-                    "It must have have value {}, but {} "
-                    "was provided instead.".format(kw, val, kwargs[kw])
-                )
+                if allow_default_param_overwrite:
+                    warn(
+                        f"You have provided {kw} with value {kwargs[kw]}. "
+                        f"For VaspInteractive to run properly it needs to be {val}. "
+                        "I will overwrite."
+                    )
+                else:
+                    raise ValueError(
+                        f"Keyword {kw} cannot be overridden! "
+                        f"It must have have value {val}, but {kwargs[kw]} "
+                        "was provided instead."
+                    )
         kwargs.update(VaspInteractive.mandatory_input)
 
         for kw, val in VaspInteractive.default_input.items():
