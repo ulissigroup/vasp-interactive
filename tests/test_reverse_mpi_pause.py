@@ -1,0 +1,83 @@
+"""Testing the cpu percent and pause / resume functionalities
+Note the test needs to run VASP with MPI cores > 4. Otherwise it will skip.
+"""
+import pytest
+import numpy as np
+from vasp_interactive import VaspInteractive
+import psutil
+import tempfile
+from pathlib import Path
+import os
+from ase.atoms import Atoms
+from ase.optimize import BFGS
+from copy import copy, deepcopy
+
+import signal
+from contextlib import contextmanager
+
+
+class TimeoutException(Exception):
+    """Simple class for timeout"""
+
+    pass
+
+
+@contextmanager
+def time_limit(seconds):
+    """Usage:
+    try:
+        with time_limit(60):
+            do_something()
+    except TimeoutException:
+        raise
+    """
+
+    def signal_handler(signum, frame):
+        raise TimeoutException("Timed out!")
+
+    signal.signal(signal.SIGALRM, signal_handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+
+with VaspInteractive() as test_calc:
+    args = test_calc.make_command().split()
+    do_test = True
+    for i, param in enumerate(args):
+        if param in ["-n", "-np", "--n", "--np", "-c"]:
+            try:
+                cores = int(args[i + 1])
+                do_test = cores >= 4
+                break
+            except Exception as e:
+                do_test = False
+                break
+    if do_test is False:
+        pytest.skip("Skipping test with ncores < 4", allow_module_level=True)
+
+
+d = 0.9575
+h2_root = Atoms("H2", positions=[(d, 0, 0), (0, 0, 0)], cell=[8, 8, 8], pbc=True)
+params = dict(xc="pbe", kpts=(1, 1, 1), ismear=0)
+rootdir = Path(__file__).parents[1] / "sandbox"
+fmax = 0.05
+ediff = 1e-4
+
+
+
+def test_paused_close():
+    """Context mode"""
+    h2 = h2_root.copy()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        calc = VaspInteractive(directory=tmpdir, **params)
+        h2.calc = calc
+        h2.get_potential_energy()
+        pid = h2.calc.process.pid
+        # Context
+        calc._pause_calc()
+        # Close statement should not last more than 10 sec
+        with time_limit(10):
+            calc.close()
+    return
