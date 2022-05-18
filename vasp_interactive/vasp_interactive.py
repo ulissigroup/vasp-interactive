@@ -386,7 +386,12 @@ class VaspInteractive(Vasp):
     def close(self):
         """Soft stop approach for the stream-based VASP process
         Works by writing STOPCAR file and runs two dummy scf cycles
+        #TODO: add a time-out option
         """
+        # Make sure the MPI process is awaken before the termination
+        if self.pause_mpi:
+            self._resume_calc()
+
         if self.process is None:
             return
         elif self.process.poll() is not None:
@@ -436,7 +441,7 @@ class VaspInteractive(Vasp):
         return
 
     def _resume_calc(self, sig=signal.SIGCONT):
-        """Resumt the vasp processes by sending SIGCONT to the master mpirun process"""
+        """Resume the vasp processes by sending SIGCONT to the master mpirun process"""
         if not self.process:
             return
         pid = self.process.pid
