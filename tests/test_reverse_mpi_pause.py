@@ -43,20 +43,22 @@ def time_limit(seconds):
         signal.alarm(0)
 
 
-with VaspInteractive() as test_calc:
-    args = test_calc.make_command().split()
-    do_test = True
-    for i, param in enumerate(args):
-        if param in ["-n", "-np", "--n", "--np", "-c"]:
-            try:
-                cores = int(args[i + 1])
-                do_test = cores >= 4
-                break
-            except Exception as e:
-                do_test = False
-                break
-    if do_test is False:
-        pytest.skip("Skipping test with ncores < 4", allow_module_level=True)
+def skip_probe():
+    """Test if single step needs to be skipped"""
+    with VaspInteractive() as test_calc:
+        args = test_calc.make_command().split()
+        do_test = True
+        for i, param in enumerate(args):
+            if param in ["-n", "-np", "--n", "--np", "-c"]:
+                try:
+                    cores = int(args[i + 1])
+                    do_test = cores >= 4
+                    break
+                except Exception as e:
+                    do_test = False
+                    break
+        if do_test is False:
+            pytest.skip("Skipping test with ncores < 4", allow_module_level=False)
 
 
 d = 0.9575
@@ -75,6 +77,7 @@ def get_average_cpu(pid, interval=0.5):
 
 
 def test_paused_close():
+    skip_probe()
     """Context mode"""
     h2 = h2_root.copy()
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -91,6 +94,7 @@ def test_paused_close():
 
 def test_paused_close_context():
     """Context mode"""
+    skip_probe()
     h2 = h2_root.copy()
     with tempfile.TemporaryDirectory() as tmpdir:
         with VaspInteractive(directory=tmpdir, **params) as calc:
@@ -103,3 +107,7 @@ def test_paused_close_context():
             assert get_average_cpu(pid) <= 5.0
         # Close statement should not last more than 10 sec
     return
+
+
+def test_always_true():
+    pass
