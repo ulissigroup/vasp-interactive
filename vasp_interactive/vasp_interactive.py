@@ -22,6 +22,33 @@ import signal
 import re
 import numpy as np
 
+DEFAULT_KILL_TIMEOUT = 60
+
+class TimeoutException(Exception):
+    """Simple class for timeout"""
+    pass
+
+
+@contextmanager
+def time_limit(seconds):
+    """Usage:
+    try:
+        with time_limit(60):
+            do_something()
+    except TimeoutException:
+        raise
+    """
+
+    def signal_handler(signum, frame):
+        raise TimeoutException("Timed out closing VASP process.")
+
+    signal.signal(signal.SIGALRM, signal_handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+
 
 def _find_mpi_process(pid, mpi_program="mpirun", vasp_program="vasp_std"):
     """Recursively search children processes with PID=pid and return the one
@@ -87,6 +114,7 @@ class VaspInteractive(Vasp):
         allow_mpi_pause=True,
         allow_default_param_overwrite=True,
         cell_tolerance=1e-8,
+        kill_timeout=DEFAULT_KILL_TIMEOUT,
         **kwargs,
     ):
         """Initialize the calculator object like the normal Vasp object.
@@ -171,6 +199,7 @@ class VaspInteractive(Vasp):
 
         # Add pause function
         self.pause_mpi = allow_mpi_pause
+        self.kill_timeout = kill_timeout
         return
 
     @property
@@ -660,7 +689,8 @@ class VaspInteractive(Vasp):
     def _force_kill_process(self):
         """Try to kill the process by soft stop. If fails, force killing it"""
         try:
-            self.close()
+            with time_limit(self.kill_timeout):
+                self.close()
         # Runtime exceptions can occur when file id missing etc
         # Normally we don't want this behavior but just for backward-compatibility
         except Exception as e:
