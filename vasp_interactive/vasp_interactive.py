@@ -24,8 +24,10 @@ import numpy as np
 
 DEFAULT_KILL_TIMEOUT = 60
 
+
 class TimeoutException(Exception):
     """Simple class for timeout"""
+
     pass
 
 
