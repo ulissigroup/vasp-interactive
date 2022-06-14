@@ -28,12 +28,15 @@ The ionic cycles of interactive mode VASP can be terminated by any of the follow
 
 `VaspInteractive` uses method 2) to stop the ionic cycles. In general, `VaspInteractive` can save up to 50% of the wall 
 time compared with classic `Vasp` calculator (combined with ASE optimizers such as BFGS), since less electronic steps are
-required and program spin-up time is drastically reduced.
+required and program spin-up time is drastically reduced. 
+<!-- When combined with active learning frameworks like [Finetuna](https://github.com/ulissigroup/finetuna) it can speed up DFT relaxation up to 1 order of magnitude. -->
 
-**NOTE: currently the code only works with VASP version >= 6.**
+**NOTE: some builds of VASP 5.x may be incompatible with `VaspInteractive`.**
 
-In principle older version of VASP can be compatible but user
-needs to make custom patches to `main.F` in VASP source code to disable chunked output.
+See this [issue](https://github.com/ulissigroup/vasp-interactive/issues/6.) for details. 
+We have seen some builds of VASP 5.x 
+incompatible with `VaspInteractive` due to broken output files.  Switching to VASP version > 6 (if available) or
+recompile your VASP binaries may help. Please do your own tests.
 
 ## How to use
 Only dependency is `ase`. Hopefully in the near future the `VaspInteractive` calculator will be merged with ASE upstream.
