@@ -369,11 +369,15 @@ class VaspInteractive(Vasp):
         while self.process.poll() is None:
             text = self.process.stdout.readline()
             self._stdout(text, out=out)
-            # Read vasp version from stdio, if version < 6 then raise Error
+            # Read vasp version from stdio, warn user of VASP5 issue
             if self._read_vasp_version_stream(text):
                 if _int_version(self.version) < 6:
-                    raise CalculatorSetupError(
-                        "VaspInteractive currently only works with VASP version >= 6."
+                    warn(
+                        (
+                            "Some builds of VASP 5.x may have issue generating output blocks. "
+                            "See this issue for details https://github.com/ulissigroup/vasp-interactive/issues/6. "
+                            "If you encounter similar error messages, try using VASP version > 6 if available."
+                        )
                     )
             if "POSITIONS: reading from stdin" in text:
                 return
@@ -606,8 +610,12 @@ class VaspInteractive(Vasp):
         self.version = self.read_version()
         if self.version is not None:
             if _int_version(self.version) < 6:
-                raise CalculatorSetupError(
-                    "VaspInteractive currently only works with VASP version >= 6."
+                warn(
+                    (
+                        "Some builds of VASP 5.x may have issue generating output blocks. "
+                        "See this issue for details https://github.com/ulissigroup/vasp-interactive/issues/6. "
+                        "If you encounter similar error messages, try using VASP version > 6 if available."
+                    )
                 )
 
         # Energy and magmom have multiple return values

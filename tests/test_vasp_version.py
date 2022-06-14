@@ -13,6 +13,8 @@ fmax = 0.05
 ediff = 1e-4
 
 
+# Since version 0.0.8 using VaspInteractive on VASP 5.x will only raise Warning instead of Exception
+@pytest.mark.filterwarnings("error:Some builds")
 def test_steps():
     from ase.build import molecule
 
@@ -23,9 +25,10 @@ def test_steps():
         tempdir = Path(tempdir)
         calc = VaspInteractive(xc="pbe", ediff=ediff, directory=tempdir)
         h2.calc = calc
-        # Initialization
-        try:
-            h2.get_potential_energy()
-        except CalculatorSetupError:
-            assert calc.version[0] == "5"
+        with calc:
+            # Initialization
+            try:
+                h2.get_potential_energy()
+            except UserWarning:
+                assert calc.version[0] == "5"
     return
