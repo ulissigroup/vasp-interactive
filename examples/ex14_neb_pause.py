@@ -2,6 +2,14 @@
 the individual calculators are sharing the same CPU resources and only 1 calculator is running at the same time.
 
 Example adapted from https://wiki.fysik.dtu.dk/ase/tutorials/neb/diffusion.html
+
+Sample output:
+
+16 MPI processes, VASP 6.3.0
+
+Sequential normal VASP: Elasp time: 1091.16 s
+Sequential VaspInteractive (shared calculator): Elasp time: 2756.08 s
+Paused VaspInteractive (individual calculator): Elasp time: 437.10 s
 """
 import time
 import tempfile
@@ -19,11 +27,11 @@ curdir = Path(__file__).parent
 initial = read(curdir / "neb-trajs" / "initial.traj")
 final = read(curdir / "neb-trajs" / "final.traj")
 # Same vasp theoretical level for the initial / final structures
-vasp_params = dict(xc="pbe", kspacing=1.0, encut=150, sigma=0.1, istart=0, lwave=False)
-# vasp_params = dict(xc="pbe", kspacing=0.5, encut=350, sigma=0.1, istart=0, lwave=False)
+# vasp_params = dict(xc="pbe", kspacing=1.0, encut=150, sigma=0.1, istart=0, lwave=False)
+vasp_params = dict(xc="pbe", kspacing=0.5, encut=350, sigma=0.1, istart=0, lwave=False)
 # Very rough
-fmax = 1.0
-# fmax = 0.03
+# fmax = 1.0
+fmax = 0.03
 
 
 class PausedVaspInteractive(VaspInteractive):
