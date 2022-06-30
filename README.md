@@ -90,6 +90,10 @@ Only dependency is `ase`. Hopefully in the near future the `VaspInteractive` cal
     Note: if your code raises exceptions when `VaspInteractive` is running, it is not always guaranteed that 
     the VASP process is terminated by standard Python garbage collection. Test your own code. This issue is 
     solved when running `VaspInteractive` in context mode.
+### Note:
+For `VaspInteractive` to work properly, the VASP executable (i.e. environment variable `$ASE_VASP_COMMAND` or `$VASP_COMMAND`) must not
+filter or redirect the stdout from `vasp_std`. If you want to set the file name for capturing the stdout, add `txt=<your-custom-stdout-file>` to the 
+initial parameters of `VaspInteractive`.
 
 ## Benchmark
 
