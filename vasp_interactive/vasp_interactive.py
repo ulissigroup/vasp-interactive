@@ -93,7 +93,7 @@ class VaspInteractive(Vasp):
     mandatory_input = {
         "potim": 0.0,
         "ibrion": -1,
-        "iwavpr": 11,
+        # "iwavpr": 11,
         "interactive": True,
         # Disable stopping criteria but just rely on nsw
         "ediffg": 0,
