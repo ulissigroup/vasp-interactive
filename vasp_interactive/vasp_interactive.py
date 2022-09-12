@@ -274,6 +274,31 @@ class VaspInteractive(Vasp):
             if open_and_close:
                 out.close()
 
+    def _txt_to_handler(self):
+        """Wrap the self.txt into a file handler for parsing 
+        only relevant for read_results when OUTCAR and vasprun.xml are both trimmed (vasp 5.x)
+        """
+
+        txt = self.txt
+        if txt is None:
+            fd = None
+        else:
+            if isinstance(txt, str):
+                if txt == "-":
+                    fd = None
+                else:
+                    self._ensure_directory()
+                    txt = self._indir(txt)
+                    fd = open(txt, "r")
+            elif hasattr(txt, "read"):
+                out = txt
+            else:
+                raise RuntimeError(
+                    "txt should either be a string"
+                    "or an I/O stream, got {}".format(txt)
+                )
+        return fd
+
     def _stdin(self, text, out=None, ending="\n"):
         """Write single line text to `self.process.stdin`
         if `out` provided, the same input is write to `out` as well.
@@ -650,6 +675,79 @@ class VaspInteractive(Vasp):
 
         # Store the parameters used for this calculation
         self._store_param_state()
+    
+    def read_energy(self, all=None, lines=None):
+        """Overwrite the parent read_energy to allow further parsing from vasp 5.x
+        a flag self.parse_vaspout should be set to True to allow such behavior
+        """
+        try:
+            fe, e0 = super().read_energy(all=all, lines=lines)
+        except Exception:
+            fe, e0 = [0, 0]
+        # Upstream read_energy from ase has a flaw that returns 0, 0 if parsing failed
+        # Need to handle such case
+        if (fe == 0) and (e0 == 0):
+            if getattr(self, "parse_vaspout", False) is False:
+                raise RuntimeError((
+                    "Cannot parse potential energy. Most likely vasprun.xml and OUTCAR are both corrupt. \n"
+                    "If you are running with VASP 5.x, try adding parse_vaspout=True to the calculator "
+                    "which may solve this issue."
+                ))
+            f_vaspout = self._txt_to_handler()
+            if f_vaspout is None:
+                raise RuntimeError(
+                    (
+                        "Fails to locate file for vasp output. Please don't set the calculator's txt parameter to either '-' or None"
+                    )
+
+                )
+            vaspout = f_vaspout.read()
+            try:
+                fe, e0 = parse_vaspout(vaspout, all=all, property="energy")
+            except Exception as e:
+                raise RuntimeError((
+                    "Cannot parse energy from vasp output."
+                ))
+                from e
+        return fe, e0
+
+    def read_forces(self, all=False, lines=None):
+        """Overwrite the parent read_forces to allow further parsing from vasp 5.x
+        a flag self.parse_vaspout should be set to True to allow such behavior
+        """
+        try:
+            forces = super().read_energy(all=all, lines=lines)
+        except Exception:
+            forces = None
+        
+        # Upstream read_energy from ase has a flaw that returns 0, 0 if parsing failed
+        # Need to handle such case
+        if forces is None:
+            if getattr(self, "parse_vaspout", False) is False:
+                raise RuntimeError((
+                    "Cannot parse forces. Most likely vasprun.xml and OUTCAR are both corrupt. \n"
+                    "If you are running with VASP 5.x, try adding parse_vaspout=True to the calculator "
+                    "which may solve this issue."
+                ))
+            f_vaspout = self._txt_to_handler()
+            if f_vaspout is None:
+                raise RuntimeError(
+                    (
+                        "Fails to locate file for vasp output. Please don't set the calculator's txt parameter to either '-' or None"
+                    )
+
+                )
+            vaspout = f_vaspout.read()
+            try:
+                forces = parse_vaspout(vaspout, all=all, property="forces")
+            except Exception as e:
+                raise RuntimeError((
+                    "Cannot parse forces from vasp output."
+                ))
+                from e
+        return forces
+    
+
 
     def read_all_iterations(self):
         """Parse the ionic & electronic scf cycles from OUTCAR files.
@@ -804,6 +902,23 @@ def parse_outcar_time(lines):
         if "Elapsed time (sec):" in line:
             wall_time = float(line.split(":")[1].strip())
     return cpu_time, wall_time
+
+def parse_vaspout_energy(vaspout, all=all, property="energy"):
+    """Parse the energy and force lines from vaspout or stdout
+    This should only be relevant when vasp5.x is involved, as a last resort 
+    when both OUTCAR and vaspun.xml are truncated. Please use with care.
+    
+    The vaspout format are almost identical to OSZICAR https://www.vasp.at/wiki/index.php/OSZICAR
+    FORCES:
+        (N x 3) fields of force
+    N F= XX E0= XX  d E =XX
+    The F & E0 line should most likely maintain the same format but there can be extra output lines like
+    vdW dispersion etc. Some codes can be traken from https://github.com/materialsproject/pymatgen/blob/v2022.9.8/pymatgen/io/vasp/outputs.py#L4253-L4394
+    
+    For upstream methods in the calculator class, one must first check if the calc.txt is neither "-" nor None,
+    otherwise the vaspout lines cannot be parsed.
+    """
+
 
 
 def _int_version(version_string):
