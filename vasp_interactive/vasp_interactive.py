@@ -702,6 +702,7 @@ class VaspInteractive(Vasp):
 
                 )
             vaspout = f_vaspout.read()
+            f_vaspout.close()
             try:
                 fe, e0 = parse_vaspout(vaspout, all=all, property="energy")
             except Exception as e:
@@ -738,6 +739,7 @@ class VaspInteractive(Vasp):
 
                 )
             vaspout = f_vaspout.read()
+            f_vaspout.close()
             try:
                 forces = parse_vaspout(vaspout, all=all, property="forces")
             except Exception as e:

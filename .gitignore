@@ -146,3 +146,6 @@ examples/mlp_examples/*_tmp/
 examples/checkpoints/
 *.bak
 sandbox/
+**/metadata.json
+**/output.pkl
+**/func_code.py
