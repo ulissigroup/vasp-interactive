@@ -652,7 +652,8 @@ class VaspInteractive(Vasp):
                         "If you encounter similar error messages, try using VASP version > 6 if available."
                     )
                 )
-                vasp5 = True
+                if self.parse_vaspout:
+                    vasp5 = True
 
         # breakpoint()
         # Energy and magmom have multiple return values
@@ -663,8 +664,10 @@ class VaspInteractive(Vasp):
                 )
                 # breakpoint()
                 self.results.update(dict(free_energy=energy_free, energy=energy_zero))
-            except Exception:
-                pass
+            except Exception as e:
+                raise RuntimeError((
+                    "Failed to obtain energy from calculator."
+                )) from e
 
         if "forces" not in self.results.keys():
             try:
@@ -672,7 +675,9 @@ class VaspInteractive(Vasp):
                     dict(forces=self.read_forces(lines=outcar, vasp5=vasp5))
                 )
             except Exception:
-                pass
+                raise RuntimeError((
+                    "Failed to obtain forces from calculator."
+                )) from e
 
         if "magmom" not in self.results.keys():
             try:
@@ -716,8 +721,7 @@ class VaspInteractive(Vasp):
                 raise RuntimeError(
                     (
                         "Cannot parse potential energy. Most likely vasprun.xml and OUTCAR are both corrupt. \n"
-                        "If you are running with VASP 5.x, try adding parse_vaspout=True to the calculator "
-                        "which may solve this issue."
+                        "If you are running with VASP 5.x, add parse_vaspout=True to the calculator "
                     )
                 )
             f_vaspout = self._txt_to_handler()
@@ -752,8 +756,7 @@ class VaspInteractive(Vasp):
                 raise RuntimeError(
                     (
                         "Cannot parse forces. Most likely vasprun.xml and OUTCAR are both corrupt. \n"
-                        "If you are running with VASP 5.x, try adding parse_vaspout=True to the calculator "
-                        "which may solve this issue."
+                        "If you are running with VASP 5.x, add parse_vaspout=True to the calculator "
                     )
                 )
             f_vaspout = self._txt_to_handler()

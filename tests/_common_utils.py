@@ -20,3 +20,4 @@ def skip_probe(min_cores=8):
             pytest.skip(
                 f"Skipping test with ncores < {min_cores}", allow_module_level=False
             )
+
