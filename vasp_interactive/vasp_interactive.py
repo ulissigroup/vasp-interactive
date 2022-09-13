@@ -711,7 +711,7 @@ class VaspInteractive(Vasp):
         except Exception:
             fe, e0 = [0, 0]
         # Upstream read_energy from ase has a flaw that returns 0, 0 if parsing failed
-        if ((fe == 0) and (e0 == 0)) or vasp5:
+        if vasp5:
             if getattr(self, "parse_vaspout", False) is False:
                 raise RuntimeError(
                     (
@@ -747,7 +747,7 @@ class VaspInteractive(Vasp):
 
         # Upstream read_energy from ase has a flaw that returns 0, 0 if parsing failed
         # Need to handle such case
-        if forces is None or vasp5:
+        if vasp5:
             if getattr(self, "parse_vaspout", False) is False:
                 raise RuntimeError(
                     (
