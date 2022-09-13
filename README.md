@@ -31,12 +31,15 @@ time compared with classic `Vasp` calculator (combined with ASE optimizers such 
 required and program spin-up time is drastically reduced. 
 <!-- When combined with active learning frameworks like [Finetuna](https://github.com/ulissigroup/finetuna) it can speed up DFT relaxation up to 1 order of magnitude. -->
 
-**NOTE: some builds of VASP 5.x may be incompatible with `VaspInteractive`.**
+**NOTE: some builds of VASP 5.x may be incompatible wih `VaspInteractive`.**
 
 See this [issue](https://github.com/ulissigroup/vasp-interactive/issues/6.) for details. 
-We have seen some builds of VASP 5.x 
-incompatible with `VaspInteractive` due to broken output files.  Switching to VASP version > 6 (if available) or
-recompile your VASP binaries may help. Please do your own tests.
+We have seen some builds of VASP 5.x incompatible with `VaspInteractive` due to broken output files.  Switching to VASP version > 6 (if available) or
+recompile your VASP binaries may help. 
+
+**Minimal VASP 5.x support**: starting from version 0.0.9, `VaspInteractive` supports VASP 5.x by parsing the raw output (e.g. `vasp.out` file) in case of broken `OUTCAR` / `vasprun.xml` files, although there are several limitations:
+1. Only energy and forces can be get from the calculator
+2. `VaspInteractive` must not have the `txt` option set to (`"-"` or `None`)
 
 ## How to use
 Only dependency is `ase`. Hopefully in the near future the `VaspInteractive` calculator will be merged with ASE upstream.

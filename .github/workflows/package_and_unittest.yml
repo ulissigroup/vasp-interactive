@@ -31,7 +31,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10"]
-        vasp-version: ["vasp.6.1.2_pgi_mkl_beef", "vasp.6.2.0_pgi_mkl", "vasp.6.3.0_pgi_mkl"]
+        vasp-version: ["vasp.5.4.4.pl2", "vasp.6.1.2_pgi_mkl_beef", "vasp.6.2.0_pgi_mkl", "vasp.6.3.0_pgi_mkl"]
         
 
     steps:
@@ -68,6 +68,7 @@ jobs:
       if: ${{ matrix.vasp-version == 'vasp.5.4.4.pl2' }}
       run: |
         source activate actions
-        export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_gam"
+        export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_std"
         echo $VASP_COMMAND
-        python -m pytest -s tests/test_vasp_version.py
+        for f in tests/test*.py; do echo $f; python -m pytest -s $f; killall vasp_std || echo ""; done
+        # python -m pytest -s tests/test_vasp_version.py

@@ -1,3 +1,5 @@
+"""Unit test for propylene-Au system. Only test when >= 8 cores
+"""
 import pytest
 import numpy as np
 import os
@@ -12,6 +14,7 @@ from vasp_interactive import VaspInteractive
 from ase.calculators.vasp import Vasp
 from ase.io import Trajectory
 from pathlib import Path
+from _common_utils import skip_probe
 
 rootdir = Path(__file__).parents[1] / "sandbox"
 curdir = Path(__file__).parent
@@ -69,6 +72,7 @@ def run_vasp_interactive():
 
 
 def test_main():
+    skip_probe(8)
     ec, fc = run_vasp_classic()
     ei, fi = run_vasp_interactive()
     print(ec, fc)

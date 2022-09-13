@@ -11,24 +11,7 @@ import os
 from ase.atoms import Atoms
 from ase.optimize import BFGS
 from copy import copy, deepcopy
-
-
-def skip_probe():
-    """Test if single step needs to be skipped"""
-    with VaspInteractive() as test_calc:
-        args = test_calc.make_command().split()
-        do_test = True
-        for i, param in enumerate(args):
-            if param in ["-n", "-np", "--n", "--np", "-c"]:
-                try:
-                    cores = int(args[i + 1])
-                    do_test = cores >= 4
-                    break
-                except Exception as e:
-                    do_test = False
-                    break
-        if do_test is False:
-            pytest.skip("Skipping test with ncores < 4", allow_module_level=False)
+from _common_utils import skip_probe
 
 
 d = 0.9575
@@ -48,7 +31,7 @@ def get_average_cpu(pid, interval=0.5):
 
 def test_pause_cpu_percent():
     """Send pause signal to mpi process and see if drops below threshold"""
-    skip_probe()
+    skip_probe(4)
     h2 = h2_root.copy()
     threshold_high = 75.0
     threshold_low = 25.0
@@ -71,7 +54,7 @@ def test_pause_cpu_percent():
 
 def test_pause_context():
     """Context mode"""
-    skip_probe()
+    skip_probe(4)
     h2 = h2_root.copy()
     threshold_high = 75.0
     threshold_low = 25.0

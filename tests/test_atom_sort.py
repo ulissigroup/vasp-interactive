@@ -9,7 +9,7 @@ from ase.io import read
 
 rootdir = Path(__file__).parents[1] / "sandbox"
 curdir = Path(__file__).parent
-cluster_root = read(curdir / "TIP4P-5.xyz")
+cluster_root = read(curdir / "TIP4P-2.xyz")
 cluster_root.pbc = True
 # Make a dummy "sequence"
 parameters = dict(

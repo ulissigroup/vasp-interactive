@@ -40,6 +40,8 @@ def run_with_vasp_interactive():
             xc="pbe",
             kpts=(1, 1, 1),  # not important, just keeps it faster
             directory=tmpdir,
+            # Only relevant for vasp5
+            parse_vaspout=True,
         )
 
         # Best practice of VaspInteractive is to use it as ContextManager
