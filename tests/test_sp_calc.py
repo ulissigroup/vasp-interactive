@@ -10,7 +10,7 @@ import os
 import sys
 import random
 
-params = dict(xc="pbe", kpts=(1, 1, 1), nsw=0, ibrion=-1, ismear=0)
+params = dict(xc="pbe", kpts=(1, 1, 1), nsw=0, ibrion=-1, ismear=0, ediff=1e-2, encut=120)
 
 
 def test_nsw():
