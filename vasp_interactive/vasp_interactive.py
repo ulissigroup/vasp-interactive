@@ -674,7 +674,7 @@ class VaspInteractive(Vasp):
                 self.results.update(
                     dict(forces=self.read_forces(lines=outcar, vasp5=vasp5))
                 )
-            except Exception:
+            except Exception as e:
                 raise RuntimeError((
                     "Failed to obtain forces from calculator."
                 )) from e
