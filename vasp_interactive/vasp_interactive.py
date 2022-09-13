@@ -404,8 +404,10 @@ class VaspInteractive(Vasp):
                 if _int_version(self.version) < 6:
                     warn(
                         (
-                            "Some builds of VASP 5.x may have issue generating output blocks. "
+                            "VaspInteractive is not fully compatible with VASP 5.x. "
                             "See this issue for details https://github.com/ulissigroup/vasp-interactive/issues/6. "
+                            "While our implementation should handle energy and forces correctly, "
+                            "other properties may be incorrectly parsed during optimization. "
                             "If you encounter similar error messages, try using VASP version > 6 if available."
                         )
                     )
@@ -702,7 +704,7 @@ class VaspInteractive(Vasp):
     def read_energy(self, all=False, lines=None, vasp5=False):
         """Overwrite the parent read_energy
         VASP 5.x output behavior is unpredictable and should always use the value in vasp.out
-        parameter vasp5 enforces read using vasp.out (or any txt)
+        parameter vasp5 enforces read using vasp.out (or any txt) and uses only all=False
         """
         try:
             fe, e0 = super().read_energy(all=all, lines=lines)
@@ -728,7 +730,7 @@ class VaspInteractive(Vasp):
             vaspout = f_vaspout.readlines()
             f_vaspout.close()
             try:
-                fe, e0 = parse_vaspout_energy(vaspout, all=all)
+                fe, e0 = parse_vaspout_energy(vaspout, all=False)
             except Exception as e:
                 raise RuntimeError(("Cannot parse energy from vasp output.")) from e
         return fe, e0
@@ -764,7 +766,7 @@ class VaspInteractive(Vasp):
             vaspout = f_vaspout.readlines()
             f_vaspout.close()
             try:
-                forces = parse_vaspout_forces(vaspout, all=all)
+                forces = parse_vaspout_forces(vaspout, all=False)
             except Exception as e:
                 raise RuntimeError(("Cannot parse forces from vasp output.")) from e
         return forces
@@ -993,9 +995,13 @@ def parse_vaspout_forces(vaspout, all=False):
                 except Exception:
                     break
             forces.append(forces_this_step)
-    forces = np.array(forces)
-    if not all:
-        forces = forces[-1]
+    # forces = np.array(forces)
+    if all is False:
+        forces = np.array(forces[-1])
+    else:
+        # May be unusable if vasp.out is appended from previous calculation.
+        # Use all=True with caution
+        forces = np.array(forces)
     return forces
 
 
