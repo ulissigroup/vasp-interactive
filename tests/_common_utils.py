@@ -1,6 +1,7 @@
 import pytest
 from vasp_interactive import VaspInteractive
 
+
 def skip_probe(min_cores=8):
     """Test if single step needs to be skipped"""
     with VaspInteractive() as test_calc:
@@ -16,4 +17,6 @@ def skip_probe(min_cores=8):
                     do_test = False
                     break
         if do_test is False:
-            pytest.skip(f"Skipping test with ncores < {min_cores}", allow_module_level=False)
+            pytest.skip(
+                f"Skipping test with ncores < {min_cores}", allow_module_level=False
+            )
