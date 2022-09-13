@@ -676,7 +676,7 @@ class VaspInteractive(Vasp):
         # Store the parameters used for this calculation
         self._store_param_state()
     
-    def read_energy(self, all=None, lines=None):
+    def read_energy(self, all=False, lines=None):
         """Overwrite the parent read_energy to allow further parsing from vasp 5.x
         a flag self.parse_vaspout should be set to True to allow such behavior
         """
@@ -701,7 +701,7 @@ class VaspInteractive(Vasp):
                     )
 
                 )
-            vaspout = f_vaspout.read()
+            vaspout = f_vaspout.readlines()
             f_vaspout.close()
             try:
                 fe, e0 = parse_vaspout(vaspout, all=all, property="energy")
@@ -738,7 +738,7 @@ class VaspInteractive(Vasp):
                     )
 
                 )
-            vaspout = f_vaspout.read()
+            vaspout = f_vaspout.readlines()
             f_vaspout.close()
             try:
                 forces = parse_vaspout(vaspout, all=all, property="forces")
@@ -905,7 +905,8 @@ def parse_outcar_time(lines):
             wall_time = float(line.split(":")[1].strip())
     return cpu_time, wall_time
 
-def parse_vaspout_energy(vaspout, all=all, property="energy"):
+
+def parse_vaspout_energy(vaspout, all=False):
     """Parse the energy and force lines from vaspout or stdout
     This should only be relevant when vasp5.x is involved, as a last resort 
     when both OUTCAR and vaspun.xml are truncated. Please use with care.
@@ -920,6 +921,66 @@ def parse_vaspout_energy(vaspout, all=all, property="energy"):
     For upstream methods in the calculator class, one must first check if the calc.txt is neither "-" nor None,
     otherwise the vaspout lines cannot be parsed.
     """
+    free_energies, zero_energies = [], []
+    ionic_pattern = re.compile(
+            (r"(\d+)\s+F=\s*([\d\-\.E\+]+)\s+" 
+            r"E0=\s*([\d\-\.E\+]+)\s+" 
+            r"d\s*E\s*=\s*([\d\-\.E\+]+)$"
+            )
+        )
+    for line in vaspout:
+        line = line.strip()
+        if ionic_pattern.match(line.strip()):
+            m = ionic_pattern.match(line.strip())
+            free_energies.append(float(m.group(2)))
+            zero_energies.append(float(m.group(3)))
+    if all is False:
+        free_energies = free_energies[-1]
+        zero_energies = zero_energies[-1]
+    return free_energies, zero_energies
+
+
+def parse_vaspout_forces(vaspout, all=False):
+    """Parse the energy and force lines from vaspout or stdout
+    This should only be relevant when vasp5.x is involved, as a last resort 
+    when both OUTCAR and vaspun.xml are truncated. Please use with care.
+    
+    The vaspout format are almost identical to OSZICAR https://www.vasp.at/wiki/index.php/OSZICAR
+    FORCES:
+        (N x 3) fields of force
+    N F= XX E0= XX  d E =XX
+    The F & E0 line should most likely maintain the same format but there can be extra output lines like
+    vdW dispersion etc. Some codes can be taken from https://github.com/materialsproject/pymatgen/blob/v2022.9.8/pymatgen/io/vasp/outputs.py#L4253-L4394
+    
+    For upstream methods in the calculator class, one must first check if the calc.txt is neither "-" nor None,
+    otherwise the vaspout lines cannot be parsed.
+    """
+    forces = []
+    current_line = 0
+    for i, line in enumerate(vaspout):
+        if i < current_line:
+            continue
+        else:
+            current_line = i
+        if "FORCES:" in line:
+            forces_this_step = []
+            while True:
+                current_line += 1
+                try:
+                    fx, fy, fz = np.fromstring(vaspout[current_line], dtype=float, sep=" ")
+                    forces_this_step.append([fx, fy, fz])
+                except Exception:
+                    break
+            forces.append(forces_this_step)
+    forces = np.array(forces)
+    if not all:
+        forces = forces[-1]
+    return forces
+
+
+    
+
+
 
 
 
