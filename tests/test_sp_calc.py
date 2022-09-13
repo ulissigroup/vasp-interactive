@@ -36,8 +36,8 @@ def test_nsw():
             atoms2.calc = calc2
             e2 = atoms2.get_potential_energy()
 
-    assert e1 == pytest.approx(e0)
-    assert e2 == pytest.approx(e0)
+    assert e1 == pytest.approx(e0, 1e-3)
+    assert e2 == pytest.approx(e0, 1e-3)
     return
 
 
@@ -60,5 +60,5 @@ def test_mock_sp():
                 atoms1.calc = calc1
                 e1 = atoms1.get_potential_energy()
 
-        assert e1 == pytest.approx(e0)
+        assert e1 == pytest.approx(e0, 1e-3)
     return
