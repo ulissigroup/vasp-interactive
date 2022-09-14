@@ -72,7 +72,8 @@ def run_vasp_interactive():
 
 
 def test_main():
-    skip_probe(8)
+    # This test is extremely expensive and does not need to perform in most cases.
+    skip_probe(128)
     ec, fc = run_vasp_classic()
     ei, fi = run_vasp_interactive()
     print(ec, fc)

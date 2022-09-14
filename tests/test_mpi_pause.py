@@ -11,7 +11,7 @@ import os
 from ase.atoms import Atoms
 from ase.optimize import BFGS
 from copy import copy, deepcopy
-from _common_utils import skip_probe
+from _common_utils import skip_probe, skip_slurm
 
 
 d = 0.9575
@@ -32,6 +32,7 @@ def get_average_cpu(pid, interval=0.5):
 def test_pause_cpu_percent():
     """Send pause signal to mpi process and see if drops below threshold"""
     skip_probe(4)
+    skip_slurm()
     h2 = h2_root.copy()
     threshold_high = 75.0
     threshold_low = 25.0
@@ -55,6 +56,7 @@ def test_pause_cpu_percent():
 def test_pause_context():
     """Context mode"""
     skip_probe(4)
+    skip_slurm()
     h2 = h2_root.copy()
     threshold_high = 75.0
     threshold_low = 25.0
