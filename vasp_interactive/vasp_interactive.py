@@ -55,6 +55,7 @@ def time_limit(seconds):
 def _find_mpi_process(pid, mpi_program="mpirun", vasp_program="vasp_std"):
     """Recursively search children processes with PID=pid and return the one
     that mpirun (or synonyms) are the main command.
+    Note we currently do not support signal forwarding in srun and multiple node mpi
     """
     allowed_names = set(["mpirun", "mpiexec", "orterun", "oshrun", "shmemrun"])
     allowed_vasp_names = set(["vasp_std", "vasp_gam", "vasp_ncl"])
@@ -77,8 +78,11 @@ def _find_mpi_process(pid, mpi_program="mpirun", vasp_program="vasp_std"):
         warn(
             "More than 1 mpi processes are created. This may be a bug. I'll use the last one"
         )
-    mpi_proc = mpi_candidates[-1]
-    return mpi_proc
+    if len(mpi_candidates) > 0:
+        mpi_proc = mpi_candidates[-1]
+        return mpi_proc
+    else:
+        return None
 
 
 class VaspInteractive(Vasp):
@@ -502,7 +506,7 @@ class VaspInteractive(Vasp):
         pid = self.process.pid
         mpi_process = _find_mpi_process(pid)
         if mpi_process is None:
-            warn("Cannot find the mpi process. Will not send stop signal to mpi.")
+            warn("Cannot find the mpi process or you're using different ompi wrapper. Will not send stop signal to mpi.")
             return
         mpi_process.send_signal(sig)
         return
@@ -514,7 +518,7 @@ class VaspInteractive(Vasp):
         pid = self.process.pid
         mpi_process = _find_mpi_process(pid)
         if mpi_process is None:
-            warn("Cannot find the mpi process. Will not send continue signal to mpi.")
+            warn("Cannot find the mpi process or you're using different ompi wrapper. Will not send continue signal to mpi.")
             return
         mpi_process.send_signal(sig)
         return
