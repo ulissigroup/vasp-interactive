@@ -161,6 +161,17 @@ def _locate_slurm_step(vasp_program="vasp_std"):
     else:
         proc = None
     return proc
-        
+
+def _slurm_signal(stepid, sig=signal.SIGTSTP):
+    if isinstance(sig, (str,)):
+        sig = str(sig)
+    elif isinstance(sig, (int,)):
+        sig = signal.Signals(sig).name
+    else:
+        sig = sig.name
+    cmds = ["scancel", "-s", sig, str(stepid)]
+    proc = _run_process(cmds, capture_output=True)
+    output = proc.stdout.decode("utf8").split("\n")
+    return
         
 

@@ -16,7 +16,7 @@ from ase.calculators.calculator import Calculator, ReadError, CalculatorSetupErr
 from ase.calculators.vasp.vasp import Vasp, check_atoms
 
 
-from .utils import DEFAULT_KILL_TIMEOUT, _int_version, time_limit, _find_mpi_process
+from .utils import (DEFAULT_KILL_TIMEOUT, _int_version, time_limit, _find_mpi_process, _slurm_signal)
 from .parse import (
     parse_outcar_iterations,
     parse_outcar_time,
@@ -454,7 +454,8 @@ class VaspInteractive(Vasp):
             mpi_process = match["process"]
             mpi_process.send_signal(sig)
         elif match["type"] == "slurm":
-            raise NotImplementedError()
+            slurm_step = match["process"]
+            _slurm_signal(slurm_step, sig)
         else:
             raise ValueError("Unsupported process type!")
         return
@@ -474,7 +475,8 @@ class VaspInteractive(Vasp):
             mpi_process = match["process"]
             mpi_process.send_signal(sig)
         elif match["type"] == "slurm":
-            raise NotImplementedError()
+            slurm_step = match["process"]
+            _slurm_signal(slurm_step, sig)
         else:
             raise ValueError("Unsupported process type!")
         return

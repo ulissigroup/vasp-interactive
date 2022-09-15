@@ -44,3 +44,30 @@ def test_jobid():
         time.sleep(10)
         stepid = _locate_slurm_step()
         assert stepid is None
+
+
+def get_average_cpu(pid, interval=0.5):
+    proc = psutil.Process(pid)
+    vasp_procs = [p for p in proc.children(recursive=True) if "vasp" in p.name()]
+    cpu_per = [p.cpu_percent(interval) for p in vasp_procs]
+    return np.mean(cpu_per)
+
+
+def test_signal_send():
+    """Simple test if slurm jobs parsing is ok"""
+    skip_slurm(reverse=True)
+    h2 = h2_root.copy()
+    jobid = _get_slurm_jobid()
+    assert jobid is not None
+    with tempfile.TemporaryDirectory() as tmpdir:
+        calc = VaspInteractive(directory=tmpdir, **params)
+        with calc:
+            h2.calc = calc
+            h2.get_potential_energy()
+            stepid1 = _locate_slurm_step()
+            h2.calc._pause_calc()
+            time.sleep(10)
+            stepid2 = _locate_slurm_step()
+            h2.calc._resume_calc()
+            stepid3 = _locate_slurm_step()
+        assert stepid1 == stepid2 == stepid3
