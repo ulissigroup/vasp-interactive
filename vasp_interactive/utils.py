@@ -5,11 +5,32 @@ import psutil
 import signal
 import re
 import numpy as np
+from warnings import warn
+import subprocess
 from contextlib import contextmanager
 
 # Timeout in seconds before a "forced" kill
 DEFAULT_KILL_TIMEOUT = 60
 
+def _run_process(commands, shell=False, print_cmd=True, cwd=".", capture_output=False):
+    """Wrap around subprocess.run
+    Returns the process object
+    """
+    full_cmd = " ".join(commands)
+    if print_cmd:
+        print(" ".join(commands))
+    if shell is False:
+        proc = subprocess.run(
+            commands, shell=shell, cwd=cwd, capture_output=capture_output
+        )
+    else:
+        proc = subprocess.run(
+            full_cmd, shell=shell, cwd=cwd, capture_output=capture_output
+        )
+    if proc.returncode == 0:
+        return proc
+    else:
+        raise RuntimeError(f"Running {full_cmd} returned error code {proc.returncode}")
 
 class TimeoutException(Exception):
     """Simple class for timeout"""
@@ -63,7 +84,7 @@ def _find_mpi_process(pid, mpi_program="mpirun", vasp_program="vasp_std"):
                 "If you spot weird behaviors, disable the pausing of calculator."
             )
             match["type"] = "slurm"
-            match["process"] = proc
+            match["process"] = _locate_slurm_step(vasp_program=vasp_program)
             break
         elif proc.name() in allowed_names:
             # is the mpi process's direct children are vasp_std?
@@ -77,7 +98,7 @@ def _find_mpi_process(pid, mpi_program="mpirun", vasp_program="vasp_std"):
         )
     if len(mpi_candidates) > 0:
         match["type"] = "mpi"
-        match["process"] = mpi_proc = mpi_candidates[-1]
+        match["process"] = mpi_candidates[-1]
 
     return match
 
@@ -89,3 +110,57 @@ def _int_version(version_string):
     """
     major = int(version_string.split(".")[0])
     return major
+
+def _get_slurm_jobid():
+    jobid = os.environ.get("SLURM_JOB_ID", None)
+    if jobid is None:
+        jobid = os.environ.get("SLURM_JOBID", None)
+    return jobid
+
+def _locate_slurm_step(vasp_program="vasp_std"):
+    """If slurm job system is involved, search for the slurm step id
+    that matches vasp_std (or other vasp commands)
+    
+    Steps:
+    1. Look for SLURM_JOB_ID in current env
+    2. Use `squeue` to locate the vasp_std step (latest)
+    
+    squeue
+    """
+    allowed_vasp_names = set(["vasp_std", "vasp_gam", "vasp_ncl"])
+    if vasp_program:
+        allowed_vasp_names.add(vasp_program)
+    jobid = _get_slurm_jobid()
+    if jobid is None:
+        # TODO: convert warn to logger
+        warn((
+            "Cannot locate the SLURM job id."
+        ))
+        return None
+    # Only 2 column output (jobid and jobname)
+    cmds = ["squeue", "-s", "--job", str(jobid), "-o", "%.30i %.30j"]
+    proc = _run_process(cmds, capture_output=True)
+    output = proc.stdout.decode("utf8").split("\n")
+    # print(output)
+    candidates = []
+    # breakpoint()
+    for line in output[1:]:
+        try:
+            stepid, name = line.strip().split()
+        except Exception:
+            continue
+        if any([v in name for v in allowed_vasp_names]):
+            candidates.append(stepid)
+    
+    if len(candidates) > 1:
+        warn(
+            "More than 1 slurm steps are found. I'll use the most recent one"
+        )
+    if len(candidates) > 0:
+        proc = candidates[0]
+    else:
+        proc = None
+    return proc
+        
+        
+

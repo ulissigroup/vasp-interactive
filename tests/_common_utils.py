@@ -22,7 +22,7 @@ def skip_probe(min_cores=8):
             )
 
 
-def skip_slurm():
+def skip_slurm(reverse=False):
     """Test if single step needs to be skipped"""
     with VaspInteractive() as test_calc:
         args = test_calc.make_command().split()
@@ -31,5 +31,7 @@ def skip_slurm():
             if "srun" in param:
                 do_test = False
                 break
-        if do_test is False:
-            pytest.skip(f"Skipping test started by srun", allow_module_level=False)
+    if reverse:
+        do_test = not do_test
+    if do_test is False:
+        pytest.skip(f"Skipping test started by srun", allow_module_level=False)
