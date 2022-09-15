@@ -1,5 +1,6 @@
 """Test process recovery on slurm systems (currenly only NERSC Cori)
 """
+import time
 import pytest
 import numpy as np
 from vasp_interactive import VaspInteractive
@@ -26,12 +27,20 @@ def test_jobid():
     jobid = _get_slurm_jobid()
     assert jobid is not None
     with tempfile.TemporaryDirectory() as tmpdir:
-        calc = VaspInteractive(directory=rootdir / "slurm-test", **params)
+        calc = VaspInteractive(directory=tmpdir, **params)
         with calc:
             h2.calc = calc
             h2.get_potential_energy()
             # Now should have a running VASP srun
             stepid = _locate_slurm_step()
             assert stepid is not None
+            assert "." in stepid
             print("jobid", jobid, "stepid", stepid)
-            assert jobid in stepid
+            stem, seq = stepid.split(".")
+            assert jobid == stem
+        # breakpoint()
+        # vasp process is terminated
+        # wait a few seconds until step finishes
+        time.sleep(10)
+        stepid = _locate_slurm_step()
+        assert stepid is None
