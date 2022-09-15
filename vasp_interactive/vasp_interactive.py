@@ -3,18 +3,18 @@ Provides additional bug fix to
 https://gitlab.com/ase/ase/-/blob/master/ase/calculators/vasp/interactive.py
 May be merged with upstream by the end of day.
 """
-import psutil
+import time
 import signal
+import os
+import sys
+from warnings import warn
 from subprocess import Popen, PIPE
 from contextlib import contextmanager
 
+import numpy as np
 from ase.calculators.calculator import Calculator, ReadError, CalculatorSetupError
-from ase.calculators.vasp import Vasp
-from ase.io import read
-from ase.io.vasp import write_vasp
+from ase.calculators.vasp.vasp import Vasp, check_atoms
 
-from ase.calculators.vasp.vasp import check_atoms
-from warnings import warn
 
 from .utils import DEFAULT_KILL_TIMEOUT, _int_version, time_limit, _find_mpi_process
 from .parse import (
@@ -240,7 +240,7 @@ class VaspInteractive(Vasp):
                     txt = self._indir(txt)
                     fd = open(txt, "r")
             elif hasattr(txt, "read"):
-                out = txt
+                fd = txt
             else:
                 raise RuntimeError(
                     "txt should either be a string"
@@ -444,13 +444,19 @@ class VaspInteractive(Vasp):
         if not self.process:
             return
         pid = self.process.pid
-        mpi_process = _find_mpi_process(pid)
-        if mpi_process is None:
+        match = _find_mpi_process(pid)
+        if (match["type"] is None) or (match["process"] is None):
             warn(
                 "Cannot find the mpi process or you're using different ompi wrapper. Will not send stop signal to mpi."
             )
             return
-        mpi_process.send_signal(sig)
+        elif match["type"] == "mpi":
+            mpi_process = match["process"]
+            mpi_process.send_signal(sig)
+        elif match["type"] == "slurm":
+            raise NotImplementedError()
+        else:
+            raise ValueError("Unsupported process type!")
         return
 
     def _resume_calc(self, sig=signal.SIGCONT):
@@ -458,13 +464,19 @@ class VaspInteractive(Vasp):
         if not self.process:
             return
         pid = self.process.pid
-        mpi_process = _find_mpi_process(pid)
-        if mpi_process is None:
+        match = _find_mpi_process(pid)
+        if (match["type"] is None) or (match["process"] is None):
             warn(
                 "Cannot find the mpi process or you're using different ompi wrapper. Will not send continue signal to mpi."
             )
             return
-        mpi_process.send_signal(sig)
+        elif match["type"] == "mpi":
+            mpi_process = match["process"]
+            mpi_process.send_signal(sig)
+        elif match["type"] == "slurm":
+            raise NotImplementedError()
+        else:
+            raise ValueError("Unsupported process type!")
         return
 
     @contextmanager

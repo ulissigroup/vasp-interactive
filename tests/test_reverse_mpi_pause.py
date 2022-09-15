@@ -44,7 +44,6 @@ def time_limit(seconds):
         signal.alarm(0)
 
 
-
 d = 0.9575
 h2_root = Atoms("H2", positions=[(d, 0, 0), (0, 0, 0)], cell=[8, 8, 8], pbc=True)
 params = dict(xc="pbe", kpts=(1, 1, 1), ismear=0)
