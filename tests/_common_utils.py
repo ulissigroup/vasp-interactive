@@ -1,4 +1,6 @@
 import pytest
+import psutil
+import numpy as np
 from vasp_interactive import VaspInteractive
 
 
@@ -35,3 +37,11 @@ def skip_slurm(reverse=False):
         do_test = not do_test
     if do_test is False:
         pytest.skip(f"Skipping test started by srun", allow_module_level=False)
+
+
+def get_average_cpu(interval=0.5):
+    """Get average cpu usage for vasp processes
+    """
+    vasp_procs = [p for p in psutil.process_iter() if "vasp" in p.name()]
+    cpu_per = [p.cpu_percent(interval) for p in vasp_procs]
+    return np.mean(cpu_per)

@@ -12,7 +12,7 @@ import os
 from ase.build import molecule
 from ase.optimize import BFGS
 from copy import copy, deepcopy
-from _common_utils import skip_probe, skip_slurm
+from _common_utils import skip_probe, skip_slurm, get_average_cpu
 
 
 h2_root = molecule("H2", vacuum=4, pbc=True)
@@ -20,10 +20,6 @@ params = dict(xc="pbe", kpts=(1, 1, 1), ismear=0)
 rootdir = Path(__file__).parents[1] / "sandbox"
 
 
-def get_average_cpu(interval=0.5):
-    vasp_procs = [p for p in psutil.process_iter() if "vasp" in p.name()]
-    cpu_per = [p.cpu_percent(interval) for p in vasp_procs]
-    return np.mean(cpu_per)
 
 
 def test_jobid():
