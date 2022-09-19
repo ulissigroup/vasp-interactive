@@ -3,10 +3,9 @@
 
 ## TL;DR
 
-`VaspInteractive` is a faster replacement for the original `Vasp` calculator from the 
+`VaspInteractive` is a faster yet fully-compatible replacement for the original `Vasp` calculator from the 
 [Atomic Simulation Environment (`ase`)](https://databases.fysik.dtu.dk/ase/ase/calculators/vasp.html) 
-that reduces numbers of electronic self-consistent cycles by leveraging the interactive mode of Vienna 
-Ab Initio Package (VASP)
+by leveraging the interactive mode of Vienna Ab Initio Package (VASP).
 
 ### VASP compatibility check
 
