@@ -16,7 +16,13 @@ from ase.calculators.calculator import Calculator, ReadError, CalculatorSetupErr
 from ase.calculators.vasp.vasp import Vasp, check_atoms
 
 
-from .utils import (DEFAULT_KILL_TIMEOUT, _int_version, time_limit, _find_mpi_process, _slurm_signal)
+from .utils import (
+    DEFAULT_KILL_TIMEOUT,
+    _int_version,
+    time_limit,
+    _find_mpi_process,
+    _slurm_signal,
+)
 from .parse import (
     parse_outcar_iterations,
     parse_outcar_time,
@@ -108,6 +114,8 @@ class VaspInteractive(Vasp):
         )
         # VaspInteractive can take 1 Popen process to track the VASP job
         self.process = None
+        # self.pid tracks if pid changes (useful for stopping slurm jobs)
+        self.pid = None
         self.allow_restart_process = allow_restart_process
 
         # Ionic steps counter. Note this number will be 1 more than that in ase.optimize
@@ -149,6 +157,10 @@ class VaspInteractive(Vasp):
 
         # Add pause function
         self.pause_mpi = allow_mpi_pause
+        # Tracker of mpi process (root proc of mpirun or slurm stepid etc)
+        # after calling _find_mpi_process, this property will become a dict cont
+        if self.pause_mpi:
+            self.mpi_match = None
         self.kill_timeout = kill_timeout
         self.parse_vaspout = parse_vaspout
         return
@@ -284,6 +296,7 @@ class VaspInteractive(Vasp):
             if (self.process.poll() == 0) and self.allow_restart_process:
                 pid = self.process.pid
                 self.process = None
+                self.pid = None
                 self._stdout(
                     "It seems your VASP process exited normally. I'll retart a new one.",
                     out=out,
@@ -318,6 +331,7 @@ class VaspInteractive(Vasp):
                 universal_newlines=True,
                 bufsize=0,
             )
+            self.pid = self.process.pid
             self.steps = 0
         else:
             # Whenever at this point, VASP interactive asks the input
@@ -399,11 +413,14 @@ class VaspInteractive(Vasp):
         Works by writing STOPCAR file and runs two dummy scf cycles
         #TODO: add a time-out option
         """
-        # Make sure the MPI process is awaken before the termination
+        # Make sure the MPI process is awake before the termination
         if self.pause_mpi:
             self._resume_calc()
 
         if self.process is None:
+            self.pid = None
+            if hasattr(self, "mpi_match"):
+                self.mpi_match = None
             return
         elif self.process.poll() is not None:
             # For whatever reason the vasp process stops prematurely (possibly too small nsw)
@@ -412,6 +429,9 @@ class VaspInteractive(Vasp):
             with self._txt_outstream() as out:
                 self._stdout(f"VASP exited with code {retcode}.", out=out)
             self.process = None
+            self.pid = None
+            if hasattr(self, "mpi_match"):
+                self.mpi_match = None
             return
         else:
             with self._txt_outstream() as out:
@@ -430,21 +450,33 @@ class VaspInteractive(Vasp):
                             f"VASP exited with code {self.process.poll()}.", out=out
                         )
                         self.process = None
+                        self.pid = None
+                        if hasattr(self, "mpi_match"):
+                            self.mpi_match = None
                         return
-                # TODO: the endless waiting cycle is hand-waving
-                # consider add a timeout function
+                # TODO: change the endless waiting to a timeout function
                 while self.process.poll() is None:
                     time.sleep(1)
                 self._stdout("VASP has been closed\n", out=out)
                 self.process = None
+                self.pid = None
+                if hasattr(self, "mpi_match"):
+                    self.mpi_match = None
             return
 
     def _pause_calc(self, sig=signal.SIGTSTP):
-        """Pause the vasp processes by sending SIGTSTP to the master mpirun process"""
+        """Pause the vasp processes by sending SIGTSTP to the master mpirun process
+        If the current pid are the same with previous record, do not query the mpi pid or slurm stepid
+        """
         if not self.process:
             return
         pid = self.process.pid
-        match = _find_mpi_process(pid)
+        if (self.pid == pid) and getattr(self, "mpi_match", None) is not None:
+            match = self.mpi_match
+        else:
+            self.pid = pid
+            match = _find_mpi_process(pid)
+            self.mpi_match = match
         if (match["type"] is None) or (match["process"] is None):
             warn(
                 "Cannot find the mpi process or you're using different ompi wrapper. Will not send stop signal to mpi."
@@ -461,11 +493,18 @@ class VaspInteractive(Vasp):
         return
 
     def _resume_calc(self, sig=signal.SIGCONT):
-        """Resume the vasp processes by sending SIGCONT to the master mpirun process"""
+        """Resume the vasp processes by sending SIGCONT to the master mpirun process
+        If the current pid are the same with previous record, do not query the mpi pid or slurm stepid
+        """
         if not self.process:
             return
         pid = self.process.pid
-        match = _find_mpi_process(pid)
+        if (self.pid == pid) and getattr(self, "mpi_match", None) is not None:
+            match = self.mpi_match
+        else:
+            self.pid = pid
+            match = _find_mpi_process(pid)
+            self.mpi_match = match
         if (match["type"] is None) or (match["process"] is None):
             warn(
                 "Cannot find the mpi process or you're using different ompi wrapper. Will not send continue signal to mpi."
@@ -798,6 +837,11 @@ class VaspInteractive(Vasp):
             if self.process is not None:
                 if self.process.poll() is None:
                     self.process.kill()
+            # Reset process tracker
+            self.process = None
+            self.pid = None
+            if hasattr(self, "mpi_match"):
+                self.mpi_match = None
         return
 
     def __del__(self):
