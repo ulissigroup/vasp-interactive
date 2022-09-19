@@ -3,86 +3,32 @@ Provides additional bug fix to
 https://gitlab.com/ase/ase/-/blob/master/ase/calculators/vasp/interactive.py
 May be merged with upstream by the end of day.
 """
+import time
+import signal
+import os
+import sys
+from warnings import warn
 from subprocess import Popen, PIPE
 from contextlib import contextmanager
 
-from ase.calculators.calculator import Calculator, ReadError, CalculatorSetupError
-from ase.calculators.vasp import Vasp
-from ase.io import read
-from ase.io.vasp import write_vasp
-
-from ase.calculators.vasp.vasp import check_atoms
-from warnings import warn
-
-import time
-import os
-import sys
-import psutil
-import signal
-import re
 import numpy as np
-
-DEFAULT_KILL_TIMEOUT = 60
-
-
-class TimeoutException(Exception):
-    """Simple class for timeout"""
-
-    pass
+from ase.calculators.calculator import Calculator, ReadError, CalculatorSetupError
+from ase.calculators.vasp.vasp import Vasp, check_atoms
 
 
-@contextmanager
-def time_limit(seconds):
-    """Usage:
-    try:
-        with time_limit(60):
-            do_something()
-    except TimeoutException:
-        raise
-    """
-
-    def signal_handler(signum, frame):
-        raise TimeoutException("Timed out closing VASP process.")
-
-    signal.signal(signal.SIGALRM, signal_handler)
-    signal.alarm(seconds)
-    try:
-        yield
-    finally:
-        signal.alarm(0)
-
-
-def _find_mpi_process(pid, mpi_program="mpirun", vasp_program="vasp_std"):
-    """Recursively search children processes with PID=pid and return the one
-    that mpirun (or synonyms) are the main command.
-    Note we currently do not support signal forwarding in srun and multiple node mpi
-    """
-    allowed_names = set(["mpirun", "mpiexec", "orterun", "oshrun", "shmemrun"])
-    allowed_vasp_names = set(["vasp_std", "vasp_gam", "vasp_ncl"])
-    if mpi_program:
-        allowed_names.add(mpi_program)
-    if vasp_program:
-        allowed_vasp_names.add(vasp_program)
-    process_list = [psutil.Process(pid)]
-    process_list.extend(process_list[0].children(recursive=True))
-    mpi_candidates = []
-    for proc in process_list:
-        # print(proc, proc.name())
-        if proc.name() in allowed_names:
-            # is the mpi process's direct children are vasp_std?
-            children = proc.children()
-            if len(children) > 0:
-                if children[0].name() in allowed_vasp_names:
-                    mpi_candidates.append(proc)
-    if len(mpi_candidates) > 1:
-        warn(
-            "More than 1 mpi processes are created. This may be a bug. I'll use the last one"
-        )
-    if len(mpi_candidates) > 0:
-        mpi_proc = mpi_candidates[-1]
-        return mpi_proc
-    else:
-        return None
+from .utils import (
+    DEFAULT_KILL_TIMEOUT,
+    _int_version,
+    time_limit,
+    _find_mpi_process,
+    _slurm_signal,
+)
+from .parse import (
+    parse_outcar_iterations,
+    parse_outcar_time,
+    parse_vaspout_energy,
+    parse_vaspout_forces,
+)
 
 
 class VaspInteractive(Vasp):
@@ -168,6 +114,8 @@ class VaspInteractive(Vasp):
         )
         # VaspInteractive can take 1 Popen process to track the VASP job
         self.process = None
+        # self.pid tracks if pid changes (useful for stopping slurm jobs)
+        self.pid = None
         self.allow_restart_process = allow_restart_process
 
         # Ionic steps counter. Note this number will be 1 more than that in ase.optimize
@@ -209,6 +157,11 @@ class VaspInteractive(Vasp):
 
         # Add pause function
         self.pause_mpi = allow_mpi_pause
+        # Tracker of mpi process (root proc of mpirun or slurm stepid etc)
+        # after calling _find_mpi_process, this property will become a dict cont
+        if self.pause_mpi:
+            self.mpi_match = None
+            self.mpi_state = None
         self.kill_timeout = kill_timeout
         self.parse_vaspout = parse_vaspout
         return
@@ -300,7 +253,7 @@ class VaspInteractive(Vasp):
                     txt = self._indir(txt)
                     fd = open(txt, "r")
             elif hasattr(txt, "read"):
-                out = txt
+                fd = txt
             else:
                 raise RuntimeError(
                     "txt should either be a string"
@@ -344,6 +297,7 @@ class VaspInteractive(Vasp):
             if (self.process.poll() == 0) and self.allow_restart_process:
                 pid = self.process.pid
                 self.process = None
+                self.pid = None
                 self._stdout(
                     "It seems your VASP process exited normally. I'll retart a new one.",
                     out=out,
@@ -378,6 +332,7 @@ class VaspInteractive(Vasp):
                 universal_newlines=True,
                 bufsize=0,
             )
+            self.pid = self.process.pid
             self.steps = 0
         else:
             # Whenever at this point, VASP interactive asks the input
@@ -459,11 +414,18 @@ class VaspInteractive(Vasp):
         Works by writing STOPCAR file and runs two dummy scf cycles
         #TODO: add a time-out option
         """
-        # Make sure the MPI process is awaken before the termination
+        # Make sure the MPI process is awake before the termination
         if self.pause_mpi:
-            self._resume_calc()
+            # If the mpi_state is never evaluated (None) or RUNNING,
+            # we don't need to continue the mpi process
+            if getattr(self, "mpi_state", None) == "PAUSED":
+                self._resume_calc()
 
         if self.process is None:
+            self.pid = None
+            if hasattr(self, "mpi_match"):
+                self.mpi_match = None
+                self.mpi_state = None
             return
         elif self.process.poll() is not None:
             # For whatever reason the vasp process stops prematurely (possibly too small nsw)
@@ -472,6 +434,10 @@ class VaspInteractive(Vasp):
             with self._txt_outstream() as out:
                 self._stdout(f"VASP exited with code {retcode}.", out=out)
             self.process = None
+            self.pid = None
+            if hasattr(self, "mpi_match"):
+                self.mpi_match = None
+                self.mpi_state = None
             return
         else:
             with self._txt_outstream() as out:
@@ -490,37 +456,78 @@ class VaspInteractive(Vasp):
                             f"VASP exited with code {self.process.poll()}.", out=out
                         )
                         self.process = None
+                        self.pid = None
+                        if hasattr(self, "mpi_match"):
+                            self.mpi_match = None
+                            self.mpi_state = None
                         return
-                # TODO: the endless waiting cycle is hand-waving
-                # consider add a timeout function
+                # TODO: change the endless waiting to a timeout function
                 while self.process.poll() is None:
                     time.sleep(1)
                 self._stdout("VASP has been closed\n", out=out)
                 self.process = None
+                self.pid = None
+                if hasattr(self, "mpi_match"):
+                    self.mpi_match = None
+                    self.mpi_state = None
             return
 
     def _pause_calc(self, sig=signal.SIGTSTP):
-        """Pause the vasp processes by sending SIGTSTP to the master mpirun process"""
+        """Pause the vasp processes by sending SIGTSTP to the master mpirun process
+        If the current pid are the same with previous record, do not query the mpi pid or slurm stepid
+        """
         if not self.process:
             return
         pid = self.process.pid
-        mpi_process = _find_mpi_process(pid)
-        if mpi_process is None:
-            warn("Cannot find the mpi process or you're using different ompi wrapper. Will not send stop signal to mpi.")
+        if (self.pid == pid) and getattr(self, "mpi_match", None) is not None:
+            match = self.mpi_match
+        else:
+            self.pid = pid
+            match = _find_mpi_process(pid)
+            self.mpi_match = match
+        if (match["type"] is None) or (match["process"] is None):
+            warn(
+                "Cannot find the mpi process or you're using different ompi wrapper. Will not send stop signal to mpi."
+            )
             return
-        mpi_process.send_signal(sig)
+        elif match["type"] == "mpi":
+            mpi_process = match["process"]
+            mpi_process.send_signal(sig)
+        elif match["type"] == "slurm":
+            slurm_step = match["process"]
+            _slurm_signal(slurm_step, sig)
+        else:
+            raise ValueError("Unsupported process type!")
+        self.mpi_state = "PAUSED"
         return
 
     def _resume_calc(self, sig=signal.SIGCONT):
-        """Resume the vasp processes by sending SIGCONT to the master mpirun process"""
+        """Resume the vasp processes by sending SIGCONT to the master mpirun process
+        If the current pid are the same with previous record, do not query the mpi pid or slurm stepid
+        """
         if not self.process:
             return
         pid = self.process.pid
-        mpi_process = _find_mpi_process(pid)
-        if mpi_process is None:
-            warn("Cannot find the mpi process or you're using different ompi wrapper. Will not send continue signal to mpi.")
+        if (self.pid == pid) and getattr(self, "mpi_match", None) is not None:
+            match = self.mpi_match
+        else:
+            self.pid = pid
+            match = _find_mpi_process(pid)
+            self.mpi_match = match
+        if (match["type"] is None) or (match["process"] is None):
+            warn(
+                "Cannot find the mpi process or you're using different ompi wrapper. Will not send continue signal to mpi."
+            )
             return
-        mpi_process.send_signal(sig)
+        elif match["type"] == "mpi":
+            mpi_process = match["process"]
+            mpi_process.send_signal(sig)
+        elif match["type"] == "slurm":
+            slurm_step = match["process"]
+            _slurm_signal(slurm_step, sig)
+        else:
+            raise ValueError("Unsupported process type!")
+        self.mpi_state = "RUNNING"
         return
 
     @contextmanager
@@ -669,9 +676,7 @@ class VaspInteractive(Vasp):
                 # breakpoint()
                 self.results.update(dict(free_energy=energy_free, energy=energy_zero))
             except Exception as e:
-                raise RuntimeError((
-                    "Failed to obtain energy from calculator."
-                )) from e
+                raise RuntimeError(("Failed to obtain energy from calculator.")) from e
 
         if "forces" not in self.results.keys():
             try:
@@ -679,9 +684,7 @@ class VaspInteractive(Vasp):
                     dict(forces=self.read_forces(lines=outcar, vasp5=vasp5))
                 )
             except Exception as e:
-                raise RuntimeError((
-                    "Failed to obtain forces from calculator."
-                )) from e
+                raise RuntimeError(("Failed to obtain forces from calculator.")) from e
 
         if "magmom" not in self.results.keys():
             try:
@@ -844,6 +847,12 @@ class VaspInteractive(Vasp):
             if self.process is not None:
                 if self.process.poll() is None:
                     self.process.kill()
+            # Reset process tracker
+            self.process = None
+            self.pid = None
+            if hasattr(self, "mpi_match"):
+                self.mpi_match = None
+                self.mpi_state = None
         return
 
     def __del__(self):
@@ -892,127 +901,3 @@ class VaspInteractive(Vasp):
             )
         )
         return new
-
-
-# Following are functions parsing OUTCAR files which are not present in parent
-# Vasp calculator but can he helpful for job diagnosis
-
-
-def parse_outcar_iterations(lines):
-    """Read the whole iteration information (ionic + electronic) from OUTCAR lines"""
-    n_ion_scf = 0
-    n_elec_scf = []
-
-    for line in lines:
-        if "- Iteration" in line:
-            ni_, ne_ = list(map(int, re.findall(r"\d+", line)))
-            if ni_ > n_ion_scf:
-                n_ion_scf = ni_
-                n_elec_scf.append(ne_)
-            else:
-                n_elec_scf[ni_ - 1] = ne_
-    n_elec_scf = np.array(n_elec_scf)
-    return n_ion_scf, n_elec_scf
-
-
-def parse_outcar_time(lines):
-    """Parse the cpu and wall time from OUTCAR.
-    The mismatch between wall time and cpu time represents
-    the turn-around time in VaspInteractive
-
-    returns (cpu_time, wall_time)
-    if the calculation is not finished, both will be None
-    """
-    cpu_time = None
-    wall_time = None
-    for line in lines:
-        if "Total CPU time used (sec):" in line:
-            cpu_time = float(line.split(":")[1].strip())
-        if "Elapsed time (sec):" in line:
-            wall_time = float(line.split(":")[1].strip())
-    return cpu_time, wall_time
-
-
-def parse_vaspout_energy(vaspout, all=False):
-    """Parse the energy and force lines from vaspout or stdout
-    This should only be relevant when vasp5.x is involved, as a last resort
-    when both OUTCAR and vaspun.xml are truncated. Please use with care.
-
-    The vaspout format are almost identical to OSZICAR https://www.vasp.at/wiki/index.php/OSZICAR
-    FORCES:
-        (N x 3) fields of force
-    N F= XX E0= XX  d E =XX
-    The F & E0 line should most likely maintain the same format but there can be extra output lines like
-    vdW dispersion etc. Some codes can be traken from https://github.com/materialsproject/pymatgen/blob/v2022.9.8/pymatgen/io/vasp/outputs.py#L4253-L4394
-
-    For upstream methods in the calculator class, one must first check if the calc.txt is neither "-" nor None,
-    otherwise the vaspout lines cannot be parsed.
-    """
-    free_energies, zero_energies = [], []
-    ionic_pattern = re.compile(
-        (
-            r"(\d+)\s+F=\s*([\d\-\.E\+]+)\s+"
-            r"E0=\s*([\d\-\.E\+]+)\s+"
-            r"d\s*E\s*=\s*([\d\-\.E\+]+)$"
-        )
-    )
-    for line in vaspout:
-        line = line.strip()
-        if ionic_pattern.match(line.strip()):
-            m = ionic_pattern.match(line.strip())
-            free_energies.append(float(m.group(2)))
-            zero_energies.append(float(m.group(3)))
-    if all is False:
-        free_energies = free_energies[-1]
-        zero_energies = zero_energies[-1]
-    return free_energies, zero_energies
-
-
-def parse_vaspout_forces(vaspout, all=False):
-    """Parse the energy and force lines from vaspout or stdout
-    This should only be relevant when vasp5.x is involved, as a last resort
-    when both OUTCAR and vaspun.xml are truncated. Please use with care.
-
-    The vaspout format are almost identical to OSZICAR https://www.vasp.at/wiki/index.php/OSZICAR
-    FORCES:
-        (N x 3) fields of force
-    N F= XX E0= XX  d E =XX
-    The F & E0 line should most likely maintain the same format but there can be extra output lines like
-    vdW dispersion etc. Some codes can be taken from https://github.com/materialsproject/pymatgen/blob/v2022.9.8/pymatgen/io/vasp/outputs.py#L4253-L4394
-
-    For upstream methods in the calculator class, one must first check if the calc.txt is neither "-" nor None,
-    otherwise the vaspout lines cannot be parsed.
-    """
-    forces = []
-    current_line = 0
-    for i, line in enumerate(vaspout):
-        if i < current_line:
-            continue
-        else:
-            current_line = i
-        if "FORCES:" in line:
-            forces_this_step = []
-            while True:
-                current_line += 1
-                try:
-                    fx, fy, fz = np.fromstring(
-                        vaspout[current_line], dtype=float, sep=" "
-                    )
-                    forces_this_step.append([fx, fy, fz])
-                except Exception:
-                    break
-            forces.append(forces_this_step)
-    # forces = np.array(forces)
-    if all is False:
-        forces = np.array(forces[-1])
-    else:
-        # May be unusable if vasp.out is appended from previous calculation.
-        # Use all=True with caution
-        forces = np.array(forces)
-    return forces
-
-
-def _int_version(version_string):
-    """Get int version string"""
-    major = int(version_string.split(".")[0])
-    return major

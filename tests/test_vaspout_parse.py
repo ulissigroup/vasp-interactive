@@ -4,7 +4,11 @@ step-0
 """
 import pytest
 from vasp_interactive import VaspInteractive
-from vasp_interactive.vasp_interactive import parse_vaspout_energy, parse_vaspout_forces, _int_version
+from vasp_interactive.vasp_interactive import (
+    parse_vaspout_energy,
+    parse_vaspout_forces,
+    _int_version,
+)
 from ase.calculators.calculator import CalculatorSetupError
 import tempfile
 from pathlib import Path
@@ -91,13 +95,12 @@ def test_calc_option():
 
 
 def test_txt_option():
-    """Parsing with vasp 5 should only work when the txt output of VASP calculator is not suppressed
-    """
+    """Parsing with vasp 5 should only work when the txt output of VASP calculator is not suppressed"""
     atoms = molecule("H2", vacuum=5, pbc=True)
     # Very rough settings
     params = dict(
-    xc="pbe", kpts=(1, 1, 1), nsw=0, ibrion=-1, ismear=0, ediff=1e-2, encut=120
-)
+        xc="pbe", kpts=(1, 1, 1), nsw=0, ibrion=-1, ismear=0, ediff=1e-2, encut=120
+    )
     # Change vasp.out name
     with tempfile.TemporaryDirectory() as tmpdir:
         atoms0 = atoms.copy()
@@ -107,17 +110,17 @@ def test_txt_option():
         version = _int_version(calc.version)
         if version == 6:
             pytest.skip(f"Skipping vasp 6 tests", allow_module_level=False)
-        
+
         assert fe == pytest.approx(-6.2, 0.1)
-    
-    # stdout     
+
+    # stdout
     with tempfile.TemporaryDirectory() as tmpdir:
         atoms0 = atoms.copy()
         calc = VaspInteractive(directory=tmpdir, txt="-", **params)
         atoms0.calc = calc
         with pytest.raises(RuntimeError):
             fe = atoms0.get_potential_energy()
-    
+
     # supressed
     with tempfile.TemporaryDirectory() as tmpdir:
         atoms0 = atoms.copy()
@@ -125,5 +128,3 @@ def test_txt_option():
         atoms0.calc = calc
         with pytest.raises(RuntimeError):
             fe = atoms0.get_potential_energy()
-
-
