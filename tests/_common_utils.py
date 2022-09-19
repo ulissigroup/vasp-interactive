@@ -40,8 +40,7 @@ def skip_slurm(reverse=False):
 
 
 def get_average_cpu(interval=0.5):
-    """Get average cpu usage for vasp processes
-    """
+    """Get average cpu usage for vasp processes"""
     vasp_procs = [p for p in psutil.process_iter() if "vasp" in p.name()]
     cpu_per = [p.cpu_percent(interval) for p in vasp_procs]
     return np.mean(cpu_per)

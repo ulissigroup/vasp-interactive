@@ -12,6 +12,7 @@ from contextlib import contextmanager
 # Timeout in seconds before a "forced" kill
 DEFAULT_KILL_TIMEOUT = 60
 
+
 def _run_process(commands, shell=False, print_cmd=True, cwd=".", capture_output=False):
     """Wrap around subprocess.run
     Returns the process object
@@ -31,6 +32,7 @@ def _run_process(commands, shell=False, print_cmd=True, cwd=".", capture_output=
         return proc
     else:
         raise RuntimeError(f"Running {full_cmd} returned error code {proc.returncode}")
+
 
 class TimeoutException(Exception):
     """Simple class for timeout"""
@@ -111,20 +113,22 @@ def _int_version(version_string):
     major = int(version_string.split(".")[0])
     return major
 
+
 def _get_slurm_jobid():
     jobid = os.environ.get("SLURM_JOB_ID", None)
     if jobid is None:
         jobid = os.environ.get("SLURM_JOBID", None)
     return jobid
 
+
 def _locate_slurm_step(vasp_program="vasp_std"):
     """If slurm job system is involved, search for the slurm step id
     that matches vasp_std (or other vasp commands)
-    
+
     Steps:
     1. Look for SLURM_JOB_ID in current env
     2. Use `squeue` to locate the vasp_std step (latest)
-    
+
     squeue
     """
     allowed_vasp_names = set(["vasp_std", "vasp_gam", "vasp_ncl"])
@@ -133,9 +137,7 @@ def _locate_slurm_step(vasp_program="vasp_std"):
     jobid = _get_slurm_jobid()
     if jobid is None:
         # TODO: convert warn to logger
-        warn((
-            "Cannot locate the SLURM job id."
-        ))
+        warn(("Cannot locate the SLURM job id."))
         return None
     # Only 2 column output (jobid and jobname)
     cmds = ["squeue", "-s", "--job", str(jobid), "-o", "%.30i %.30j"]
@@ -151,16 +153,15 @@ def _locate_slurm_step(vasp_program="vasp_std"):
             continue
         if any([v in name for v in allowed_vasp_names]):
             candidates.append(stepid)
-    
+
     if len(candidates) > 1:
-        warn(
-            "More than 1 slurm steps are found. I'll use the most recent one"
-        )
+        warn("More than 1 slurm steps are found. I'll use the most recent one")
     if len(candidates) > 0:
         proc = candidates[0]
     else:
         proc = None
     return proc
+
 
 def _slurm_signal(stepid, sig=signal.SIGTSTP):
     if isinstance(sig, (str,)):
@@ -173,5 +174,3 @@ def _slurm_signal(stepid, sig=signal.SIGTSTP):
     proc = _run_process(cmds, capture_output=True)
     output = proc.stdout.decode("utf8").split("\n")
     return
-        
-

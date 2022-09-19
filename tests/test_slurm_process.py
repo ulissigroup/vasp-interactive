@@ -20,8 +20,6 @@ params = dict(xc="pbe", kpts=(1, 1, 1), ismear=0)
 rootdir = Path(__file__).parents[1] / "sandbox"
 
 
-
-
 def test_jobid():
     """Simple test if slurm jobs parsing is ok"""
     skip_slurm(reverse=True)

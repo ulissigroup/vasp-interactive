@@ -3,7 +3,6 @@ Note the test needs to run VASP with MPI cores > 4. Otherwise it will skip.
 """
 import pytest
 import numpy as np
-from vasp_interactive import VaspInteractive
 import psutil
 import tempfile
 from pathlib import Path
@@ -14,34 +13,9 @@ from copy import copy, deepcopy
 
 import signal
 from contextlib import contextmanager
-from _common_utils import skip_probe, skip_slurm
-
-
-class TimeoutException(Exception):
-    """Simple class for timeout"""
-
-    pass
-
-
-@contextmanager
-def time_limit(seconds):
-    """Usage:
-    try:
-        with time_limit(60):
-            do_something()
-    except TimeoutException:
-        raise
-    """
-
-    def signal_handler(signum, frame):
-        raise TimeoutException("Timed out!")
-
-    signal.signal(signal.SIGALRM, signal_handler)
-    signal.alarm(seconds)
-    try:
-        yield
-    finally:
-        signal.alarm(0)
+from vasp_interactive import VaspInteractive
+from vasp_interactive.utils import time_limit
+from _common_utils import skip_probe, skip_slurm, get_average_cpu
 
 
 d = 0.9575
@@ -52,16 +26,9 @@ fmax = 0.05
 ediff = 1e-4
 
 
-def get_average_cpu(pid, interval=0.5):
-    proc = psutil.Process(pid)
-    vasp_procs = [p for p in proc.children(recursive=True) if "vasp" in p.name()]
-    cpu_per = [p.cpu_percent(interval) for p in vasp_procs]
-    return np.mean(cpu_per)
-
-
 def test_paused_close():
     skip_probe(4)
-    skip_slurm()
+    # skip_slurm()
     """Context mode"""
     h2 = h2_root.copy()
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -79,7 +46,7 @@ def test_paused_close():
 def test_paused_close_context():
     """Context mode"""
     skip_probe(4)
-    skip_slurm()
+    # skip_slurm()
     h2 = h2_root.copy()
     with tempfile.TemporaryDirectory() as tmpdir:
         with VaspInteractive(directory=tmpdir, **params) as calc:
@@ -89,7 +56,7 @@ def test_paused_close_context():
                 h2.get_potential_energy()
             assert calc.process is not None
             pid = calc.process.pid
-            assert get_average_cpu(pid) <= 5.0
+            assert get_average_cpu() <= 25
         # Close statement should not last more than 10 sec
     return
 
