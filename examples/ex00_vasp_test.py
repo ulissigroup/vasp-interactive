@@ -8,6 +8,9 @@ import tempfile
 from ase.build import molecule
 from ase.io import read
 from vasp_interactive import VaspInteractive
+import warnings
+
+warnings.filterwarnings("ignore")
 
 
 def cprint(content, color=None, **kwargs):
@@ -76,6 +79,7 @@ def demo_test():
     atoms = molecule("H2", pbc=True, vacuum=4)
     with tempfile.TemporaryDirectory() as tmpdir:
         calc = VaspInteractive(
+            nsw=0,
             istart=0,
             xc="pbe",
             directory="test1",
@@ -84,8 +88,6 @@ def demo_test():
         with calc._txt_outstream() as out:
             calc._run(atoms, out=out)
         pid = calc.process.pid
-        # Low level kill to prevent any issue with STOPCAR etc.
-        subprocess.run(["kill", "-9", str(pid)])
 
         # Check vasprun.xml
         try:
@@ -118,6 +120,8 @@ def demo_test():
             if "FORCES" in line:
                 vaspout_ok = True
                 break
+        # Low level kill to prevent any issue with STOPCAR etc.
+        subprocess.run(["kill", "-9", str(pid)])
 
     print("Single point calculation finished. Checking output file parsing.")
     if vasprun_ok:
