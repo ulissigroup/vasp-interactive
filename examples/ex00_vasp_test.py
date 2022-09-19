@@ -10,6 +10,30 @@ from ase.io import read
 from vasp_interactive import VaspInteractive
 
 
+def cprint(content, color=None, **kwargs):
+    """Color print wrapper"""
+    ansi_color = dict(
+        HEADER="\033[95m",
+        OKBLUE="\033[94m",
+        OKGREEN="\033[92m",
+        WARNING="\033[93m",
+        FAIL="\033[91m",
+        ENDC="\033[0m",
+        BOLD="\033[1m",
+        UNDERLINE="\033[4m",
+    )
+    if color is None:
+        output = content
+    elif color in ansi_color.keys() and color != "ENDC":
+        output = ansi_color[color] + content + ansi_color["ENDC"]
+    else:
+        raise ValueError(
+            f"Unknown ANSI color name. Allowed values are {list(ansi_color.keys())}"
+        )
+    print(output, **kwargs)
+    return
+
+
 def vasp_env_test():
     print(
         "Checking if ASE_VASP_COMMAND, VASP_COMMAND or VASP_SCRIPT environment variables are set"
@@ -20,11 +44,11 @@ def vasp_env_test():
             for p in ("ASE_VASP_COMMAND", "VASP_COMMAND", "VASP_SCRIPT")
         ]
     ):
-        print("env set OK!")
+        cprint("VASP command env is set!", color="OKGREEN")
     else:
         var = input("Please enter the VASP command:\n")
         if len(var) == 0:
-            print("Failed to set VASP env. Abort.")
+            cprint("Failed to set VASP env. Abort.", color="FAIL")
             return False
         else:
             os.environ["ASE_VASP_COMMAND"] = str(var)
@@ -32,23 +56,27 @@ def vasp_env_test():
     print("Checking VASP Pseudopotential settings")
 
     if os.environ.get("VASP_PP_PATH", None) is not None:
-        print("VASP_PP_PATH set")
+        cprint("VASP_PP_PATH is set!", color="OKGREEN")
     else:
         var = input("Please enter the VASP_PP_PATH environmen variable:\n")
         if len(var) == 0:
-            print("Failed to set VASP_PP_PATH env. Abort.")
+            cprint("Failed to set VASP_PP_PATH env. Abort.", color="FAIL")
             return False
         else:
             os.environ["VASP_PP_PATH"] = str(var)
-            print(f"set VASP_PP_PATH to {var}")
+            print(f"Set VASP_PP_PATH to {var}")
     return True
 
 
 def demo_test():
+    """Use low-level commands to execute VASP on a simple H2 structure
+    check whether parsing of vasprun.xml, OUTCAR and vasp.out are supported
+    """
     print("Running test example")
     atoms = molecule("H2", pbc=True, vacuum=4)
     with tempfile.TemporaryDirectory() as tmpdir:
         calc = VaspInteractive(
+            istart=0,
             xc="pbe",
             directory="test1",
         )
@@ -56,8 +84,15 @@ def demo_test():
         with calc._txt_outstream() as out:
             calc._run(atoms, out=out)
         pid = calc.process.pid
+        # Low level kill to prevent any issue with STOPCAR etc.
+        subprocess.run(["kill", "-9", str(pid)])
 
         # Check vasprun.xml
+        try:
+            vrun = read(calc._indir("vasprun.xml"))
+            vasprun_ok = True
+        except Exception as e:
+            vasprun_ok = False
 
         # Check OUTCAR
         outcar_lines = open(calc._indir("OUTCAR"), "r").readlines()
@@ -83,11 +118,46 @@ def demo_test():
             if "FORCES" in line:
                 vaspout_ok = True
                 break
-        # Low level kill
-        subprocess.run(["kill", "-9", str(pid)])
 
-    print(f"VASP OUTCAR: {outcar_ok}")
-    print(f"VASP raw output: {vaspout_ok}")
+    print("Single point calculation finished. Checking output file parsing.")
+    if vasprun_ok:
+        cprint(f"vasprunxml: OK", color="OKGREEN")
+    else:
+        cprint(f"vasprunxml: FAIL", color="FAIL")
+    if outcar_ok:
+        cprint(f"OUTCAR: OK", color="OKGREEN")
+    else:
+        cprint(f"OUTCAR: FAIL", color="FAIL")
+    if vaspout_ok:
+        cprint(f"VASP raw output: OK", color="OKGREEN")
+    else:
+        cprint(f"VASP raw output: FAIL", color="FAIL")
+
+    if not vasprun_ok:
+        cprint(
+            "VaspInteractive may not be compatible with your VASP setup. Please refer to the README for details.",
+            color="FAIL",
+        )
+    elif not outcar_ok:
+        cprint(
+            (
+                "VaspInteractive can read from raw output but OUTCAR is incomplete. "
+                "Only the energy and forces are read in this case. "
+                "Please refer to the README for details"
+            ),
+            color="WARNING",
+        )
+    elif not vasprun_ok:
+        cprint(
+            (
+                "vasprun.xml is incomplete. "
+                "VaspInteractive should still work but "
+                "you're welcome to submit issues."
+            ),
+            color="OKBLUE",
+        )
+    else:
+        cprint("All test pass! Enjoy coding.", color="OKGREEN")
 
 
 if __name__ == "__main__":
