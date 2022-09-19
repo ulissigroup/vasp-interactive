@@ -1,6 +1,37 @@
-# Interactive Vasp calculator
+# `VaspInteractive`: a stream-based interactive calculator for VASP
 ![workflow](https://github.com/ulissigroup/vasp-interactive/actions/workflows/package_and_unittest.yml/badge.svg)
 
+## TL;DR
+
+`VaspInteractive` is a faster replacement for the original `Vasp` calculator from the 
+[Atomic Simulation Environment (`ase`)](https://databases.fysik.dtu.dk/ase/ase/calculators/vasp.html) 
+that reduces numbers of electronic self-consistent cycles by leveraging the interactive mode of Vienna 
+Ab Initio Package (VASP)
+
+### VASP compatibility check
+
+You can test whether `VaspInteractive` is compatible with your compiled VASP code. Simply run the test demo
+from this repository and follow the prompt input:
+**TODO**
+```bash
+git clone xxx
+bash vasp-interactive/examples/00-pretest.sh
+```
+
+If the test fails, please check the **TODO** Troubleshooting section or submit an issue.
+
+### Installation
+
+**TODO**
+```bash
+pip install git+xxx
+```
+
+### Basic usage
+**TODO**
+
+
+## Additional notes
 This repo provides a patched version of the `VaspInteractive` calculator, 
 originally from Atomic Simulation Environment (`ase`).
 
