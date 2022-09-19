@@ -161,6 +161,7 @@ class VaspInteractive(Vasp):
         # after calling _find_mpi_process, this property will become a dict cont
         if self.pause_mpi:
             self.mpi_match = None
+            self.mpi_state = None
         self.kill_timeout = kill_timeout
         self.parse_vaspout = parse_vaspout
         return
@@ -415,12 +416,16 @@ class VaspInteractive(Vasp):
         """
         # Make sure the MPI process is awake before the termination
         if self.pause_mpi:
-            self._resume_calc()
+            # If the mpi_state is never evaluated (None) or RUNNING,
+            # we don't need to continue the mpi process
+            if getattr(self, "mpi_state", None) == "PAUSED":
+                self._resume_calc()
 
         if self.process is None:
             self.pid = None
             if hasattr(self, "mpi_match"):
                 self.mpi_match = None
+                self.mpi_state = None
             return
         elif self.process.poll() is not None:
             # For whatever reason the vasp process stops prematurely (possibly too small nsw)
@@ -432,6 +437,7 @@ class VaspInteractive(Vasp):
             self.pid = None
             if hasattr(self, "mpi_match"):
                 self.mpi_match = None
+                self.mpi_state = None
             return
         else:
             with self._txt_outstream() as out:
@@ -453,6 +459,7 @@ class VaspInteractive(Vasp):
                         self.pid = None
                         if hasattr(self, "mpi_match"):
                             self.mpi_match = None
+                            self.mpi_state = None
                         return
                 # TODO: change the endless waiting to a timeout function
                 while self.process.poll() is None:
@@ -462,6 +469,7 @@ class VaspInteractive(Vasp):
                 self.pid = None
                 if hasattr(self, "mpi_match"):
                     self.mpi_match = None
+                    self.mpi_state = None
             return
 
     def _pause_calc(self, sig=signal.SIGTSTP):
@@ -490,6 +498,7 @@ class VaspInteractive(Vasp):
             _slurm_signal(slurm_step, sig)
         else:
             raise ValueError("Unsupported process type!")
+        self.mpi_state = "PAUSED"
         return
 
     def _resume_calc(self, sig=signal.SIGCONT):
@@ -518,6 +527,7 @@ class VaspInteractive(Vasp):
             _slurm_signal(slurm_step, sig)
         else:
             raise ValueError("Unsupported process type!")
+        self.mpi_state = "RUNNING"
         return
 
     @contextmanager
@@ -842,6 +852,7 @@ class VaspInteractive(Vasp):
             self.pid = None
             if hasattr(self, "mpi_match"):
                 self.mpi_match = None
+                self.mpi_state = None
         return
 
     def __del__(self):

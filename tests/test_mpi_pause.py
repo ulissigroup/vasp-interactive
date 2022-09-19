@@ -11,7 +11,7 @@ import os
 from ase.atoms import Atoms
 from ase.optimize import BFGS
 from copy import copy, deepcopy
-from _common_utils import skip_probe, skip_slurm
+from _common_utils import skip_probe, skip_slurm, get_average_cpu
 
 
 d = 0.9575
@@ -22,17 +22,17 @@ fmax = 0.05
 ediff = 1e-4
 
 
-def get_average_cpu(pid, interval=0.5):
-    proc = psutil.Process(pid)
-    vasp_procs = [p for p in proc.children(recursive=True) if "vasp" in p.name()]
-    cpu_per = [p.cpu_percent(interval) for p in vasp_procs]
-    return np.mean(cpu_per)
+# def get_average_cpu(pid, interval=0.5):
+#     proc = psutil.Process(pid)
+#     vasp_procs = [p for p in proc.children(recursive=True) if "vasp" in p.name()]
+#     cpu_per = [p.cpu_percent(interval) for p in vasp_procs]
+#     return np.mean(cpu_per)
 
 
 def test_pause_cpu_percent():
     """Send pause signal to mpi process and see if drops below threshold"""
     skip_probe(4)
-    skip_slurm()
+    # skip_slurm()
     h2 = h2_root.copy()
     threshold_high = 75.0
     threshold_low = 25.0
@@ -42,11 +42,11 @@ def test_pause_cpu_percent():
             h2.calc = calc
             h2.get_potential_energy()
             pid = h2.calc.process.pid
-            cpu_nonstop = get_average_cpu(pid)
+            cpu_nonstop = get_average_cpu()
             print(cpu_nonstop)
             assert cpu_nonstop > threshold_high
             h2.calc._pause_calc()
-            cpu_stop = get_average_cpu(pid)
+            cpu_stop = get_average_cpu()
             print(cpu_stop)
             assert cpu_stop < threshold_low
             h2.calc._resume_calc()
@@ -56,7 +56,7 @@ def test_pause_cpu_percent():
 def test_pause_context():
     """Context mode"""
     skip_probe(4)
-    skip_slurm()
+    # skip_slurm()
     h2 = h2_root.copy()
     threshold_high = 75.0
     threshold_low = 25.0
@@ -67,11 +67,11 @@ def test_pause_context():
             pid = h2.calc.process.pid
             # Context
             with h2.calc.pause():
-                cpu_stop = get_average_cpu(pid)
+                cpu_stop = get_average_cpu()
                 print(cpu_stop)
                 assert cpu_stop < threshold_low
 
-            cpu_nonstop = get_average_cpu(pid)
+            cpu_nonstop = get_average_cpu()
             print(cpu_nonstop)
             assert cpu_nonstop > threshold_high
     return
