@@ -137,15 +137,17 @@ initial parameters of `VaspInteractive`. -->
 
 ## Benchmark
 
+### Comparison against original `Vasp` calculator
+
 The following figure shows the benchmark of `VaspInteractive` vs original `Vasp`. The structures for relaxation are taken from the 
 GPAW [optimizer benchmark](https://wiki.fysik.dtu.dk/gpaw/devel/ase_optimize/ase_optimize.html) and BFGS is used as the optimizer in all cases.
-All calculations are done using AMD Ryzen Threadripper 3990X (8 MPI ranks, 4105.948 GHz).
+All calculations are done using AMD Ryzen Threadripper 3990X (8 MPI ranks, 4105.948 GHz) with VASP version 6.1.2 compiled with Intel's MKL library.
 
 Two quantities are compared:
 1) Wall time (right panel).
 2) Total electronic scf steps (i.e. sum of scf steps per ionic cycle) (left panel).
 
-Performance of relaxation using pure VASP routines (`IBRION=2`, conjugate gradient) is used as the reference. 
+Performance of relaxation using pure VASP routines (`IBRION=2`, conjugate gradient) is used as the baseline reference. 
 `VaspInteractive` reduces the wall time and electronic steps compared with the classic VASP+BFGS appraoch.
 
 ![benchmark-1](examples/benchmark.png)
@@ -154,11 +156,10 @@ Below are the details about the ionic and electronic steps (using system CAu8O):
 
 ![benchmark-2](examples/details.png)
 
-In the case of CO+Au(111) slab system, `VaspInteractive` seems even to be better
+In the case of CO+Au(111) slab system, `VaspInteractive` seems even to better
 than the VASP CG optimizer. Note such results can be tuned by parameters such as IBRION or IWAVEPR.
 
-A more detailed example comparing the wall time and SCF cycles for `VaspInteractive` and classic `Vasp` combined with 
-various ASE-optimizers can be find in the following figure. The horizontal broken lines are the lowest value among all optimizers
+A more detailed example comparing the wall time and SCF cycles for `VaspInteractive` and classic `Vasp` combined with various ASE-optimizers can be find in the following figure. The horizontal broken lines are the lowest value among all optimizers
 for the same structure.
 
 ![benchmark-2](examples/benchmark-large.png)
@@ -167,12 +168,18 @@ In addition to the constant time reduction using `VaspInteractive+ASE` compared 
 `GPMin` seems to be the most reliable optimizer to be combined. In most cases `VaspInteractive+GPMin` 
 outperforms VASP internal CG routine (`IBRION=2`) and gives more consistent results than RMM-DIIS (`IBRION=1`).
 
-`VaspInteractive` is also possible to combine with some more complex optimizers like `al_mlp` 
-(with `flare` as underlying machine learnin potential). Online learning optimizer in combination with `VaspInteractive`
-can greatly save computation time as compared with direct DFT + BFGS approaches,
-as shown in the following benchmark for a 7-atom Cu cluster.
+### Combining `VaspInteractive` with advanced optimizers
 
-![benchmark-3](examples/mlp_examples/mlp_online_parent_scf.png)
+The benchmark from previous section shows when combining with better optimizers, 
+`VaspInteractive` can outperform internal VASP routines. This becomes even more obvious when
+using active learning algorithms such as [FINETUNA](https://github.com/ulissigroup/finetuna) 
+([Musielewicz et al. *Mach. Learn.: Sci. Technol.* **3** 03LT01](https://iopscience.iop.org/article/10.1088/2632-2153/ac8fe0)). An excerpt from the FINETUNA study regarding the performance can be seen in the following figure:
+
+<img align="center" src="figs/finetuna_perf.png" width="800">
+
+The combination of `FINETUNA` + `VaspInteractive` can achieve up to 10x walltime boost compared with internal VASP CG optimizer.
+
+### Parallel `VaspInteractive` calculators for faster NEB calculations
 
 [*Experimental*] A special mode `KubeVaspInteractive` makes the interactive vasp process running inside an 
 isolated container on kubernetes pod, with full functioning message communication between the local and remote
@@ -190,6 +197,10 @@ Note in this case, sharing `VaspInteractive` on all NEB images is
 not beneficial due to big difference of wavefunctions on neighboring images. 
 On the other hand, `KubeVaspInteractive` has nearly linear scaling with worker pod numbers,
 if the workload per pod is balanced (see [examples/ex11_k8s_minimal.py](examples/ex11_k8s_minimal.py)).
+
+## Advanced topics
+
+### Resource optimization by MPI pause / resume
 
 By default, the MPI processes that run the VASP calculations will occupy 100% cpu on the allocated cores / slots, even when waiting for the inputs. 
 This can lead to undesired effects when other CPU-expensive codes are running between two `VaspInteractive` ionic steps. 
