@@ -1,4 +1,4 @@
-# `VaspInteractive`: a stream-based interactive calculator for VASP
+# `VaspInteractive`: a stream-based calculator for VASP
 ![workflow](https://github.com/ulissigroup/vasp-interactive/actions/workflows/package_and_unittest.yml/badge.svg)
 
 ## TL;DR
