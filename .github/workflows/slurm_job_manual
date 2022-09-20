@@ -3,11 +3,11 @@ name: Test on Cori KNL
 
 on:
   workflow_dispatch:
-    inputs:
-      signal:
-        description: "Manual setting for the action status"
-        required: true
-        default: true
+    # inputs:
+    #   signal:
+    #     description: "Manual setting for the action status"
+    #     required: true
+    #     default: true
 
 jobs:
   basic:
