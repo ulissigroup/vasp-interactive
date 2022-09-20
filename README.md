@@ -7,27 +7,53 @@
 [Atomic Simulation Environment (`ase`)](https://databases.fysik.dtu.dk/ase/ase/calculators/vasp.html) 
 by leveraging the interactive mode of Vienna Ab Initio Package (VASP).
 
-### VASP compatibility check
-
-You can test whether `VaspInteractive` is compatible with your compiled VASP code. Simply run the test demo
-from this repository and follow the prompt input:
-**TODO**
-```bash
-git clone xxx
-bash vasp-interactive/examples/00-pretest.sh
-```
-
-If the test fails, please check the **TODO** Troubleshooting section or submit an issue.
-
 ### Installation
 
-**TODO**
 ```bash
-pip install git+xxx
+pip install git+https://github.com/ulissigroup/vasp-interactive.git
 ```
 
+A simple script for testing the compatibility of `VaspInteractive` with
+you VASP setup. After [setting proper environmental variables](https://databases.fysik.dtu.dk/ase/ase/calculators/vasp.html#environment-variables),
+download the script and run the test:
+
+```bash
+wget https://raw.githubusercontent.com/ulissigroup/vasp-interactive/main/examples/ex00_vasp_test.py
+python ex00_vasp_test.py
+```
+
+If the compatibility test fails, your VASP build may truncate output. See the **Troubleshooting** section for more details.
+
+
 ### Basic usage
-**TODO**
+
+Existing code written with ase's `Vasp` calculator can be easily replaced by `VaspInteractive`, 
+the following example shows how to run a structural optimization using `VaspInteractive` with an BFGS optimizer:
+```python
+from ase.optimize import BFGS
+from vasp_interactive import VaspInteractive
+# atoms: an ase.atoms.Atoms object
+# parameters: parameters compatible with ase.calculators.vasp.Vasp
+atoms.calc = VaspInteractive(**parameters)
+dyn = BFGS(atoms)
+dyn.run()
+# Special to `VaspInteractive`: close the stream manually
+calc.finalize()
+```
+
+#### (Recommended) `VaspInteractive` in context-mode
+
+To prevent orphan VASP process running in the background if `calc.finalized()` is not properly added,
+we recommend using `VaspInteractive` within a context manager (i.e. using the `with`-clause):
+```python
+from ase.optimize import BFGS
+from vasp_interactive import VaspInteractive
+# Exiting the with-clause kills the background VASP process
+with VaspInteractive(**parameters) as calc:
+    atoms.calc = calc
+    dyn = BFGS(atoms)
+    dyn.run()
+```
 
 
 ## Additional notes
