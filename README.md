@@ -5,7 +5,8 @@
 
 `VaspInteractive` is a faster yet fully-compatible replacement for the original `Vasp` calculator from the 
 [Atomic Simulation Environment (`ase`)](https://databases.fysik.dtu.dk/ase/ase/calculators/vasp.html) 
-by leveraging the interactive mode of Vienna Ab Initio Package (VASP).
+by leveraging the interactive mode of Vienna Ab Initio Package (VASP). Up to 75% reduction of DFT electronic self-consistent 
+cycle compared with the original `Vasp` implementation can be achieved (see [Benchmark](#benchmark) section).
 
 ### Installation
 
@@ -13,9 +14,8 @@ by leveraging the interactive mode of Vienna Ab Initio Package (VASP).
 pip install git+https://github.com/ulissigroup/vasp-interactive.git
 ```
 
-A simple script for testing the compatibility of `VaspInteractive` with
-you VASP setup. After [setting proper environmental variables](https://databases.fysik.dtu.dk/ase/ase/calculators/vasp.html#environment-variables),
-download the script and run the test:
+After [setting proper environmental variables](https://databases.fysik.dtu.dk/ase/ase/calculators/vasp.html#environment-variables),
+download the script and run the compatibility test with your local VASP setup:
 
 ```bash
 wget https://raw.githubusercontent.com/ulissigroup/vasp-interactive/main/examples/ex00_vasp_test.py
