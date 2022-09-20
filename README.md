@@ -1,6 +1,11 @@
 # `VaspInteractive`: a stream-based calculator for VASP
 ![workflow](https://github.com/ulissigroup/vasp-interactive/actions/workflows/package_and_unittest.yml/badge.svg)
 
+
+[![Cori Haswell](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml)
+[![Cori KNL](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml)
+[![Perlmutter GPU test](https://github.com/ulissigroup/vasp-interactive/actions/workflows/perlmutter_gpu_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/perlmutter_gpu_status.yaml)
+
 # TL;DR
 
 `VaspInteractive` is a faster yet fully-compatible replacement for the original `Vasp` calculator from the 

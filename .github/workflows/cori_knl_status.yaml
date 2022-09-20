@@ -1,5 +1,5 @@
 # Simple manual action that only for the purpose of status badge
-name: Cori KNL test
+name: Cori KNL
 
 on:
   workflow_dispatch:
