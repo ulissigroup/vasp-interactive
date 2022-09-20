@@ -203,14 +203,41 @@ if the workload per pod is balanced (see [examples/ex11_k8s_minimal.py](examples
 ### Resource optimization by MPI pause / resume
 
 By default, the MPI processes that run the VASP calculations will occupy 100% cpu on the allocated cores / slots, even when waiting for the inputs. 
-This can lead to undesired effects when other CPU-expensive codes are running between two `VaspInteractive` ionic steps. 
-Starting from version `0.0.5` we add the `pause_calc` and `resume_calc` methods to `VaspInteractive`, so the user can temporarily free the resources occupied by VASP processes between two ionic steps. 
-An example can be found in [ex13_pause_mpi.py](examples/ex13_pause_mpi.py), where computationally expensive operations (e.g. `Numpy` huge matrix multiplication **A·B**) occur between VASP ionic steps. 
-The figures below show the CPU usage of VASP and Numpy processes without intervention (upper panel) and with MPI pause / resume (lower panel). With the pause / resume functionality, the `Numpy` threads can gain almost 100% CPU, saving the total computational time.
+This can lead to undesired effects when other CPU-expensive codes are running between two `VaspInteractive` ionic steps (e.g. huge matrix multiplication in machine learning). 
+
+When `VaspInteractive` calculator is initialized with `allow_mpi_pause=True` (the default setting since `0.0.5`),  the user can temporarily free the resources occupied by VASP processes between two ionic steps. Please see the following minimal example
+
+```python
+calc = VaspInteractive(allow_mpi_pause=True, **params)
+atoms.calc = calc
+atoms.get_potential_energy()
+# VASP MPI processes are occupying 100% CPU at this line
+with calc.pause():
+    # VASP MPI processes are paused (0% CPU)
+    do_some_cpu_intensive_calculation()
+# VASP MPI processes are resumed (100% CPU)
+```
+
+An example can be found in [ex13_pause_mpi.py](examples/ex13_pause_mpi.py), where computationally expensive operations (e.g. `numpy` huge matrix multiplication **A·B**) occur between VASP ionic steps. 
+The figures below show the CPU usage of VASP and Numpy processes without intervention (upper panel) and with MPI pause / resume (lower panel). With the pause / resume functionality, the `numpy` threads can gain almost 100% CPU, saving the total computational time.
  
 ![pause-resume](examples/ex13_time_cpu_refined.png)
 
-Note currently the functionality is only tested for OpenMPI > 1.3.0. You may need to explicitly add the flag `--mca orte_forward_job_control 1` to your vasp command, or setting via environmental variable `export OMPI_MCA_orte_forward_job_control=1`. 
+Alternatively, you can also wrap the DFT part with the context so that outside the MPI CPU usage is always 0:
+```python
+calc = VaspInteractive(allow_mpi_pause=True, **params)
+atoms.calc = calc
+with calc._ensure_mpi():
+    # Inside the context, MPI processes can use full cpu resources
+    atoms.get_potential_energy()
+# Outside the context, MPI process is paused. You can write longer code here.
+do_some_cpu_intensive_calculation()
+```
+
+**Notes**
+- The MPI process pause / resume has been tested on OpenMPI > 1.3.0. For some systems you may need to explicitly add the flag `--mca orte_forward_job_control 1`.
+- If your VASP commands are run by SLURM job manager's `srun` command, the signal is sent by `scancel` utility instead of forwarding to `mpirun` directly. Make sure you have access to these utilities in your environment
+- Each pause / resume cycle adds an overhead of 0.5 ~ 5 s depending on your system load.
 
 
 
