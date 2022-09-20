@@ -278,6 +278,18 @@ while in the case of minimal support (likely using VASP 5.4.x), only the energy 
 
 If you have an incompatible VASP build, consult your sysadmin or use VASP in container images.
 
+### `VaspInteractive` fails to parse VASP 5.4.x outputs
+
+As stated above, in some VASP 5 cases the support is minimal. Please ensure the flag `parse_vaspout=True` is set during the
+calculator initialization and `txt` parameter is neither `"-"` nor `None`, because the parsing of VASP raw output requires a 
+real file on disk.
+
+### `VaspInteractive` hangs up forever after the first ionic step
+
+First, make sure the [compatibility test](#installation) passes. Please also disable any output redirection in the VASP command
+env variables. If you want to achieve something like `mpirun -n 16 vasp_std > vasp.out`, 
+set the `txt` parameter of the calculator instead.
+
 ### "The OUTCAR and vasprun.xml outputs may be incomplete" warning
 
 In many cases user may see warnings like follows when `VaspInteractive` exits:
