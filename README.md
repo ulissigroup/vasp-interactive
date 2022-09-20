@@ -150,11 +150,11 @@ Two quantities are compared:
 Performance of relaxation using pure VASP routines (`IBRION=2`, conjugate gradient) is used as the baseline reference. 
 `VaspInteractive` reduces the wall time and electronic steps compared with the classic VASP+BFGS appraoch.
 
-![benchmark-1](examples/benchmark.png)
+<img align="center" src="examples/benchmark.png" width=800/>
 
 Below are the details about the ionic and electronic steps (using system CAu8O):
 
-![benchmark-2](examples/details.png)
+<img align="center" src="examples/details.png" width=600/>
 
 In the case of CO+Au(111) slab system, `VaspInteractive` seems even to better
 than the VASP CG optimizer. Note such results can be tuned by parameters such as IBRION or IWAVEPR.
@@ -162,7 +162,7 @@ than the VASP CG optimizer. Note such results can be tuned by parameters such as
 A more detailed example comparing the wall time and SCF cycles for `VaspInteractive` and classic `Vasp` combined with various ASE-optimizers can be find in the following figure. The horizontal broken lines are the lowest value among all optimizers
 for the same structure.
 
-![benchmark-2](examples/benchmark-large.png)
+<img align="center" src="examples/benchmark-large.png" width=800/>
 
 In addition to the constant time reduction using `VaspInteractive+ASE` compared with `Vasp+ASE`, 
 `GPMin` seems to be the most reliable optimizer to be combined. In most cases `VaspInteractive+GPMin` 
@@ -221,7 +221,7 @@ with calc.pause():
 An example can be found in [ex13_pause_mpi.py](examples/ex13_pause_mpi.py), where computationally expensive operations (e.g. `numpy` huge matrix multiplication **A·B**) occur between VASP ionic steps. 
 The figures below show the CPU usage of VASP and Numpy processes without intervention (upper panel) and with MPI pause / resume (lower panel). With the pause / resume functionality, the `numpy` threads can gain almost 100% CPU, saving the total computational time.
  
-![pause-resume](examples/ex13_time_cpu_refined.png)
+<img align="center" src="examples/ex13_time_cpu_refined.png" width=800>
 
 Alternatively, you can also wrap the DFT part with the context so that outside the MPI CPU usage is always 0:
 ```python
