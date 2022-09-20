@@ -278,7 +278,36 @@ while in the case of minimal support (likely using VASP 5.4.x), only the energy 
 
 If you have an incompatible VASP build, consult your sysadmin or use VASP in container images.
 
-### 
+### "The OUTCAR and vasprun.xml outputs may be incomplete" warning
+
+In many cases user may see warnings like follows when `VaspInteractive` exits:
+```
+Trying to close the VASP stream but encountered error: 
+<error message>
+Will now force closing the VASP process. The OUTCAR and vasprun.xml outputs may be incomplete
+```
+As the message indicates, it is caused by some runtime error when terminating VASP process associated with `VaspInteractive`. 
+Usually this is harmless but if you suspect it may be caused by a bug, please [submit your issue](https://github.com/ulissigroup/vasp-interactive/issues) in the github page.
+
+### Pause / resume does not have effect
+
+There may be several causes for this:
+1. Your VASP program is not started using the standard `mpirun` / `mpiexec` or `srun` method. 
+
+    You will be notified by a warning like: `
+    Cannot find the mpi process or you're using different ompi wrapper. Will not send continue signal to mpi.
+    `
+    
+
+2. The SIGTSTP / SIGCONT signals sent to associated processes are not properly propagated. 
+
+    You may need to update OpenMPI / MPICH version and enable signal forwarding.
+
+3. The current user does not have privilege sending signals to VASP processes. 
+
+    This is likely the case in SLURM job manager. We have added support for `srun` but may not be extensive. 
+    Please submit an issue regarding your specific situation.
+
 
 
 
