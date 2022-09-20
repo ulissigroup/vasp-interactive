@@ -22,7 +22,7 @@ wget https://raw.githubusercontent.com/ulissigroup/vasp-interactive/main/example
 python ex00_vasp_test.py
 ```
 
-If the compatibility test fails, your VASP build may truncate output. See the **Troubleshooting** section for more details.
+If the compatibility test fails, your VASP build may truncate output. See the [**Troubleshooting**](#troubleshooting) section for more details.
 
 
 ### Basic usage
@@ -103,7 +103,7 @@ alternative.
 
 - `VaspInteractive` currently does not support change of unit cell. 
 - An additional ionic step (with 1 electronic step) will be added to the end of the calculation as a result of STOPCAR 
-- Compatibility with VASP depends on the version and how the code is compiled. More details see **Troubleshooting** section
+- Compatibility with VASP depends on the version and how the code is compiled. More details see [**Troubleshooting**]((#troubleshooting)) section
 
 
 <!-- 
@@ -241,7 +241,6 @@ do_some_cpu_intensive_calculation()
 
 
 
-
 ## More examples
 - [examples/ex01_h2_relax.py](examples/ex01_h2_relax.py): Basic example of structural relaxation
 - [examples/ex02_h2_comparison.py](examples/ex02_h2_comparison.py): Comparing `VaspInteractive` with pure VASP and VASP+BFGS
@@ -250,8 +249,10 @@ do_some_cpu_intensive_calculation()
 - [examples/ex05_rattle_atoms.py](examples/ex05_rattle_atoms.py): Apply `VaspInteractive` to sequence of structures (same formula, different positions)
 - [examples/ex06_benchmark.py](examples/ex06_benchmark.py) and [examples/ex07_benchmark.py](examples/ex07_benchmark.py): Running benchmark. You can delete `examples/benchmark.pkl` and `examples/benchmark-large.pkl` if you want to re-run the calculations (may take up to a few hours).
 - [examples/ex08_dask_par.py](examples/ex08_dask_par.py): Simple example running parallel relaxation jobs using Dask. See `examples/ex08_sample_output.txt` for an example of output.
-- [examples/ex10_mlp_online.py](examples/ex10_mlp_online.py): Example with online machine learning potential (`al_mlp` + `amptorch`).
-
+<!-- - [examples/ex10_mlp_online.py](examples/ex10_mlp_online.py): Example with online machine learning potential (`al_mlp` + `amptorch`).
+ -->
+ 
+## Troubleshooting
 
 
 
