@@ -19,3 +19,4 @@ jobs:
     - name: Manual succeed or fail
       run: |
         echo SIGNAL is ${{ github.event.inputs.signal }}
+        if [[ ${{ github.event.inputs.signal }} != "true" ]]; then exit 1; fi
