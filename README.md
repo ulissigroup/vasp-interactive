@@ -103,7 +103,7 @@ alternative.
 
 - `VaspInteractive` currently does not support change of unit cell. 
 - An additional ionic step (with 1 electronic step) will be added to the end of the calculation as a result of STOPCAR 
-- Compatibility with VASP depends on the version and how the code is compiled. More details see [**Troubleshooting**]((#troubleshooting)) section
+- Compatibility with VASP depends on the version and how the code is compiled. More details see [**Troubleshooting**](#troubleshooting) section
 
 
 <!-- 
@@ -253,6 +253,33 @@ do_some_cpu_intensive_calculation()
  -->
  
 ## Troubleshooting
+
+### Compatibility test fails
+
+The compatibility test code in the [installation](#installation) section may show several different outputs
+
+1. <span style="color:green">**All pass**</span>: Raw output, OUTCAR and vasprun.xml are all complete
+2. <span style="color:olive">**Partial pass**</span>: Raw output and OUTCAR files can be parsed by vasprun.xml is truncated
+3. <span style="color:orange">**Minimal support**</span>: Raw output can be parsed while OUTCAR & vasprun.xml are both truncated
+4. <span style="color:red">**Incompatible**</span>: VASP does not print stdout during interactive mode
+
+Below are some of the test results for various VASP builds we have access to, including the [Cori](https://docs.nersc.gov/systems/cori/) and [Perlmutter](https://docs.nersc.gov/systems/perlmutter/) clusters
+from NERSC.
+
+|               | Ulissi docker images | Cori Haswell | Cori KNL | Perlmutter CPU | Perlmutter GPU |
+| ------------- | -------------        | ------------ | -------- | -------------- | ------         |
+| VASP 5.4.4    | <span style="color:orange">minimal support</span>      | <span style="color:green">all pass</span>     | <span style="color:green">all pass</span> | <span style="color:red">incompatible</span>  | not available  |
+| VASP 6.1.x    | <span style="color:olive">partial pass</span>         | <span style="color:green">all pass</span>     | <span style="color:green">all pass</span> | not available  | not available  |
+| VASP 6.2.x    | <span style="color:olive">partial pass</span>         | <span style="color:green">all pass</span>     | <span style="color:green">all pass</span> | not available  | <span style="color:olive">partial pass</span>   |
+| VASP 6.3.x    | <span style="color:olive">partial pass</span>         | <span style="color:green">all pass</span>     | <span style="color:green">all pass</span> | <span style="color:red">incompatible</span>   | not available  |
+
+In the all / partial pass cases, `VaspInteractive` should be able to handle I/O correctly, 
+while in the case of minimal support (likely using VASP 5.4.x), only the energy and force information are parsed.
+
+If you have an incompatible VASP build, consult your sysadmin or use VASP in container images.
+
+### 
+
 
 
 
