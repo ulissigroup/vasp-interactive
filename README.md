@@ -2,9 +2,9 @@
 ![workflow](https://github.com/ulissigroup/vasp-interactive/actions/workflows/package_and_unittest.yml/badge.svg)
 
 
-[![Cori Haswell](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml)
-[![Cori KNL](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml)
-[![Perlmutter GPU test](https://github.com/ulissigroup/vasp-interactive/actions/workflows/perlmutter_gpu_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/perlmutter_gpu_status.yaml)
+[![Cori Haswell](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml/badge.svg?event=workflow_dispatch)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml)
+[![Cori KNL](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml/badge.svg?event=workflow_dispatch)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml)
+[![Perlmutter GPU test](https://github.com/ulissigroup/vasp-interactive/actions/workflows/perlmutter_gpu_status.yaml/badge.svg?event=workflow_dispatch)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/perlmutter_gpu_status.yaml)
 
 # TL;DR
 
