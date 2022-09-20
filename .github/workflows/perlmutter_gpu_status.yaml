@@ -1,13 +1,13 @@
 # Simple manual action that only for the purpose of status badge
-name: Test on Cori KNL
+name: Perlmutter GPU test
 
 on:
   workflow_dispatch:
-    # inputs:
-    #   signal:
-    #     description: "Manual setting for the action status"
-    #     required: true
-    #     default: true
+    inputs:
+      signal:
+        description: "Manual setting for the action status"
+        required: true
+        default: true
 
 jobs:
   basic:
