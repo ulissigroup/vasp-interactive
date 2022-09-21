@@ -3,7 +3,7 @@
 #SBATCH -C haswell
 #SBATCH -q premium
 #SBATCH -A m2755
-#SBATCH -t 06:00:00
+#SBATCH -t 01:00:00
 
 export VASP_COMMAND="srun -n 32 -c 2 --cpu-bind=cores vasp_std"
 GIT_REPO="ulissigroup/vasp-interactive"
@@ -32,12 +32,14 @@ do
     echo "Testing VaspInteractive on $ver"
     for f in tests/test*.py
     do
-        pytest -svv $f; killall vasp_std || echo ""
+        pytest -svv $f
         if [[ $? != 0 ]]
         then
             res="false"
+            killall vasp_std
             break
         fi
+        killall vasp_std
     done
     module unload vasp
     if [[ $res == "false" ]]

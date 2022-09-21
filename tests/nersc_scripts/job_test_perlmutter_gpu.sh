@@ -59,5 +59,4 @@ else
 fi
 
 
-gh workflow run perlmutter_gpu_status.yaml -f signal=$res 
-# -f jobid=$jobid -f path=$root
+gh workflow run perlmutter_gpu_status.yaml -f signal=$res -f jobid=$jobid -f path=$root
