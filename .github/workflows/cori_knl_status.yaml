@@ -16,6 +16,10 @@ jobs:
         shell: bash
     runs-on: ubuntu-latest
     steps:
+    - name: Job output
+      run: |
+      	echo "The slurm job id is " ${{ github.event.inputs.jobid }}
+	      echo "Job was executed in " ${{ github.event.inputs.path }}
     - name: Manual succeed or fail
       run: |
         echo SIGNAL is ${{ github.event.inputs.signal }}
