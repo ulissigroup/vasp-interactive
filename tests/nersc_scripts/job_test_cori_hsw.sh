@@ -5,13 +5,15 @@
 #SBATCH -A m2755
 #SBATCH -t 01:00:00
 
+CONDA_ROOT="/global/homes/t/ttian20/.conda/envs/vpi"
 export VASP_COMMAND="srun -n 32 -c 2 --cpu-bind=cores vasp_std"
 GIT_REPO="ulissigroup/vasp-interactive"
 if [ -z "$GIT_REF" ]
 then
     GIT_REF="main"
 fi
-conda activate vpi
+#conda activate vpi
+export PATH=${CONDA_ROOT}/bin:$PATH
 
 uid=`uuidgen`
 root=$SCRATCH/vpi-runner/$uid

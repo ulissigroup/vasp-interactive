@@ -7,6 +7,7 @@
 #SBATCH -G 4 
 #SBATCH --exclusive
 
+CONDA_ROOT="/global/homes/t/ttian20/.conda/envs/vpi"
 export TMPDIR=$SCRATCH
 export VASP_COMMAND="srun -n 1 -c 32 --gpu-bind=single:1 -G 4 --cpu-bind=cores vasp_std"
 GIT_REPO="ulissigroup/vasp-interactive"
@@ -14,7 +15,8 @@ if [ -z "$GIT_REF" ]
 then
     GIT_REF="main"
 fi
-conda activate vpi
+# conda activate $CONDA_ROOT
+export PATH=${CONDA_ROOT}/bin:$PATH
 
 uid=`uuidgen`
 root=$SCRATCH/vpi-runner/$uid
