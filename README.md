@@ -107,7 +107,7 @@ However there are several things to note:
 
 Most of the issues comes from the way original VASP code is written. If you want more flexible control over
 how the DFT calculator interacts with your own optimizer, and is comfortable to switch to other DFT codes, 
-the [socker calculator protocol](https://wiki.fysik.dtu.dk/ase/ase/calculators/socketio/socketio.html) may be an
+the [i-Pi calculator protocol](https://wiki.fysik.dtu.dk/ase/ase/calculators/socketio/socketio.html) may be an
 alternative.
 
 - `VaspInteractive` currently does not support change of unit cell. 
