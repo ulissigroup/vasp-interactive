@@ -12,12 +12,14 @@ import os
 from ase.build import molecule
 from ase.optimize import BFGS
 from copy import copy, deepcopy
-from _common_utils import skip_probe, skip_slurm, get_average_cpu
+from _common_utils import skip_probe, skip_slurm, get_average_cpu, get_cpu_cores
 
 
 h2_root = molecule("H2", vacuum=4, pbc=True)
 params = dict(xc="pbe", kpts=(1, 1, 1), ismear=0)
 rootdir = Path(__file__).parents[1] / "sandbox"
+
+cores = get_cpu_cores()
 
 
 def test_jobid():
@@ -61,15 +63,17 @@ def test_signal_send():
             stepid1 = _locate_slurm_step()
             h2.calc._pause_calc()
             time.sleep(2)
-            cpu = get_average_cpu()
-            print(f"After pause, cpu is {cpu}")
-            assert cpu < 25
+            if cores >= 8:
+                cpu = get_average_cpu()
+                print(f"After pause, cpu is {cpu}")
+                assert cpu < 25
             pid2 = calc.process.pid
             stepid2 = _locate_slurm_step()
             h2.calc._resume_calc()
-            cpu = get_average_cpu()
-            assert cpu > 75
-            print(f"After cont, cpu is {cpu}")
+            if cores >= 8:
+                cpu = get_average_cpu()
+                assert cpu > 75
+                print(f"After cont, cpu is {cpu}")
             pid3 = calc.process.pid
             stepid3 = _locate_slurm_step()
         assert stepid1 == stepid2 == stepid3
