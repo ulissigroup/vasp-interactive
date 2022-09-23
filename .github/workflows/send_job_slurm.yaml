@@ -46,6 +46,7 @@ jobs:
         echo ${{ matrix.file }}
     - name: Create local ssh key
       run: |
+        mkdir -p ~/.ssh
         echo "$SSH_KEY" > ~/.ssh/nersc
         chmod 600 ~/.ssh/nersc
       env:
