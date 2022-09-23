@@ -29,4 +29,12 @@ Note: the slurm ssh key needs to be update frequently using
 [`sshproxy.sh`](https://docs.nersc.gov/connect/mfa/#using-sshproxy), 
 therefore the action `send_job_slurm.yaml` is set to be enabled by manual dispatch only. 
 Please contact nersc help desk if you have difficulty generating the secretes.
+
+### Things need to be modified for future maintainance
+
+In `tests/nersc_scriptes/*.sh`, modify the following variables as needed:
+1. `CONDA_ROOT`: change to the actual conda env
+2. VASP versions e.g. "vasp/5.4.4-knl", change accordingly
+3. Change NERSC account / QOS accordingly
+
  
