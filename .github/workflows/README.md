@@ -20,5 +20,13 @@ The steps to recreate the slurm test environment on NERSC Cori or Perlmutter is 
 
 Note: the above steps only need to be done once and can be used for both Cori and Perlmutter.
 
+### Setting secrets
+The action `send_job_slurm.yaml` requires a working slurm user account name and ssh key to proceed.
+Both can be added from `Settings` --> `Secrets` --> `Actions` --> `Repository secrets`. 
+If you cannot access them, ask the group admin to add you to the maintainer list.
 
-
+Note: the slurm ssh key needs to be update frequently using 
+[`sshproxy.sh`](https://docs.nersc.gov/connect/mfa/#using-sshproxy), 
+therefore the action `send_job_slurm.yaml` is set to be enabled by manual dispatch only. 
+Please contact nersc help desk if you have difficulty generating the secretes.
+ 
