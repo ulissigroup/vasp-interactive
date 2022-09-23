@@ -60,7 +60,7 @@ jobs:
     - name: SCP job file and enqueue
       run: |
         uuid=`uuidgen`
-        scp -i ~/.ssh/nersc ${{ matrix.file }} ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}/"\$HOME/$uuid.sh"
+        scp -i ~/.ssh/nersc ${{ matrix.file }} ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$HOME/$uuid.sh"
         ssh -i ~/.ssh/nersc ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} "sbatch \$HOME/$uuid.sh"
     - name: Cleanup ssh key
       run: |
