@@ -49,6 +49,7 @@ jobs:
         mkdir -p ~/.ssh
         echo "$SSH_KEY" > ~/.ssh/nersc
         chmod 600 ~/.ssh/nersc
+        ssh-keyscan -H ${{ matrix.url }} >> ~/.ssh/known_hosts
       env:
         SSH_KEY: ${{ secrets.NERSC_SSH_KEY }}
     - name: Try ssh
@@ -58,7 +59,7 @@ jobs:
         ssh -i ~/.ssh/nersc -t -vv ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'whoami'
     - name: Cleanup ssh key
       run: |
-        rm -rf ~/.ssh/nersc
+        rm -rf ~/.ssh
 
     # - name: Copy files over to the cluster
     #   uses: garygrossgarten/github-action-scp@v0.7.3
