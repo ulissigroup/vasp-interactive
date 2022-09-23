@@ -45,7 +45,7 @@ jobs:
         echo ${{ matrix.url }}
         echo ${{ matrix.file }}
     - name: Copy files over to the cluster
-      uses: garygrossgarten/github-action-scp@0.7.3
+      uses: garygrossgarten/github-action-scp@v0.7.3
       with:
         local: ${{ matrix.file }}
         remote: "~/${{ matrix.host }}-${{ steps.getshortsha.outputs.sha_short }}/"
