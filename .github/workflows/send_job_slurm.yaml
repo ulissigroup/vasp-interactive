@@ -52,11 +52,16 @@ jobs:
         ssh-keyscan -H ${{ matrix.url }} >> ~/.ssh/known_hosts
       env:
         SSH_KEY: ${{ secrets.NERSC_SSH_KEY }}
-    - name: Try ssh
+    - name: Test scp connection
       run: |
         which ssh
         which scp
-        ssh -i ~/.ssh/nersc -t -vv ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'whoami'
+        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'hostname'
+    - name: SCP job file and enqueue
+      run: |
+        uuid=`uuidgen`
+        scp -i ~/.ssh/nersc ${{ matrix.file }} ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}/"\$HOME/$uuid.sh"
+        ssh -i ~/.ssh/nersc ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} "sbatch \$HOME/$uuid.sh"
     - name: Cleanup ssh key
       run: |
         rm -rf ~/.ssh
