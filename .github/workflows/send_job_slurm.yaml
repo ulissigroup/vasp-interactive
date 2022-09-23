@@ -44,30 +44,30 @@ jobs:
         echo ${{ matrix.host }}
         echo ${{ matrix.url }}
         echo ${{ matrix.file }}
-    # - name: Create local ssh key
-    #   run: |
-    #     mkdir -p ~/.ssh
-    #     echo "$SSH_KEY" > ~/.ssh/nersc
-    #     chmod 600 ~/.ssh/nersc
-    #   env:
-    #     SSH_KEY: ${{ secrets.NERSC_SSH_KEY }}
-    # - name: Try ssh
-    #   run: |
-    #     which ssh
-    #     which scp
-    #     ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'whoami'
-    # - name: Cleanup ssh key
-    #   run: |
-    #     rm -rf ~/.ssh/nersc
+    - name: Create local ssh key
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_KEY" > ~/.ssh/nersc
+        chmod 600 ~/.ssh/nersc
+      env:
+        SSH_KEY: ${{ secrets.NERSC_SSH_KEY }}
+    - name: Try ssh
+      run: |
+        which ssh
+        which scp
+        ssh -i ~/.ssh/nersc -t -vv ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'whoami'
+    - name: Cleanup ssh key
+      run: |
+        rm -rf ~/.ssh/nersc
 
-    - name: Copy files over to the cluster
-      uses: garygrossgarten/github-action-scp@v0.7.3
-      with:
-        local: ${{ matrix.file }}
-        remote: "~/${{ matrix.host }}-${{ steps.getshortsha.outputs.sha_short }}/"
-        host: ${{ matrix.url }}
-        username: ttian20
-        privateKey: ${{ secrets.NERSC_SSH_KEY }}
+    # - name: Copy files over to the cluster
+    #   uses: garygrossgarten/github-action-scp@v0.7.3
+    #   with:
+    #     local: ${{ matrix.file }}
+    #     remote: "~/${{ matrix.host }}-${{ steps.getshortsha.outputs.sha_short }}/"
+    #     host: ${{ matrix.url }}
+    #     username: ttian20
+    #     privateKey: ${{ secrets.NERSC_SSH_KEY }}
     # - name: Execute script to enqueue job in cluster
     #   uses: appleboy/ssh-action@v0.1.3
     #   with: 
