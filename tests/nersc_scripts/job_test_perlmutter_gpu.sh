@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH -A m2755_g
 #SBATCH -q regular
-#SBATCH -t 1:00:00        
+#SBATCH -t 2:00:00        
 #SBATCH -N 1           
 #SBATCH -C gpu
 #SBATCH -G 4 
@@ -29,6 +29,7 @@ cd vasp-interactive
 git checkout $GIT_REF
 echo "Check to $GIT_REF"
 export PYTHONPATH=`realpath .`
+export TMPDIR=$SCRATCH
 
 res="true"
 for ver in "vasp/6.2.1-gpu"

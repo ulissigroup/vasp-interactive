@@ -1,0 +1,86 @@
+# Sending test jobs to NERSC (cori / perlmutter)
+# The ssh key needs to be updated frequently
+name: Sending nersc test files
+
+on:
+  # push:
+  #   branches: [ main ]
+  #   paths-ignore:
+  #     - '**.md'
+  #     - 'examples/**'
+  #     - 'tutorials/**'
+  #pull_request:
+  #  branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  basic:
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host: cori-knl
+            url:  cori.nersc.gov
+            file: tests/nersc_scripts/job_test_cori_knl.sh
+          - host: cori-hsw
+            url:  cori.nersc.gov
+            file: tests/nersc_scripts/job_test_cori_hsw.sh
+          - host: perlmutter-gpu
+            url:  perlmutter-p1.nersc.gov
+            file: tests/nersc_scripts/job_test_perlmutter_gpu.sh
+          
+    steps:
+    # Copied from https://thepaulo.medium.com/scheduling-jobs-in-a-super-computer-cluster-using-github-actions-2ee83405cb69
+    - uses: actions/checkout@v2
+    - name: Get a short version of the GIT commit SHA to use in naming files
+      id: getshortsha
+      run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+    - name: Output cluster info
+      run: |
+        echo ${{ matrix.host }}
+        echo ${{ matrix.url }}
+        echo ${{ matrix.file }}
+    - name: Create local ssh key
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_KEY" > ~/.ssh/nersc
+        chmod 600 ~/.ssh/nersc
+        ssh-keyscan -H ${{ matrix.url }} >> ~/.ssh/known_hosts
+      env:
+        SSH_KEY: ${{ secrets.NERSC_SSH_KEY }}
+    - name: Test scp connection
+      run: |
+        which ssh
+        which scp
+        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'hostname'
+    - name: SCP job file and enqueue
+      run: |
+        uuid=`uuidgen`
+        scp -i ~/.ssh/nersc ${{ matrix.file }} ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$HOME/$uuid.sh"
+        ssh -i ~/.ssh/nersc ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} "sbatch \$HOME/$uuid.sh"
+    - name: Cleanup ssh key
+      run: |
+        rm -rf ~/.ssh
+
+    # - name: Copy files over to the cluster
+    #   uses: garygrossgarten/github-action-scp@v0.7.3
+    #   with:
+    #     local: ${{ matrix.file }}
+    #     remote: "~/${{ matrix.host }}-${{ steps.getshortsha.outputs.sha_short }}/"
+    #     host: ${{ matrix.url }}
+    #     username: ttian20
+    #     privateKey: ${{ secrets.NERSC_SSH_KEY }}
+    # - name: Execute script to enqueue job in cluster
+    #   uses: appleboy/ssh-action@v0.1.3
+    #   with: 
+    #     host: ${{ secrets.SSH_HOST }}
+    #     username: ${{ secrets.SSH_USERNAME }}
+    #     password: ${{ secrets.SSH_PASSWORD }}
+    #     script: | 
+    #       cd "your-directory/${{ steps.getshortsha.outputs.sha_short }}"
+    #       mv job-sbatcher.sh ${{ steps.getshortsha.outputs.sha_short }}-job-sbatcher.sh
+    #       sbatch ${{ steps.getshortsha.outputs.sha_short }}-job-sbatcher.sh.sh

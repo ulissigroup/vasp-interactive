@@ -3,7 +3,7 @@
 #SBATCH -C knl
 #SBATCH -q premium
 #SBATCH -A m2755
-#SBATCH -t 01:00:00
+#SBATCH -t 02:00:00
 
 CONDA_ROOT="/global/homes/t/ttian20/.conda/envs/vpi"
 export VASP_COMMAND="srun -n 64 -c 4 --cpu-bind=cores vasp_std"
@@ -26,6 +26,7 @@ cd vasp-interactive
 git checkout $GIT_REF
 echo "Check to $GIT_REF"
 export PYTHONPATH=`realpath .`
+export TMPDIR=$SCRATCH
 
 res="true"
 for ver in "vasp/5.4.4-knl" "vasp/6.3.0-knl"
