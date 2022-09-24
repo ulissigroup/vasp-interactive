@@ -37,8 +37,8 @@ def test_paused_close():
         h2.get_potential_energy()
         # Context
         calc._pause_calc()
-        # Close statement should not last more than 10 sec
-        with time_limit(10):
+        # Close statement should not last more than 60 sec
+        with time_limit(60):
             calc.close()
     return
 
