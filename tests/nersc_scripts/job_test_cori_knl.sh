@@ -59,5 +59,5 @@ else
 fi
 
 
-gh workflow run cori_hsw_status.yaml -f signal=$res -f jobid=$jobid -f path=$root
+gh workflow run cori_knl_status.yaml -f signal=$res -f jobid=$jobid -f path=$root
 

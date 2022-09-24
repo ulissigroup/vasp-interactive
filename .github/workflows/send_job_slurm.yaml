@@ -1,6 +1,6 @@
 # Sending test jobs to NERSC (cori / perlmutter)
 # The ssh key needs to be updated frequently
-name: Sending nersc test files
+name: NERSC test job
 
 on:
   # push:
