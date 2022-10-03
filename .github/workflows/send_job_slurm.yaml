@@ -29,6 +29,9 @@ jobs:
           - host: cori-hsw
             url:  cori.nersc.gov
             file: tests/nersc_scripts/job_test_cori_hsw.sh
+          - host: cori-shifter
+            url:  cori.nersc.gov
+            file: tests/nersc_scripts/job_test_cori_shifter.sh
           - host: perlmutter-gpu
             url:  perlmutter-p1.nersc.gov
             file: tests/nersc_scripts/job_test_perlmutter_gpu.sh
