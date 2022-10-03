@@ -27,7 +27,7 @@ ediff = 1e-4
 
 
 def test_paused_close():
-    skip_probe(4)
+    skip_probe(4, skip_oversubscribe=True)
     # skip_slurm()
     """Context mode"""
     h2 = h2_root.copy()
@@ -45,7 +45,7 @@ def test_paused_close():
 
 def test_paused_close_context():
     """Context mode"""
-    skip_probe(4)
+    skip_probe(4, skip_oversubscribe=True)
     # skip_slurm()
     h2 = h2_root.copy()
     with tempfile.TemporaryDirectory() as tmpdir:

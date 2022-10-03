@@ -17,14 +17,28 @@ def get_cpu_cores():
                     break
     return cores
 
+def get_oversubscribe():
+    over = False
+    with VaspInteractive() as test_calc:
+        args = test_calc.make_command().split()
+        for i, param in enumerate(args):
+            if "oversubscribe" in param:
+                over = True
+                break
+    return over
 
-def skip_probe(min_cores=8):
+
+def skip_probe(min_cores=8, skip_oversubscribe=False):
     """Test if single step needs to be skipped"""
     cores = get_cpu_cores()
     do_test = (cores >= min_cores)
     if do_test is False:
         pytest.skip(
             f"Skipping test with ncores < {min_cores}", allow_module_level=False
+        )
+    elif skip_oversubscribe and get_oversubscribe():
+        pytest.skip(
+            f"Skipping due to oversubscription", allow_module_level=False
         )
 
 

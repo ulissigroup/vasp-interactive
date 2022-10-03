@@ -31,7 +31,7 @@ ediff = 1e-4
 
 def test_pause_cpu_percent():
     """Send pause signal to mpi process and see if drops below threshold"""
-    skip_probe(4)
+    skip_probe(4, skip_oversubscribe=True)
     # skip_slurm()
     h2 = h2_root.copy()
     threshold_high = 75.0
@@ -55,7 +55,7 @@ def test_pause_cpu_percent():
 
 def test_pause_context():
     """Context mode"""
-    skip_probe(4)
+    skip_probe(4, skip_oversubscribe=True)
     # skip_slurm()
     h2 = h2_root.copy()
     threshold_high = 75.0
