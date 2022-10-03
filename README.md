@@ -10,6 +10,7 @@
 [![Cori KNL](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml)
 [![Cori Shifter](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_shifter_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_shifter_status.yaml)
 [![Perlmutter GPU test](https://github.com/ulissigroup/vasp-interactive/actions/workflows/perlmutter_gpu_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/perlmutter_gpu_status.yaml)
+[![Perlmutter Shifter (CPU)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/perlmutter_shifter_status.yml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/perlmutter_shifter_status.yml)
 
 # TL;DR
 
