@@ -278,6 +278,7 @@ class VaspInteractive(Vasp):
     def _stdout(self, text, out=None):
         if out is not None:
             out.write(text)
+            out.flush()
 
     def _run(self, atoms, out):
         """Overwrite the Vasp._run method
