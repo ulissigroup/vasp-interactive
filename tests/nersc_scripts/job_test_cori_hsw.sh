@@ -26,7 +26,7 @@ cd vasp-interactive
 git checkout $GIT_REF
 echo "Check to $GIT_REF"
 export PYTHONPATH=`realpath .`
-export TMPDIR=$SCRATCH
+export TEMPDIR=$SCRATCH
 
 res="true"
 for ver in "vasp/5.4.4-hsw" "vasp/6.3.0-hsw"

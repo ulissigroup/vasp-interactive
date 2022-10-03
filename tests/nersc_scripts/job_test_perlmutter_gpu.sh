@@ -29,7 +29,7 @@ cd vasp-interactive
 git checkout $GIT_REF
 echo "Check to $GIT_REF"
 export PYTHONPATH=`realpath .`
-export TMPDIR=$SCRATCH
+export TEMPDIR=$SCRATCH
 
 res="true"
 for ver in "vasp/6.2.1-gpu"

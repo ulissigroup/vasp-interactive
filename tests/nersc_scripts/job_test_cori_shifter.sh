@@ -1,12 +1,11 @@
 #!/bin/bash -l
 #SBATCH -N 1
-#SBATCH -C knl
+#SBATCH -C haswell
 #SBATCH -q premium
 #SBATCH -A m2755
 #SBATCH -t 02:00:00
 
 CONDA_ROOT="/global/homes/t/ttian20/.conda/envs/vpi"
-export VASP_COMMAND="srun -n 64 -c 4 --cpu-bind=cores vasp_std"
 GIT_REPO="ulissigroup/vasp-interactive"
 if [ -z "$GIT_REF" ]
 then
@@ -25,17 +24,21 @@ gh repo clone $GIT_REPO
 cd vasp-interactive
 git checkout $GIT_REF
 echo "Check to $GIT_REF"
-export PYTHONPATH=`realpath .`
-export TEMPDIR=$SCRATCH
+export MODPATH=`realpath .`
+# export TMPDIR=$SCRATCH
+
+export SHIFTER_IMAGE=ulissigroup/kubeflow_vasp:beef_vdw
 
 res="true"
-for ver in "vasp/5.4.4-knl" "vasp/6.3.0-knl"
+for ver in "vasp.5.4.4.pl2" "vasp.6.3.0_pgi_mkl"
 do
-    module load $ver
     echo "Testing VaspInteractive on $ver"
     for f in tests/test*.py
     do
-        pytest -svv $f
+        abs_f=`realpath $f`
+        VASP_COMMAND="mpirun -np 32 --bind-to core /opt/${ver}/bin/vasp_std"
+        shifter --image=$SHIFTER_IMAGE --env=VASP_COMMAND="$VASP_COMMAND" --env=PYTHONPATH="$MODPATH" --env=TEMPDIR="$SCRATCH" -- pytest -svv ${abs_f}
+        # pytest -svv $f
         if [[ $? != 0 ]]
         then
             res="false"
@@ -59,5 +62,5 @@ else
 fi
 
 
-gh workflow run cori_knl_status.yaml -f signal=$res -f jobid=$jobid -f path=$root
+gh workflow run cori_shifter_status.yaml -f signal=$res -f jobid=$jobid -f path=$root
 
