@@ -35,6 +35,9 @@ jobs:
           - host: perlmutter-gpu
             url:  perlmutter-p1.nersc.gov
             file: tests/nersc_scripts/job_test_perlmutter_gpu.sh
+          - host: perlmutter-shifter
+            url:  perlmutter-p1.nersc.gov
+            file: tests/nersc_scripts/job_test_perlmutter_shifter.sh
           
     steps:
     # Copied from https://thepaulo.medium.com/scheduling-jobs-in-a-super-computer-cluster-using-github-actions-2ee83405cb69
