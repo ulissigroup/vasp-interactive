@@ -1,0 +1,70 @@
+!=======================================================================
+!
+! read direct lattice from stdin
+! Patch by T.Tian (alchem0x2a) for upgrading VASP's interactive mode
+! The implementation should not interfere with normal VASP usage but 
+! do tests at your own risk!
+!
+!=======================================================================
+      SUBROUTINE INLATT(LATT_CUR, T_INFO, DYN, IU6, IU0, LSTOP, MYCOMM)
+      USE prec
+      USE lattice
+      USE main_mpi
+      IMPLICIT NONE
+
+      TYPE (latt)::       LATT_CUR
+      TYPE (type_info) :: T_INFO
+      TYPE (dynamics)  :: DYN
+      INTEGER :: IU6, IU0
+      LOGICAL :: LSTOP
+      TYPE (communic) :: MYCOMM
+    ! local
+      INTEGER NI, IERR
+      REAL(q), ALLOCATABLE :: LATT_A_OLD(:, :), LATT_B_OLD(:, :)
+
+      ! Local copy of the old lattice parameters
+      LATT_A_OLD = LATT_CUR%A
+      LATT_B_OLD = LATT_CUR%B
+      ! Update the lattice on I/O rank else 0
+      ! Use M_sum_b to gather results
+      IF (IU6>=0) THEN
+         IF (IU0>=0) WRITE(IU0,'(A)') 'LATTICE: reading from stdin'
+         DO NI=1,3
+            READ(*,*,  IOSTAT=IERR) LATT_CUR%A(1,NI), LATT_CUR%A(2,NI), LATT_CUR%A(3,NI)
+            IF (IERR/=0) EXIT
+         ENDDO
+
+         IF (IERR/=0) THEN
+            LSTOP=.TRUE.
+         ELSE
+            LSTOP=.FALSE.
+         ENDIF
+         !WRITE(*,'(3F14.7)') DYN%POSION
+         !WRITE(*,'(3F14.7)') DYN%POSIOC
+         CALLMPI( M_sum_i(MYCOMM, IERR, 1))
+         IF (IERR==0) THEN
+            CALLMPI( M_sum_d(MYCOMM, LATT_CUR%A(1,1), 9))
+         ENDIF
+         !IF (IU0>=0) WRITE(IU0,'(A)') 'POSITIONS: read from stdin'
+      ELSE
+         IERR=0
+         CALLMPI( M_sum_i(MYCOMM, IERR, 1))
+         IF (IERR==0) THEN
+            LATT_CUR%A(:,1:3)=0
+            CALLMPI( M_sum_d(MYCOMM, LATT_CUR%A(1,1), 9))
+         ENDIF
+      ENDIF
+      ! Update other lattice params
+      CALL LATTIC(LATT_CUR)
+      IF (IU0 >= 0) THEN
+            WRITE(IU0, '(A)') 'New lattice A'
+            WRITE(IU0, '(3F14.7)') LATT_CUR%A
+            WRITE(IU0, '(A)') 'New lattice B'
+            WRITE(IU0, '(3F14.7)') LATT_CUR%B
+            WRITE(IU0, '(A)') 'Old lattice A'
+            WRITE(IU0, '(3F14.7)') LATT_A_OLD
+            WRITE(IU0, '(A)') 'Old lattice B'
+            WRITE(IU0, '(3F14.7)') LATT_B_OLD
+            WRITE(IU0, '(A)') 'LATTICE: read from stdin'
+      ENDIF
+      END SUBROUTINE INLATT
