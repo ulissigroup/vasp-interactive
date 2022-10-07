@@ -39,9 +39,9 @@ patches.append(
                         ENDIF
                     """,
         "pattern": (
-            r"\!\-*\n.*?interactive\smode.*?\n"
+            r"^\!\-*\n.*?interactive\smode.*?\n"
             r"[\s\S]*?ELSE\sIF\s\(DYN\%IBRION==11\)"
-            r"[\s\S]*?ENDIF[\s\S]*?\n"
+            r"[\s\S]*?ENDIF[\s\S]*?\n{2}"
         ),
         "file": "main.F.patch",
         "replace_func": lambda s: s,

@@ -1,3 +1,5 @@
+
+
 !=======================================================================
 !
 ! read direct lattice from stdin
@@ -68,3 +70,5 @@
             WRITE(IU0, '(A)') 'LATTICE: read from stdin'
       ENDIF
       END SUBROUTINE INLATT
+
+
