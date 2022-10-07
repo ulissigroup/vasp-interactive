@@ -22,7 +22,7 @@
       TYPE (communic) :: MYCOMM
     ! local
       INTEGER NI, IERR
-      REAL(q), ALLOCATABLE :: LATT_A_OLD(:, :), LATT_B_OLD(:, :)
+      REAL(q) :: LATT_A_OLD(3, 3), LATT_B_OLD(3, 3)
 
       ! Local copy of the old lattice parameters
       LATT_A_OLD = LATT_CUR%A
