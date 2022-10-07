@@ -5,6 +5,7 @@
 io_begin
            IF (IO%LOPEN) CALL WFORCE(IO%IU6)            ! write of OUTCAR
            IF (IO%LOPEN) CALL WFORCE(17)                ! write of OSZICAR
+           IF (IO%LOPEN) CALL XML_FLUSH                 ! force flush xml file
 io_end
            CALL INPOS(LATT_CUR, T_INFO, DYN, IO%IU6, IO%IU0, INFO%LSTOP, WDES%COMM)
            CALL INLATT(LATT_CUR, T_INFO, DYN, IO%IU6, IO%IU0, INFO%LSTOP, WDES%COMM)
