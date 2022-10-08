@@ -345,6 +345,7 @@ class VaspInteractive(Vasp):
                 # use scaled positions wrap back to cell
                 for atom in atoms.get_scaled_positions()[self.sort]:
                     self._stdin(" ".join(map("{:19.16f}".format, atom)), out=out)
+
             else:
                 # The vasp process stops prematurely
                 raise RuntimeError(
@@ -359,6 +360,13 @@ class VaspInteractive(Vasp):
         while self.process.poll() is None:
             text = self.process.stdout.readline()
             self._stdout(text, out=out)
+            # TODO: check compatibility
+            # Asking for the lattice positions
+            # send via stdin
+            if "LATTICE: reading from stdin" in text:
+                #print("Found lattice!")
+                for vec in atoms.cell:
+                    self._stdin(" ".join(map("{:19.16f}".format, vec)), out=out)
             # Read vasp version from stdio, warn user of VASP5 issue
             if self._read_vasp_version_stream(text):
                 if _int_version(self.version) < 6:
