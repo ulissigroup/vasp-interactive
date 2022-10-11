@@ -280,41 +280,17 @@ class VaspInteractive(Vasp):
             out.write(text)
             out.flush()
 
-    def _run(self, atoms, out, require_cell_stdin):
-        """Overwrite the Vasp._run method
-        Running pipe-based vasp job
-        `out` is the io stream determined by `_txt_outstream()`
-        Logic:
-        - If the vasp process not present (either not started or restarted):
-            make inputs and run until stdout captures request for new pos input
-        - Else the vasp process has started and asks for input (2+ ionic step)
-            write new positions to stdin
-        - If the process continues without asking input, check the process return code
-          if returncode != 0 then there is an error
+    def _start_vasp_process(self, out):
+        """Helper function to be used inside _run() to make sure the VASP process is running.
+        A new VASP process will be started if:
+        1. No VASP process has been started
+        2. The old VASP process successfully returned but more positions are provided
+        If the VASP process is running, do nothing. 
+        Return of the function ensures self.process is not None
         """
-        # VASP process exited (possibly due to NSW limit reached), release the process handle
-        # a bit messy conditions here but works
-        if self.process is not None:
-            if (self.process.poll() == 0) and self.allow_restart_process:
-                pid = self.process.pid
-                self.process = None
-                self.pid = None
-                self._stdout(
-                    "It seems your VASP process exited normally. I'll retart a new one.",
-                    out=out,
-                )
-                warn(
-                    (
-                        f"VASP process (pid={pid}) exits normally but new positions are still provided. "
-                        "A new VASP process will be started. "
-                        "To supress this warning, you may want to increase the NSW number in your settings."
-                    )
-                )
-
         if self.process is None:
             # Delete STOPCAR left by an unsuccessful run
             stopcar = self._indir("STOPCAR")
-
             if os.path.isfile(stopcar):
                 os.remove(stopcar)
             self._stdout("Writing VASP input files\n", out=out)
@@ -336,18 +312,25 @@ class VaspInteractive(Vasp):
             self.pid = self.process.pid
             self.steps = 0
         else:
-            # Whenever at this point, VASP interactive asks the input
-            # write the current atoms positions to the stdin
             retcode = self.process.poll()
-            if retcode is None:
-                self._stdout("Inputting positions...\n", out=out)
-                # ase atoms --> self.sort --> write to position for VASP
-                # use scaled positions wrap back to cell
-                for atom in atoms.get_scaled_positions()[self.sort]:
-                    self._stdin(" ".join(map("{:19.16f}".format, atom)), out=out)
-
+            if (retcode == 0) and (self.allow_restart_process):
+                pid = self.process.pid
+                self.process = None
+                self.pid = None
+                self._stdout(
+                    "It seems your VASP process exited normally. I'll restart a new one.",
+                    out=out,
+                )
+                warn(
+                    (
+                        f"VASP process (pid={pid}) exits normally but new positions are still provided. "
+                        "A new VASP process will be started. "
+                        "To supress this warning, you may want to increase the NSW number in your settings."
+                    )
+                )
+                # Call the start process again
+                self._start_vasp_process(out)
             else:
-                # The vasp process stops prematurely
                 raise RuntimeError(
                     (
                         f"The VASP process has exited with code {retcode} but "
@@ -356,85 +339,107 @@ class VaspInteractive(Vasp):
                         "to enable auto restart of the VASP process."
                     )
                 )
-        # print(self.steps, require_cell_stdin)
-        # countdown until found the cell stdin prompt, otherwise throw an unimplemented error
-        if (self.steps > 0) and require_cell_stdin:
-            # 2 * num_atoms + POSITIONS: read from stdin + LATTICE: reading from stdin
-            lines_countdown = len(atoms) * 2 + 2
-        else:
-            lines_countdown = np.inf
-        while (self.process.poll() is None):
+        return
+    
+    def _write_atoms_stdin(self, out, require_cell_stdin):
+        """Helper function to write input positions / cell in _run().
+        This function adapts to different VASP compilations.
+        """
+        self._stdout("Inputting positions...\n", out=out)
+        # ase atoms --> self.sort --> write to position for VASP
+        # use scaled positions wrap back to cell
+        for atom in atoms.get_scaled_positions()[self.sort]:
+            self._stdin(" ".join(map("{:19.16f}".format, atom)), out=None)
+        # INPOS subroutine does not split the positions, so manually write into vasp.out
+        self._stdout("New scaled positions\n", out=out)
+        for i in range(len(atoms)):
+            self._stdout(self.process.stdout.readline(), out=out)
+        self._stdout("Old scaled positions\n", out=out)
+        for i in range(len(atoms)):
+            self._stdout(self.process.stdout.readline(), out=out)
+
+        # An additional line "POSITIONS: read from stdin"
+        text = self.process.stdout.readline()
+        self._stdout(text, out=out)
+        assert "POSITIONS: read from stdin" in text
+
+        # Determine if lattice input is needed
+        text = self.process.stdout.readline()
+        self._stdout(text, out=out)
+        if "LATTICE: reading from stdin" in text:
+            for vec in atoms.cell:
+                self._stdin(" ".join(map("{:19.16f}".format, vec)), out=None)
+            # Finish the lattice vector outputs
+            for i in range(2 * len(atoms) + 2):
+                self._stdout(self.process.stdout.readline(), out=out)
             text = self.process.stdout.readline()
-            print(text, lines_countdown)
             self._stdout(text, out=out)
-            lines_countdown -= 1
-            if lines_countdown < 0:
-                # TODO: some other type of error?
-                raise RuntimeError(
-                    ("Lattice change is required in the current calculation but your VASP program does not support it. "
-                    "Please consider a patch."
-                    )
-                        )
-            # TODO: check compatibility
-            # Asking for the lattice positions
-            # send via stdin
-            if "LATTICE: reading from stdin" in text:
-                print("Found lattice!")
-                # For this ionic circle the lattice input is done
-                lines_countdown = np.inf
-                print("Current cell", atoms.cell)
-                for vec in atoms.cell:
-                    self._stdin(" ".join(map("{:19.16f}".format, vec)), out=out)
+            assert "LATTICE: read from stdin" in text
+        elif require_cell_stdin:
+            # Cannot continue if cell change is required but VASP does not support
+            raise RuntimeError(("The unit cell changes in your calculation but VASP does not support it."
+                "Please consider applying the patch https://github.com/ulissigroup/vasp-interactive first."))
+        return
+
+
+    def _run(self, atoms, out, require_cell_stdin):
+        """Overwrite the Vasp._run method
+        Running pipe-based vasp job
+        `out` is the io stream determined by `_txt_outstream()`
+        Logic:
+        - If the vasp process not present (either not started or restarted):
+            make inputs and run until stdout captures request for new pos input
+        - Else the vasp process has started and asks for input (2+ ionic step)
+            write new positions to stdin
+        - If the process continues without asking input, check the process return code
+          if returncode != 0 then there is an error
+        """
+        # 1. Start / renew the VASP process
+        self._start_vasp_process(out=out)
+
+        # 2. Input the new positions (position and / or cell) if steps > 0
+        if steps > 0:
+            self._write_atoms_stdin(out=out, require_cell_stdin=require_cell_stdin)
+        
+        # 3. Start read cycle until the current ionic step 
+        #    finishes by "POSITIONS: reading from stdin"
+        while self.process.poll() is None:
+            text = self.process.stdout.readline()
+            self._stdout(text, out=out)
             # Read vasp version from stdio, warn user of VASP5 issue
             if self._read_vasp_version_stream(text):
                 if _int_version(self.version) < 6:
                     warn(
                         (
-                            "VaspInteractive is not fully compatible with VASP 5.x. "
+                            "VASP 5.x. may be not fully compatible with VaspInteractive."
                             "See this issue for details https://github.com/ulissigroup/vasp-interactive/issues/6. "
-                            "While our implementation should handle energy and forces correctly, "
-                            "other properties may be incorrectly parsed during optimization. "
-                            "If you encounter similar error messages, try using VASP version > 6 if available."
+                            "If you encounter similar error messages, try using VASP 6.x or apply our patch if possible."
                         )
                     )
             if "POSITIONS: reading from stdin" in text:
                 return
-
-        # Extra condition, vasp exited with 0 (completed)
-        # can be 2 situations: completed job due to STOPCAR
-        # or nsw is reached
-        if self.process.poll() == 0:
+        
+        # 4. VASP process exits. Check if everything's running ok
+        retcode = self.process.poll()
+        if retcode == 0:
             self._stdout("VASP terminated normally\n", out=out)
-            # Update Aug. 13 2021
-            # Since we explicitly added the check for self.steps in self.calculate
-            # the following scenario should not happen
             if self.steps > self.incar_nsw:
                 self._stdout(
                     (
                         "However the maximum ionic iterations have been reached. "
-                        "Consider increasing NSW number in your calculation."
+                        "Consider increasing NSW number in your calculation.\n"
                     ),
                     out=out,
                 )
-                raise RuntimeError(
-                    (
-                        "VASP process terminated normally but "
-                        "your current ionic steps exceeds maximum allowed number. "
-                        "Consider increase your NSW value in calculator setup, "
-                        "or set allow_process_restart=True"
-                    )
-                )
-
-            return
         else:
             # If we've reached this point, then VASP has exited without asking for
             # new positions, meaning it either exited without error unexpectedly,
             # or it exited with an error. Either way, we need to raise an error.
-
             raise RuntimeError(
                 "VASP exited unexpectedly with exit code {}"
-                "".format(self.process.poll())
+                "".format(retcode)
             )
+        return
 
     def close(self):
         """Soft stop approach for the stream-based VASP process
