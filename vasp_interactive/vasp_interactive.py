@@ -13,7 +13,12 @@ from subprocess import Popen, PIPE
 from contextlib import contextmanager
 
 import numpy as np
-from ase.calculators.calculator import Calculator, ReadError, CalculatorSetupError, all_changes
+from ase.calculators.calculator import (
+    Calculator,
+    ReadError,
+    CalculatorSetupError,
+    all_changes,
+)
 from ase.calculators.vasp.vasp import Vasp, check_atoms
 
 
@@ -288,7 +293,7 @@ class VaspInteractive(Vasp):
         A new VASP process will be started if:
         1. No VASP process has been started
         2. The old VASP process successfully returned but more positions are provided
-        If the VASP process is running, do nothing. 
+        If the VASP process is running, do nothing.
         Return of the function ensures self.process is not None
         """
         if self.process is None:
@@ -346,7 +351,7 @@ class VaspInteractive(Vasp):
                     )
                 )
         return
-    
+
     def _write_atoms_stdin(self, atoms, out, require_cell_stdin):
         """Helper function to write input positions / cell in _run().
         This function adapts to different VASP compilations.
@@ -386,10 +391,13 @@ class VaspInteractive(Vasp):
             assert "LATTICE: read from stdin" in text
         elif require_cell_stdin:
             # Cannot continue if cell change is required but VASP does not support
-            raise RuntimeError(("The unit cell changes in your calculation but VASP does not support writing lattice parameters to stdin. "
-                "Please consider applying this patch https://github.com/ulissigroup/vasp-interactive first."))
+            raise RuntimeError(
+                (
+                    "The unit cell changes in your calculation but VASP does not support writing lattice parameters to stdin. "
+                    "Please consider applying this patch https://github.com/ulissigroup/vasp-interactive first."
+                )
+            )
         return
-
 
     def _run(self, atoms, out, require_cell_stdin):
         """Overwrite the Vasp._run method
@@ -408,9 +416,11 @@ class VaspInteractive(Vasp):
 
         # 2. Input the new positions (position and / or cell) if steps > 0
         if self.steps > 0:
-            self._write_atoms_stdin(atoms=atoms, out=out, require_cell_stdin=require_cell_stdin)
-        
-        # 3. Start read cycle until the current ionic step 
+            self._write_atoms_stdin(
+                atoms=atoms, out=out, require_cell_stdin=require_cell_stdin
+            )
+
+        # 3. Start read cycle until the current ionic step
         #    finishes by "POSITIONS: reading from stdin"
         while self.process.poll() is None:
             text = self.process.stdout.readline()
@@ -427,7 +437,7 @@ class VaspInteractive(Vasp):
                     )
             if "POSITIONS: reading from stdin" in text:
                 return
-        
+
         # 4. VASP process exits. Check if everything's running ok
         retcode = self.process.poll()
         if retcode == 0:
@@ -445,8 +455,7 @@ class VaspInteractive(Vasp):
             # new positions, meaning it either exited without error unexpectedly,
             # or it exited with an error. Either way, we need to raise an error.
             raise RuntimeError(
-                "VASP exited unexpectedly with exit code {}"
-                "".format(retcode)
+                "VASP exited unexpectedly with exit code {}" "".format(retcode)
             )
         return
 
@@ -637,7 +646,7 @@ class VaspInteractive(Vasp):
                         "Please create a new calculator instance or use standard Vasp calculator"
                     )
                 )
-        
+
         # Does the VASP interactive mode needs to take cell as inputs?
         # If require_cell_stdin is True, _run must get a "LATTICE: reading from stdin" line
         # after sending in the positions, otherwise throws NotImplementedError
@@ -648,14 +657,14 @@ class VaspInteractive(Vasp):
             require_cell_stdin = False
         # elif "cell" in system_changes:
 
-            # if self.process is not None:
-            #     raise NotImplementedError(
-            #         (
-            #             "VaspInteractive does not support change of lattice parameters. "
-            #             "Set VaspInteractive.cell_tolerance to a higher value if you think it's caused by round-off error. "
-            #             "Otherwise, please create a new calculator instance or use standard Vasp calculator"
-            #         )
-            #     )
+        # if self.process is not None:
+        #     raise NotImplementedError(
+        #         (
+        #             "VaspInteractive does not support change of lattice parameters. "
+        #             "Set VaspInteractive.cell_tolerance to a higher value if you think it's caused by round-off error. "
+        #             "Otherwise, please create a new calculator instance or use standard Vasp calculator"
+        #         )
+        #     )
 
         self.clear_results()
         if atoms is not None:
