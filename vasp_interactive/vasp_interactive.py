@@ -280,7 +280,7 @@ class VaspInteractive(Vasp):
             out.write(text)
             out.flush()
 
-    def _start_vasp_process(self, out):
+    def _start_vasp_process(self, atoms, out):
         """Helper function to be used inside _run() to make sure the VASP process is running.
         A new VASP process will be started if:
         1. No VASP process has been started
@@ -313,6 +313,9 @@ class VaspInteractive(Vasp):
             self.steps = 0
         else:
             retcode = self.process.poll()
+            # Still running, do nothing
+            if retcode is None:
+                return
             if (retcode == 0) and (self.allow_restart_process):
                 pid = self.process.pid
                 self.process = None
@@ -341,7 +344,7 @@ class VaspInteractive(Vasp):
                 )
         return
     
-    def _write_atoms_stdin(self, out, require_cell_stdin):
+    def _write_atoms_stdin(self, atoms, out, require_cell_stdin):
         """Helper function to write input positions / cell in _run().
         This function adapts to different VASP compilations.
         """
@@ -377,8 +380,8 @@ class VaspInteractive(Vasp):
             assert "LATTICE: read from stdin" in text
         elif require_cell_stdin:
             # Cannot continue if cell change is required but VASP does not support
-            raise RuntimeError(("The unit cell changes in your calculation but VASP does not support it."
-                "Please consider applying the patch https://github.com/ulissigroup/vasp-interactive first."))
+            raise RuntimeError(("The unit cell changes in your calculation but VASP does not support writing lattice parameters to stdin. "
+                "Please consider applying this patch https://github.com/ulissigroup/vasp-interactive first."))
         return
 
 
@@ -395,11 +398,11 @@ class VaspInteractive(Vasp):
           if returncode != 0 then there is an error
         """
         # 1. Start / renew the VASP process
-        self._start_vasp_process(out=out)
+        self._start_vasp_process(atoms=atoms, out=out)
 
         # 2. Input the new positions (position and / or cell) if steps > 0
-        if steps > 0:
-            self._write_atoms_stdin(out=out, require_cell_stdin=require_cell_stdin)
+        if self.steps > 0:
+            self._write_atoms_stdin(atoms=atoms, out=out, require_cell_stdin=require_cell_stdin)
         
         # 3. Start read cycle until the current ionic step 
         #    finishes by "POSITIONS: reading from stdin"
