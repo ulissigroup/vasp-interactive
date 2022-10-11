@@ -48,6 +48,8 @@ class VaspInteractive(Vasp):
         "interactive": True,
         # Disable stopping criteria but just rely on nsw
         "ediffg": 0,
+        # Set ISIF tag to cature stress-induced energy change
+        "isif": 3,
     }
     # Enforce the job to run infinitely untill killed
     default_input = {
