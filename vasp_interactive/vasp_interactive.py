@@ -332,7 +332,7 @@ class VaspInteractive(Vasp):
                     )
                 )
                 # Call the start process again
-                self._start_vasp_process(out)
+                self._start_vasp_process(atoms=atoms, out=out)
             else:
                 raise RuntimeError(
                     (
