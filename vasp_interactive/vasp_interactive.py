@@ -5,6 +5,7 @@ May be merged with upstream by the end of day.
 """
 import time
 import signal
+import traceback
 import os
 import sys
 from warnings import warn
@@ -372,11 +373,14 @@ class VaspInteractive(Vasp):
         if "LATTICE: reading from stdin" in text:
             for vec in atoms.cell:
                 self._stdin(" ".join(map("{:19.16f}".format, vec)), out=None)
-            # Finish the lattice vector outputs
-            for i in range(2 * len(atoms) + 2):
-                self._stdout(self.process.stdout.readline(), out=out)
-            text = self.process.stdout.readline()
-            self._stdout(text, out=out)
+            # Finish the lattice vector outputs. Note there can be multiple empty lines
+            # In total, there should be 9 lines before the closing sentence
+            count = 0
+            while count < (2 * 3 + 3):
+                text = self.process.stdout.readline()
+                self._stdout(text, out=out)
+                if len(text.strip()) != 0:
+                    count += 1
             assert "LATTICE: read from stdin" in text
         elif require_cell_stdin:
             # Cannot continue if cell change is required but VASP does not support
@@ -447,7 +451,6 @@ class VaspInteractive(Vasp):
     def close(self):
         """Soft stop approach for the stream-based VASP process
         Works by writing STOPCAR file and runs two dummy scf cycles
-        #TODO: add a time-out option
         """
         # Make sure the MPI process is awake before the termination
         if self.pause_mpi:
@@ -486,6 +489,7 @@ class VaspInteractive(Vasp):
                 # Program may have ended before we can write, if so then cancel the stdin
                 for i in range(2):
                     self._run(self.atoms, out=out, require_cell_stdin=False)
+
                     if self.process.poll() is not None:
                         self._stdout(
                             f"VASP exited with code {self.process.poll()}.", out=out
@@ -496,7 +500,6 @@ class VaspInteractive(Vasp):
                             self.mpi_match = None
                             self.mpi_state = None
                         return
-                # TODO: change the endless waiting to a timeout function
                 while self.process.poll() is None:
                     time.sleep(1)
                 self._stdout("VASP has been closed\n", out=out)
@@ -886,7 +889,7 @@ class VaspInteractive(Vasp):
             print(
                 (
                     f"Trying to close the VASP stream but encountered error: \n"
-                    f"{e}\n"
+                    f"{traceback.format_exc(limit=2)}\n"
                     "Will now force closing the VASP process. "
                     "The OUTCAR and vasprun.xml outputs may be incomplete"
                 ),
