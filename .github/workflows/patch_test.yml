@@ -43,10 +43,10 @@ jobs:
     - name: Download test binaries
       run: |
         wget https://github.com/ulissigroup/vasp-interactive/releases/download/v0.0.1/test_binaries.zip
-        unzip test_binaries.zip -d vasp -P $PWD
+        unzip -d vasp -P $MYPWD test_binaries.zip 
         realpath vasp
       env:
-        PWD: ${{ secrets.TEST_BINARY_KEY }}
+        MYPWD: ${{ secrets.TEST_BINARY_KEY }}
 
     # - name: setup conda version
     #   run: |
