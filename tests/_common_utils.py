@@ -2,8 +2,10 @@ import pytest
 import psutil
 import tempfile
 import numpy as np
+from ase.calculators.vasp import Vasp
 from vasp_interactive import VaspInteractive
 from ase.atoms import Atoms
+import re
 
 
 def get_cpu_cores():
@@ -32,7 +34,7 @@ def get_oversubscribe():
     return over
 
 
-def get_vasp_accepts_lattice():
+def if_vasp_accepts_lattice():
     """Run a simple test to see if VASP accepts lattice input"""
     h = Atoms("H", positions=[[0, 0, 0]], cell=[5, 5, 5], pbc=True)
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -51,6 +53,33 @@ def get_vasp_accepts_lattice():
                 accept = True
                 break
     return accept
+
+def if_vasp_ipi():
+    """Test if vasp has iPi patch"""
+    h = Atoms("H", positions=[[0, 0, 0]], cell=[5, 5, 5], pbc=True)
+    ibrion = None
+    with tempfile.TemporaryDirectory() as tmpdir:
+        calc = Vasp(
+            directory=tmpdir, xc="pbe", ibrion=23, 
+            custom={"ihost": "localhost", "port": "23333", "inet": "1"}
+        )
+        h.calc = calc
+        try:
+            h.get_potential_energy()
+        except Exception as e:
+            pass
+        outcar_lines = open(calc._indir("OUTCAR"), "r").readlines()
+        for line in outcar_lines:
+            if "IBRION" in line:
+                pat = r"IBRION\s+\=\s+(-+\d*)"
+                ibrion = re.findall(pat, line)[0][0]
+                break
+    if ibrion is None:
+        raise RuntimeError("Cannot determine IBRION in VASP. Something wrong?")
+    return int(ibrion) == 23
+                
+
+
 
 
 def skip_probe(min_cores=8, skip_oversubscribe=False):
@@ -91,10 +120,21 @@ def skip_lattice_if_incompatible(reverse=False):
     """Skip tests that requires cell changes
     the tests automatically detect if VASP is compatible with lattice input
     """
-    accept = get_vasp_accepts_lattice()
+    accept = if_vasp_accepts_lattice()
     # skip if accept and reverse are same logic value
     if not (accept ^ reverse):
         pytest.skip(
             f"Skipping because vasp does not supports lattice input",
+            allow_module_level=False,
+        )
+
+def skip_if_no_ipi(reverse=False):
+    """Skip tests that requires ipi patch
+    """
+    accept = if_vasp_ipi()
+    # skip if accept and reverse are same logic value
+    if not (accept ^ reverse):
+        pytest.skip(
+            f"Skipping because vasp does not support ipi protocol",
             allow_module_level=False,
         )
