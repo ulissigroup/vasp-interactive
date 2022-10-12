@@ -42,9 +42,10 @@ jobs:
     - uses: actions/checkout@v2
     - name: Download test binaries
       run: |
-        wget https://github.com/ulissigroup/vasp-interactive/releases/download/v0.0.1/test_binaries.zip
+        wget --no-verbose https://github.com/ulissigroup/vasp-interactive/releases/download/v0.0.1/test_binaries.zip
         unzip -d vasp -P $MYPWD test_binaries.zip 
-        realpath vasp
+        VASP_ROOT=`realpath vasp`
+        echo "VASP_ROOT=${VASP_ROOT}" >> $GITHUB_ENV
       env:
         MYPWD: ${{ secrets.TEST_BINARY_KEY }}
 
@@ -69,6 +70,7 @@ jobs:
     - name: Unit test
       run: |
         source activate actions
-        export VASP_COMMAND="${VASP_PREFIX} ./vasp/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std"
+        echo ${VASP_ROOT}
+        export VASP_COMMAND="${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std"
         echo $VASP_COMMAND
         for f in tests/test*.py; do echo $f; python -m pytest -s $f; killall vasp_std || echo ""; done
