@@ -1,0 +1,83 @@
+# Workflow runs simple package installation & unittest.
+# All python unittests should be relatively fast (1 core + gam)
+name: Support for patched VASP 
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'examples/**'
+      - 'tutorials/**'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  basic:
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-latest
+    container:
+      image: ulissigroup/kubeflow_vasp:extras-notebook
+      env: 
+        VASP_PREFIX: "mpirun -np 1 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 --allow-run-as-root"
+      options: --user root --entrypoint /bin/bash
+      credentials:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9"]
+        vasp-version: ["vasp54", "vasp61", "vasp62", "vasp63"]
+        variant: ["patch", "pristine"]
+        
+
+    steps:
+    - name: check env
+      run: |
+        echo "${{ github.workspace }}"
+    - uses: actions/checkout@v2
+    - name: Download test binaries
+      run: |
+        wget https://github.com/ulissigroup/vasp-interactive/releases/download/v0.0.1/test_binaries.zip
+        unzip test_binaries.zip -d vasp -P $PWD
+        realpath vasp
+      env:
+        PWD: ${{ secrets.TEST_BINARY_KEY }}
+
+    # - name: setup conda version
+    #   run: |
+    #     conda create --name actions -c conda-forge \
+    #       python=${{ matrix.python-version }} pip flake8 pytest
+    #     conda init bash
+    #     source activate actions
+    # - name: Lint with flake8
+    #   run: |
+    #     # stop the build if there are Python syntax errors or undefined names
+    #     source activate actions
+    #     which python
+    #     flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+    #     # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+    #     flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    # - name: Package install
+    #   run: |
+    #     source activate actions
+    #     python -m pip install --upgrade .
+    # - name: Test with pytest vasp6+
+    #   if: ${{ matrix.vasp-version != 'vasp.5.4.4.pl2' }}
+    #   run: |
+    #     source activate actions
+    #     export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_std"
+    #     echo $VASP_COMMAND
+    #     for f in tests/test*.py; do echo $f; python -m pytest -s $f; killall vasp_std || echo ""; done
+    # - name: Test with pytest vasp5
+    #   if: ${{ matrix.vasp-version == 'vasp.5.4.4.pl2' }}
+    #   run: |
+    #     source activate actions
+    #     export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_std"
+    #     echo $VASP_COMMAND
+    #     for f in tests/test*.py; do echo $f; python -m pytest -s $f; killall vasp_std || echo ""; done
+    #     # python -m pytest -s tests/test_vasp_version.py
