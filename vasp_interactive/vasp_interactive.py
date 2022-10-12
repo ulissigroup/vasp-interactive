@@ -694,39 +694,41 @@ class VaspInteractive(Vasp):
         # Temporarily load OUTCAR into memory
         outcar = self.load_file("OUTCAR")
 
-        # vasprun.xml is only valid iteration when atoms finalized
         calc_xml = None
         xml_results = None
-        if self.final:
-            try:
-                calc_xml = self._read_xml()
-                xml_results = calc_xml.results
-            except ReadError:
-                # The xml file is not complete, try using OUTCAR only
-                pass
+        # For unpatched VASP, the xml file is not complete at this point
+        # but we can prioritize the xml reading for patch VASP ones
+        try:
+            calc_xml = self._read_xml()
+            xml_results = calc_xml.results
+        except ReadError:
+            # The xml file is not complete, try using OUTCAR only
+            pass
+        # breakpoint()
 
-        # Fix sorting
-        if xml_results:
-            xml_results["forces"] = xml_results["forces"][self.resort]
-            self.results.update(xml_results)
-
-        # OUTCAR handling part
         self.converged = self.read_convergence(lines=outcar)
         self.version = self.read_version()
         vasp5 = False
-        if self.version is not None:
-            if _int_version(self.version) < 6:
-                warn(
-                    (
-                        "VaspInteractive is not fully compatible with VASP 5.x. "
-                        "See this issue for details https://github.com/ulissigroup/vasp-interactive/issues/6. "
-                        "While our implementation should handle energy and forces correctly, "
-                        "other properties may be incorrectly parsed during optimization. "
-                        "If you encounter similar error messages, try using VASP version > 6 if available."
+        # Fix sorting in xml
+        if xml_results:
+            xml_results["forces"] = xml_results["forces"][self.resort]
+            self.results.update(xml_results)
+        # if xml does not exist, read from OUTCAR first and then vasp.out
+        else:
+            # OUTCAR handling part 
+            if self.version is not None:
+                if _int_version(self.version) < 6:
+                    warn(
+                        (
+                            "VaspInteractive is not fully compatible with VASP 5.x. "
+                            "See this issue for details https://github.com/ulissigroup/vasp-interactive/issues/6. "
+                            "While our implementation should handle energy and forces correctly, "
+                            "other properties may be incorrectly parsed during optimization. "
+                            "If you encounter similar error messages, try using VASP version > 6 if available."
+                        )
                     )
-                )
-                if self.parse_vaspout:
-                    vasp5 = True
+                    if self.parse_vaspout:
+                        vasp5 = True
 
         # breakpoint()
         # Energy and magmom have multiple return values
@@ -755,22 +757,25 @@ class VaspInteractive(Vasp):
             except Exception:
                 pass
 
+
         # Missing properties that are name-consistent so can use dynamic function loading
         # Do not parse them in vasp5
-        if not vasp5:
-            properties = ["stress", "fermi", "nbands", "dipole"]
-            for prop in properties:
-                if prop not in self.results.keys():
-                    try:
-                        # use read_xxx method to parse outcar
-                        result = getattr(self, f"read_{prop}")(lines=outcar)
-                        self.results[prop] = result
-                    except Exception:
-                        # Do not add the key
-                        pass
+        
+        properties = ["stress", "fermi", "nbands", "dipole"]
+        for prop in properties:
+            if prop not in self.results.keys():
+                try:
+                    # use read_xxx method to parse outcar
+                    result = getattr(self, f"read_{prop}")(lines=outcar)
+                    self.results[prop] = result
+                except Exception:
+                    # Do not add the key
+                    pass
 
         # Manunal old keywords handling
-        self.spinpol = self.read_spinpol(lines=outcar)
+        
+
+        self._set_old_keywords()
 
         # Store the parameters used for this calculation
         self._store_param_state()
