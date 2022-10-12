@@ -27,7 +27,7 @@ params = {
 
 with tempfile.TemporaryDirectory() as tmpdir:
     atoms = al.copy()
-    atoms.calc = Vasp(directory="cell-opt", isif=3, ibrion=1, nsw=100, **params)
+    atoms.calc = Vasp(directory=tmpdir, isif=3, ibrion=1, nsw=100, **params)
     # Do a direct cell relaxation
     atoms.get_potential_energy()
     outcar = atoms.calc._indir("OUTCAR")

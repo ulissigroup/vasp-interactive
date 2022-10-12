@@ -73,7 +73,7 @@ def test_cell():
     # Change lattice scale. Each cell has new vasp calculator
     for atoms in images:
         with tempfile.TemporaryDirectory() as tmpdir:
-            atoms.calc = Vasp(directory="cell-change-vasp", **params)
+            atoms.calc = Vasp(directory=tmpdir, **params)
             e = atoms.get_potential_energy()
             s = atoms.get_stress()
             e_vasp.append(e)
@@ -82,7 +82,7 @@ def test_cell():
     s_vasp = np.array(s_vasp)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        with VaspInteractive(directory="cell-change", **params) as calc:
+        with VaspInteractive(directory=tmpdir, **params) as calc:
             for atoms in images:
                 atoms.calc = calc
                 e = atoms.get_potential_energy()
