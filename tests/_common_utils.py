@@ -54,29 +54,30 @@ def if_vasp_accepts_lattice():
                 break
     return accept
 
+
 def if_vasp_ipi():
-    """Test if vasp has iPi patch"""
+    """Test if vasp has iPi patch by parsing the stderr
+    """
     h = Atoms("H", positions=[[0, 0, 0]], cell=[5, 5, 5], pbc=True)
-    ibrion = None
     with tempfile.TemporaryDirectory() as tmpdir:
         calc = Vasp(
-            directory=tmpdir, xc="pbe", ibrion=23, 
+            directory="./test-ipi", xc="pbe", ibrion=23, 
             custom={"ihost": "localhost", "port": "23333", "inet": "1"}
         )
+        cmd = calc.make_command(calc.command) + " 2> vasp.err"
+        calc.command = cmd
         h.calc = calc
         try:
             h.get_potential_energy()
         except Exception as e:
             pass
-        outcar_lines = open(calc._indir("OUTCAR"), "r").readlines()
+        outcar_lines = open(calc._indir("vasp.err"), "r").readlines()
+        accept = False
         for line in outcar_lines:
-            if "IBRION" in line:
-                pat = r"IBRION\s+\=\s+(-+\d*)"
-                ibrion = re.findall(pat, line)[0][0]
+            if "Error opening INET socket" in line:
+                accept = True
                 break
-    if ibrion is None:
-        raise RuntimeError("Cannot determine IBRION in VASP. Something wrong?")
-    return int(ibrion) == 23
+    return accept
                 
 
 
