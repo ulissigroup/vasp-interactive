@@ -1,6 +1,6 @@
 # Workflow runs simple package installation & unittest.
 # All python unittests should be relatively fast (1 core + gam)
-name: Support for patched VASP 
+name: Code coverage test
 
 on:
   push:
@@ -52,7 +52,7 @@ jobs:
     - name: setup conda version
       run: |
         conda create --name actions -c conda-forge \
-          python=${{ matrix.python-version }} pip flake8 pytest coverage
+          python=${{ matrix.python-version }} pip flake8 pytest coverage jq
         conda init bash
         source activate actions
     # - name: Lint with flake8
