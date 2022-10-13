@@ -108,6 +108,7 @@ class VaspInteractive(Vasp):
         unixsocket=None,
         timeout=None,
         log=None,
+        launch_client=False,
         **kwargs,
     ):
         """Initialize the calculator object like the normal Vasp object.
@@ -228,8 +229,19 @@ class VaspInteractive(Vasp):
         self._xml_complete = None
         self._outcar_complete = None
 
-        # Socket-IO
+        # Socket-IO. Launch client is a lazy method that let SocketIOCalculator decide which port and socket are used
+        if launch_client:
+            # TODO: change params later
+            if use_socket:
+                raise ValueError("Parameter conflict. Cannot set launch_client with use_socket")
+            self.command = f"{sys.executable} -m vasp_interactive.vasp_interactive -s -p {{port}} -sn {{unixsocket}}"
+            param_file = self._indir(".vpi_param.pkl")
+            with open(param_file, "wb") as f:
+                pickle.dump(input_params, f)
+            print(launch_client)
+
         if use_socket:
+            # TODO: make sure if lauch_client is True, no actual socket client is attached
             self.socket_client = VPISocketClient(
                 host=host,
                 port=port,
@@ -239,9 +251,8 @@ class VaspInteractive(Vasp):
                 comm=None,
             )
             self.socket_client.attach_parent_calc(self)
-            param_file = self._indir(".vpi_param.pkl")
-            with open(param_file, "wb") as f:
-                pickle.dump(input_params, f)
+            
+            
         else:
             self.socket_client = None
         return
@@ -1099,8 +1110,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "-s", "--socket", help="Start socket interface", action="store_true"
     )
-    parser.add_argument("-p", "--port", help="Socket port", type=int)
-    parser.add_argument("-sn", "--unixsocket", help="Unixsocket name", type=str)
+    parser.add_argument("-p", "--port", help="Socket port")
+    parser.add_argument("-sn", "--unixsocket", help="Unixsocket name")
     parser.add_argument(
         "--param-file", help="Parameter file", type=str, default=".vpi_param.pkl"
     )
@@ -1109,6 +1120,19 @@ if __name__ == "__main__":
         raise NotImplementedError(
             "Cannot run vasp_interactive module without socket support!"
         )
+    port = args.port
+    if port.lower() == "none":
+        port = None
+    else:
+        try:
+            port = int(port)
+        except Exception as e:
+            raise ValueError(f"Port value {port} is invalid") from e
+    unixsocket = args.unixsocket
+    if unixsocket.lower() == "none":
+        unixsocket = None
+
+
     param_file = Path(args.param_file)
     if param_file.is_file():
         params = pickle.load(open(param_file, "rb"))
@@ -1122,4 +1146,5 @@ if __name__ == "__main__":
     calc = VaspInteractive(
         use_socket=args.socket, port=args.port, unixsocket=args.unixsocket, **params
     )
-    calc.run(atoms)
+    with calc:
+        calc.run(atoms)
