@@ -56,13 +56,14 @@ def if_vasp_accepts_lattice():
 
 
 def if_vasp_ipi():
-    """Test if vasp has iPi patch by parsing the stderr
-    """
+    """Test if vasp has iPi patch by parsing the stderr"""
     h = Atoms("H", positions=[[0, 0, 0]], cell=[5, 5, 5], pbc=True)
     with tempfile.TemporaryDirectory() as tmpdir:
         calc = Vasp(
-            directory="./test-ipi", xc="pbe", ibrion=23, 
-            custom={"ihost": "localhost", "port": "23333", "inet": "1"}
+            directory="./test-ipi",
+            xc="pbe",
+            ibrion=23,
+            custom={"ihost": "localhost", "port": "23333", "inet": "1"},
         )
         cmd = calc.make_command(calc.command) + " 2> vasp.err"
         calc.command = cmd
@@ -78,9 +79,6 @@ def if_vasp_ipi():
                 accept = True
                 break
     return accept
-                
-
-
 
 
 def skip_probe(min_cores=8, skip_oversubscribe=False):
@@ -129,9 +127,9 @@ def skip_lattice_if_incompatible(reverse=False):
             allow_module_level=False,
         )
 
+
 def skip_if_no_ipi(reverse=False):
-    """Skip tests that requires ipi patch
-    """
+    """Skip tests that requires ipi patch"""
     accept = if_vasp_ipi()
     # skip if accept and reverse are same logic value
     if not (accept ^ reverse):
