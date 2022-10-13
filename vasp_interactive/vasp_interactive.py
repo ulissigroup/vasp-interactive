@@ -6,8 +6,10 @@ May be merged with upstream by the end of day.
 import time
 import signal
 import traceback
+import pickle
 import os
 import sys
+from pathlib import Path
 from warnings import warn
 from subprocess import Popen, PIPE
 from contextlib import contextmanager
@@ -38,6 +40,26 @@ from .parse import (
     parse_vaspout_energy,
     parse_vaspout_forces,
 )
+
+
+class VPISocketClient(SocketClient):
+    """Minor patch to SocketClient so that it knows which VaspInteractive is associated for successful termination."""
+
+    def attach_parent_calc(self, calc):
+        self.parent_calc = calc
+        return
+
+    def close(self):
+        if not self.closed:
+            self.log("Close SocketClient")
+            self.protocol.socket.close()
+            # If there is a calculator associated, use finalize to terminate
+            if hasattr(self, "parent_calc"):
+                if (self.parent_calc is not None) and (
+                    hasattr(self.parent_calc, "finalize")
+                ):
+                    self.parent_calc.finalize()
+            self.closed = True
 
 
 class VaspInteractive(Vasp):
@@ -98,6 +120,25 @@ class VaspInteractive(Vasp):
             `kill_timeout`: Timeout in seconds before forcibly kill the vasp process
             `parse_vaspout`: Whether to parse vasp.out for incorrect energy and forces fields. Only relevant if using VASP 5.x
         """
+        # Save current init params, only for the use of socketio
+        # pop out the atoms and socketio settings since they are overwritten
+        input_params = dict(
+            label=label,
+            ignore_bad_restart_file=ignore_bad_restart_file,
+            command=command,
+            txt=txt,
+            allow_restart_process=allow_restart_process,
+            allow_mpi_pause=allow_mpi_pause,
+            allow_default_param_overwrite=allow_default_param_overwrite,
+            cell_tolerance=cell_tolerance,
+            kill_timeout=kill_timeout,
+            parse_vaspout=parse_vaspout,
+            # Socket-io specific
+            host=host,
+            timeout=timeout,
+            log=log,
+        )
+        input_params.update(**kwargs)
 
         # Add the mandatory keywords
         for kw, val in VaspInteractive.mandatory_input.items():
@@ -189,10 +230,18 @@ class VaspInteractive(Vasp):
 
         # Socket-IO
         if use_socket:
-            self.socket_client = SocketClient(
-                host=host, port=port, unixsocket=unixsocket,
-                timeout=timeout, log=log, comm=None
+            self.socket_client = VPISocketClient(
+                host=host,
+                port=port,
+                unixsocket=unixsocket,
+                timeout=timeout,
+                log=log,
+                comm=None,
             )
+            self.socket_client.attach_parent_calc(self)
+            param_file = self._indir(".vpi_param.pkl")
+            with open(param_file, "wb") as f:
+                pickle.dump(input_params, f)
         else:
             self.socket_client = None
         return
@@ -1011,35 +1060,66 @@ class VaspInteractive(Vasp):
             )
         )
         return new
-    
+
     # socket-related
     def irun(self, atoms, use_stress=None):
-        """Make the client run in iterative mode
-        """
+        """Make the client run in iterative mode"""
         if self.socket_client is None:
-            raise NotImplementedError("Cannot use socket io mode without specifying use_socket=True")
+            raise NotImplementedError(
+                "Cannot use socket io mode without specifying use_socket=True"
+            )
         atoms.calc = self
         return self.socket_client.irun(atoms, use_stress=use_stress)
-    
+
     def run(self, atoms, use_stress=None):
-        """Infinitely run client code
-        """
+        """Infinitely run client code"""
         if self.socket_client is None:
-            raise NotImplementedError("Cannot use socket io mode without specifying use_socket=True")
+            raise NotImplementedError(
+                "Cannot use socket io mode without specifying use_socket=True"
+            )
         atoms.calc = self
-        #breakpoint()
+        # breakpoint()
         self.socket_client.run(atoms, use_stress=use_stress)
         return
-    
+
 
 if __name__ == "__main__":
     """Allow execute as a module when using VaspInteractive as a self-contained socket-IO calculator
     only to be used when calling SocketIOCalculator(calc=VaspInteractive(**params))
+
+    See ase.calculators.socketio.FileIOSocketClientLauncher for its API details.
+
+    The module executor will start a VaspInteractive calculator on the current directory,
+    and do calc.run(atoms) from there. Since it's a subprocess, we're not interfered if
+    the run() function is blocking
     """
     from argparse import ArgumentParser
+
     parser = ArgumentParser(description="Commandline module of VaspInteractive")
-    parser.add_argument("-s", "--socket", help="Start socket interface", action="store_true")
+    parser.add_argument(
+        "-s", "--socket", help="Start socket interface", action="store_true"
+    )
+    parser.add_argument("-p", "--port", help="Socket port", type=int)
+    parser.add_argument("-sn", "--unixsocket", help="Unixsocket name", type=str)
+    parser.add_argument(
+        "--param-file", help="Parameter file", type=str, default=".vpi_param.pkl"
+    )
     args = parser.parse_args()
     if args.socket is False:
-        raise NotImplementedError("Cannot run vasp_interactive module without socket support!")
+        raise NotImplementedError(
+            "Cannot run vasp_interactive module without socket support!"
+        )
+    param_file = Path(args.param_file)
+    if param_file.is_file():
+        params = pickle.load(open(param_file, "rb"))
+    else:
+        params = {}
 
+    # Use original Vasp restart to handle structure unfolding
+    vc = Vasp(restart=True)
+    atoms = vc.atoms
+    # TODO: unpack parameters
+    calc = VaspInteractive(
+        use_socket=args.socket, port=args.port, unixsocket=args.unixsocket, **params
+    )
+    calc.run(atoms)
