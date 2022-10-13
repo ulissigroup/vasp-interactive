@@ -22,6 +22,7 @@ from ase.calculators.calculator import (
 )
 from ase.calculators.vasp.vasp import Vasp, check_atoms
 from ase.calculators.singlepoint import SinglePointDFTCalculator, SinglePointCalculator
+from ase.calculators.socketio import SocketClient
 
 
 from .utils import (
@@ -78,6 +79,13 @@ class VaspInteractive(Vasp):
         cell_tolerance=1e-8,
         kill_timeout=DEFAULT_KILL_TIMEOUT,
         parse_vaspout=True,
+        # Socket-io specific
+        use_socket=False,
+        host="localhost",
+        port=None,
+        unixsocket=None,
+        timeout=None,
+        log=None,
         **kwargs,
     ):
         """Initialize the calculator object like the normal Vasp object.
@@ -178,6 +186,15 @@ class VaspInteractive(Vasp):
         # VASP status flags
         self._xml_complete = None
         self._outcar_complete = None
+
+        # Socket-IO
+        if use_socket:
+            self.socket_client = SocketClient(
+                host=host, port=port, unixsocket=unixsocket,
+                timeout=timeout, log=log, comm=None
+            )
+        else:
+            self.socket_client = None
         return
 
     @property
@@ -994,3 +1011,25 @@ class VaspInteractive(Vasp):
             )
         )
         return new
+    
+    # socket-related
+    def irun(self, atoms, use_stress=None):
+        """Make the client run in iterative mode
+        """
+        if self.socket_client is None:
+            raise NotImplementedError("Cannot use socket io mode without specifying use_socket=True")
+        atoms.calc = self
+        return self.socket_client.irun(atoms, use_stress=use_stress)
+    
+    def run(self, atoms, use_stress=None):
+        """Infinitely run client code
+        """
+        if self.socket_client is None:
+            raise NotImplementedError("Cannot use socket io mode without specifying use_socket=True")
+        atoms.calc = self
+        #breakpoint()
+        self.socket_client.run(atoms, use_stress=use_stress)
+        return
+    
+
+        
