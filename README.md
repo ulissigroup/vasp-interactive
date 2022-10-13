@@ -1,5 +1,6 @@
 # `VaspInteractive`: a stream-based calculator for VASP
 ![workflow](https://github.com/ulissigroup/vasp-interactive/actions/workflows/package_and_unittest.yml/badge.svg)
+![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/alchem0x2a/afede700c2b7703c77e10e51333bfa75/raw/test.json)
 
 
 <!-- [![Cori Haswell](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml/badge.svg?event=workflow_dispatch)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml)
