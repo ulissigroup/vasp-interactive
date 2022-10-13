@@ -149,3 +149,7 @@ sandbox/
 **/metadata.json
 **/output.pkl
 **/func_code.py
+coverage.json
+.vscode/settings.json
+examples/mlp_cluster_benchmark/results.json
+examples/test-ipi/vasp.err

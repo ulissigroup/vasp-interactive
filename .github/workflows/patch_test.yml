@@ -1,6 +1,6 @@
 # Workflow runs simple package installation & unittest.
 # All python unittests should be relatively fast (1 core + gam)
-name: Support for patched VASP 
+name: VASP Patch
 
 on:
   push:
