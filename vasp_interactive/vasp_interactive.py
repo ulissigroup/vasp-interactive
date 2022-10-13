@@ -1032,4 +1032,14 @@ class VaspInteractive(Vasp):
         return
     
 
-        
+if __name__ == "__main__":
+    """Allow execute as a module when using VaspInteractive as a self-contained socket-IO calculator
+    only to be used when calling SocketIOCalculator(calc=VaspInteractive(**params))
+    """
+    from argparse import ArgumentParser
+    parser = ArgumentParser(description="Commandline module of VaspInteractive")
+    parser.add_argument("-s", "--socket", help="Start socket interface", action="store_true")
+    args = parser.parse_args()
+    if args.socket is False:
+        raise NotImplementedError("Cannot run vasp_interactive module without socket support!")
+
