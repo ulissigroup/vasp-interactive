@@ -1,12 +1,14 @@
 # `VaspInteractive`: a stream-based calculator for VASP
-![workflow](https://github.com/ulissigroup/vasp-interactive/actions/workflows/package_and_unittest.yml/badge.svg)
+[![VASP Patch](https://github.com/ulissigroup/vasp-interactive/actions/workflows/patch_test.yml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/patch_test.yml)
 ![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/alchem0x2a/afede700c2b7703c77e10e51333bfa75/raw/test.json)
+
 
 
 <!-- [![Cori Haswell](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml/badge.svg?event=workflow_dispatch)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml)
 [![Cori KNL](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml/badge.svg?event=workflow_dispatch)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml)
 [![Perlmutter GPU test](https://github.com/ulissigroup/vasp-interactive/actions/workflows/perlmutter_gpu_status.yaml/badge.svg?event=workflow_dispatch)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/perlmutter_gpu_status.yaml) -->
 
+![docker image](https://github.com/ulissigroup/vasp-interactive/actions/workflows/package_and_unittest.yml/badge.svg)
 [![Cori Haswell](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml)
 [![Cori KNL](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml)
 [![Cori Shifter](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_shifter_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_shifter_status.yaml)
