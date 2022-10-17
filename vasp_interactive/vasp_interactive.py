@@ -135,7 +135,7 @@ class VaspInteractive(Vasp):
             kill_timeout=kill_timeout,
             parse_vaspout=parse_vaspout,
             # Socket-io specific
-            host=host,
+            # host=host,
             timeout=timeout,
             log=log,
         )
@@ -234,7 +234,7 @@ class VaspInteractive(Vasp):
             # TODO: change params later
             if use_socket:
                 raise ValueError("Parameter conflict. Cannot set launch_client with use_socket")
-            self.command = f"{sys.executable} -m vasp_interactive.vasp_interactive -s -p {{port}} -sn {{unixsocket}}"
+            self.command = f"{sys.executable} -m vasp_interactive.socketio -p {{port}} -sn {{unixsocket}} -ht {host}"
             param_file = self._indir(".vpi_param.pkl")
             with open(param_file, "wb") as f:
                 pickle.dump(input_params, f)
