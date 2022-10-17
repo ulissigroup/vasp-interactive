@@ -153,3 +153,6 @@ coverage.json
 .vscode/settings.json
 examples/mlp_cluster_benchmark/results.json
 examples/test-ipi/vasp.err
+patches/vasp.*.tgz
+.vpi_param.pkl
+.vpi_params.pkl

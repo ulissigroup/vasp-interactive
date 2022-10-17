@@ -94,6 +94,27 @@ Currently tested versions are:
 
 Please contact the maintainer if you have issues applying the patches due to VASP source code change.
 
+## Example builder system
+
+We use the Nvidia HPCSDK docker image as the main builder environment with the following specs:
+
+Container image:
+`nvcr.io/nvidia/nvhpc:21.2-devel-cuda_multi-ubuntu20.04`
+
+Additional APT packages
+- `make`
+- `intel-mkl-full`
+- `makedepf90`
+- `libfftw3-3`
+- `libfftw3-dev`
+- `ca-certificates`
+- `rsync`
+- `unzip`
+- `wget`
+- `git`
+- `python3`
+
+
 
 
 
