@@ -46,7 +46,7 @@ def main():
 
     Executing this module will start a VaspInteractive calculator on the current directory,
     and call the main loop calc.run(atoms) from there. The input parameters to start VaspInteractive
-    will follow the order: 1) existing VASP input files 2) the parameter dumpfile `.vpi_param.pkl` 3)
+    will follow the order: 1) existing VASP input files 2) the parameter dumpfile `.vpi_params.pkl` 3)
     user provided json-format parameters via `--params` option. 
 
     ASE's socket-I/O interface allows any DFT calculator that is compatible with the 
@@ -76,10 +76,13 @@ def main():
     parser.add_argument("-sn", "--unixsocket", help="Unixsocket name", type=str, default="None")
     parser.add_argument("-ht", "--host", help="Hostname of socket sever", type=str, default="localhost")
     parser.add_argument(
-        "--param-file", help="Parameter file", type=str, default=".vpi_param.pkl"
+        "--param-file", help="Parameter file", type=str, default=".vpi_params.pkl"
     )
     parser.add_argument(
         "--params", help="Additional parameters in json-format", type=str, default="{}"
+    )
+    parser.add_argument(
+        "--log", help="Log file", type=str, default="socket-client.log"
     )
     args = parser.parse_args()
     port = args.port
@@ -118,19 +121,18 @@ def main():
     # 2. Overwrite the user parameters
     vpi_params = vasp_inputs.copy()
     vpi_params.update(**params)
-    
-    print(vpi_params)
-
-    calc = VaspInteractive(
-        # use_socket=args.socket, 
-        use_socket=True,
-        host=host,
-        port=port, 
-        unixsocket=unixsocket, 
-        **vpi_params
-    )
-    with calc:
-        calc.run(atoms)
+    vpi_params.pop("log", None)
+    vpi_params.update(host=host, port=port, unixsocket=unixsocket)
+    logfile = args.log
+    # 
+    with open(workdir / logfile, "w") as fd:
+        calc = VaspInteractive(
+            use_socket=True,
+            log=fd,
+            **vpi_params
+        )
+        with calc:
+            calc.run(atoms)
 
 if __name__ == "__main__":
     main()

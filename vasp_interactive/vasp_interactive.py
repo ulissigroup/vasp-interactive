@@ -237,21 +237,22 @@ class VaspInteractive(Vasp):
             kill_timeout=kill_timeout,
             parse_vaspout=parse_vaspout,
             # host=host,
-            # unixsocket=socket,
+            # unixsocket=unixsocket,
             # port=port,
-            timeout=timeout,
-            log=log,
+            # timeout=timeout,
+            # log=log,
         )
         input_params.update(**kwargs)
 
         # Store the original self.command to self._vasp_command since 
         # FileIOClientLauncher makes use of it. Leave the port & unixsocket as formatters
-        # By default, the calculator passed to SocketIOCalculator 
+        # When starting the socket-I/O interface like SocketIOCalculator(calc=calc, **params)
+        # there is no need to specify any socket parameters.
         self._vasp_command = self.command
         self.command = f"{sys.executable} -m vasp_interactive.socketio -p {{port}} -sn {{unixsocket}} -ht {host}"
         # save vpi settings
         self._ensure_directory()
-        param_file = self._indir(".vpi_param.pkl")
+        param_file = self._indir(".vpi_params.pkl")
         with open(param_file, "wb") as f:
             pickle.dump(input_params, f)
 
