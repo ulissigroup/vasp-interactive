@@ -43,7 +43,7 @@ from .parse import (
 
 
 class VPISocketClient(SocketClient):
-    """Minor patch to SocketClient so that it knows which VaspInteractive is associated for successful termination."""
+    """Minor patch to SocketClient to handle parent calculator termination"""
 
     def attach_parent_calc(self, calc):
         self.parent_calc = calc
@@ -123,7 +123,9 @@ class VaspInteractive(Vasp):
             `parse_vaspout`: Whether to parse vasp.out for incorrect energy and forces fields. Only relevant if using VASP 5.x
         
         Parameters for socket-I/O mode:
-            `use_socket`: switch between running VaspInteractive via standard or socket I/O
+            `use_socket`: if True, attach a socket client to the calculator and self.run() method
+                          will be available. Note you don't need to set use_socket when passing through
+                          SocketIOCalculator
             `host`: hostname of the socket server running iPI protocol
             `port`: server port to connect to
             `unixsocket`: name of local unix socket
@@ -136,26 +138,8 @@ class VaspInteractive(Vasp):
         - self.command is by default set to calling the socket mode command line. 
           The actual VASP command passed in __init__ is stored in self._vasp_command
         """
-        # Save current init params, only for the use of socketio
-        # pop out the atoms and socketio settings since they are overwritten
-        input_params = dict(
-            label=label,
-            command=command,
-            txt=txt,
-            allow_restart_process=allow_restart_process,
-            allow_mpi_pause=allow_mpi_pause,
-            allow_default_param_overwrite=allow_default_param_overwrite,
-            cell_tolerance=cell_tolerance,
-            kill_timeout=kill_timeout,
-            parse_vaspout=parse_vaspout,
-            # Socket-io specific
-            # host=host,
-            timeout=timeout,
-            log=log,
-        )
-        input_params.update(**kwargs)
 
-        # Add the mandatory keywords
+        
         for kw, val in VaspInteractive.mandatory_input.items():
             if kw in kwargs and val != kwargs[kw]:
                 if allow_default_param_overwrite:
@@ -186,8 +170,8 @@ class VaspInteractive(Vasp):
             **kwargs,
         )
         # VaspInteractive can take 1 Popen process to track the VASP job
-        self.process = None
         # self.pid tracks if pid changes (useful for stopping slurm jobs)
+        self.process = None
         self.pid = None
         self.allow_restart_process = allow_restart_process
 
@@ -242,21 +226,34 @@ class VaspInteractive(Vasp):
         self._xml_complete = None
         self._outcar_complete = None
 
+        input_params = dict(
+            label=label,
+            command=command,
+            txt=txt,
+            allow_restart_process=allow_restart_process,
+            allow_mpi_pause=allow_mpi_pause,
+            allow_default_param_overwrite=allow_default_param_overwrite,
+            cell_tolerance=cell_tolerance,
+            kill_timeout=kill_timeout,
+            parse_vaspout=parse_vaspout,
+            # host=host,
+            # unixsocket=socket,
+            # port=port,
+            timeout=timeout,
+            log=log,
+        )
+        input_params.update(**kwargs)
 
-        # User may provide `command` to the intializer, but we need to expose 
-        # self.command to the command line wrapper for socketio
+        # Store the original self.command to self._vasp_command since 
+        # FileIOClientLauncher makes use of it. Leave the port & unixsocket as formatters
+        # By default, the calculator passed to SocketIOCalculator 
         self._vasp_command = self.command
-        # Socket-IO. Launch client is a lazy method that let SocketIOCalculator decide which port and socket are used
-        # 
-        # if launch_client:
-        #     if use_socket:
-        #         raise ValueError("Parameter conflict. Cannot set launch_client with use_socket")
         self.command = f"{sys.executable} -m vasp_interactive.socketio -p {{port}} -sn {{unixsocket}} -ht {host}"
         # save vpi settings
+        self._ensure_directory()
         param_file = self._indir(".vpi_param.pkl")
         with open(param_file, "wb") as f:
             pickle.dump(input_params, f)
-            # print(launch_client)
 
         if use_socket:
             self.socket_client = VPISocketClient(
