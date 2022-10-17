@@ -250,8 +250,8 @@ class VaspInteractive(Vasp):
         # there is no need to specify any socket parameters.
         self._vasp_command = self.command
         self.command = f"{sys.executable} -m vasp_interactive.socketio -p {{port}} -sn {{unixsocket}} -ht {host}"
-        # save vpi settings
         self._ensure_directory()
+        # save vpi settings
         param_file = self._indir(".vpi_params.pkl")
         with open(param_file, "wb") as f:
             pickle.dump(input_params, f)
