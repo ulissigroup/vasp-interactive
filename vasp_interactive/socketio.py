@@ -114,10 +114,8 @@ def main():
     sort, resort = _read_sort(workdir)
     if resort:
         atoms = atoms[resort]
-    # print(old_params)
     
     # 2. Overwrite the user parameters
-
     vpi_params = vasp_inputs.copy()
     vpi_params.update(**params)
     

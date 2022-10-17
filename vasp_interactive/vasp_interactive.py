@@ -92,7 +92,6 @@ class VaspInteractive(Vasp):
         atoms=None,
         directory=".",
         label="vasp-interactive",
-        ignore_bad_restart_file=Calculator._deprecated,
         command=None,
         txt="vasp.out",
         allow_restart_process=True,
@@ -101,7 +100,6 @@ class VaspInteractive(Vasp):
         cell_tolerance=1e-8,
         kill_timeout=DEFAULT_KILL_TIMEOUT,
         parse_vaspout=True,
-        # Socket-io specific
         use_socket=False,
         host="localhost",
         port=None,
@@ -125,7 +123,6 @@ class VaspInteractive(Vasp):
         # pop out the atoms and socketio settings since they are overwritten
         input_params = dict(
             label=label,
-            ignore_bad_restart_file=ignore_bad_restart_file,
             command=command,
             txt=txt,
             allow_restart_process=allow_restart_process,
@@ -166,7 +163,6 @@ class VaspInteractive(Vasp):
             atoms=atoms,
             directory=directory,
             label=label,
-            ignore_bad_restart_file=ignore_bad_restart_file,
             command=command,
             txt=txt,
             restart=None,
@@ -229,19 +225,23 @@ class VaspInteractive(Vasp):
         self._xml_complete = None
         self._outcar_complete = None
 
+
+        # User may provide `command` to the intializer, but we need to expose 
+        # self.command to the command line wrapper for socketio
+        self._vasp_command = self.command
         # Socket-IO. Launch client is a lazy method that let SocketIOCalculator decide which port and socket are used
-        if launch_client:
-            # TODO: change params later
-            if use_socket:
-                raise ValueError("Parameter conflict. Cannot set launch_client with use_socket")
-            self.command = f"{sys.executable} -m vasp_interactive.socketio -p {{port}} -sn {{unixsocket}} -ht {host}"
-            param_file = self._indir(".vpi_param.pkl")
-            with open(param_file, "wb") as f:
-                pickle.dump(input_params, f)
-            print(launch_client)
+        # 
+        # if launch_client:
+        #     if use_socket:
+        #         raise ValueError("Parameter conflict. Cannot set launch_client with use_socket")
+        self.command = f"{sys.executable} -m vasp_interactive.socketio -p {{port}} -sn {{unixsocket}} -ht {host}"
+        # save vpi settings
+        param_file = self._indir(".vpi_param.pkl")
+        with open(param_file, "wb") as f:
+            pickle.dump(input_params, f)
+            # print(launch_client)
 
         if use_socket:
-            # TODO: make sure if lauch_client is True, no actual socket client is attached
             self.socket_client = VPISocketClient(
                 host=host,
                 port=port,
@@ -251,8 +251,6 @@ class VaspInteractive(Vasp):
                 comm=None,
             )
             self.socket_client.attach_parent_calc(self)
-            
-            
         else:
             self.socket_client = None
         return
@@ -389,7 +387,7 @@ class VaspInteractive(Vasp):
             self.write_input(atoms)
             self._stdout("Starting VASP for initial step...\n", out=out)
             # Dynamic generation of command args
-            command = self.make_command(self.command)
+            command = self.make_command(self._vasp_command)
             self.process = Popen(
                 command,
                 shell=True,
