@@ -106,18 +106,35 @@ class VaspInteractive(Vasp):
         unixsocket=None,
         timeout=None,
         log=None,
-        launch_client=False,
         **kwargs,
     ):
-        """Initialize the calculator object like the normal Vasp object.
-        Additional attributes:
-            `self.process`: Popen instance to run the VASP calculation
+        """Interactive mode calculator for VASP. 
+        
+        `VaspInteractive` handles all compatible parameters with `ase.calculators.vasp.Vasp`.
+        There are also additional parameters controlling the interactive mode and socket-I/O mode
+        behavior:
+
+        Parameters for interactive mode:
             `allow_restart_process`: if True, will restart the VASP process if it exits before user program ends
-            `allow_mpi_pause`: If disabled, do not interfere with the vasp program but let system load balancing handle CPU requests.
-            `allow_default_param_overwrite`: If True, use mandatory input parameters to overwrite (but give warnings)
-            `cell_tolerance`: tolerance threshold for detecting cell change
-            `kill_timeout`: Timeout in seconds before forcibly kill the vasp process
+            `allow_mpi_pause`: whether the calculator can be paused.
+            `allow_default_param_overwrite`: if True, use mandatory input parameters to overwrite (but give warnings)
+            `cell_tolerance`: tolerance threshold for detecting cell change. 
+            `kill_timeout`: timeout in seconds before forcibly kill the vasp process
             `parse_vaspout`: Whether to parse vasp.out for incorrect energy and forces fields. Only relevant if using VASP 5.x
+        
+        Parameters for socket-I/O mode:
+            `use_socket`: switch between running VaspInteractive via standard or socket I/O
+            `host`: hostname of the socket server running iPI protocol
+            `port`: server port to connect to
+            `unixsocket`: name of local unix socket
+            `timeout`: socket I/O timeout 
+            `log`: logfile for the socket client. If None, write to stdout
+
+        Different behaviors compared with original `ase.calculators.vasp.Vasp`:
+        - VaspInteractive can be run using the context manager (the `with`-clause)
+        - Copies of the calculator do not duplicate the underlying VASP process
+        - self.command is by default set to calling the socket mode command line. 
+          The actual VASP command passed in __init__ is stored in self._vasp_command
         """
         # Save current init params, only for the use of socketio
         # pop out the atoms and socketio settings since they are overwritten
