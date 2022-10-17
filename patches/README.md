@@ -11,6 +11,36 @@ before applying them.
 
 ------
 
+## TL; DR
+
+Use `compile_vasp.sh` for the patching and compilation the VASP source code
+
+```
+INTERACTIVE_PATCH=patch.py ./compile_vasp.sh <path-to-VASP-source-tgz> <path-to-makefile> <path-to-makefile.include>
+```
+
+We provide examples of  `makefile` and `makefile.include` for compilation using PGI compilers in the Nvidia HPCSDK toolchain. 
+You can simply adjust the variables to your requirements. Here are a few examples:
+
+- **Example 1**: building pristine VASP 6.3.0 on an 8-core machine, uncompress to `/tmp`, and move the binary files to `/opt/vasp/bin`
+
+```bash
+NCORES=8 ROOT=/tmp VASP_BINARY_PATH=/opt/vasp/bin
+./compile_vasp.sh vasp.6.3.0.tgz examples/makefile examples/makefile.include.vasp6
+```
+
+- **Example 2**: add the interactive mode patch to Example 1
+
+```bash
+NCORES=8 ROOT=/tmp VASP_BINARY_PATH=/opt/vasp/bin \
+INTERACTIVE_PATCH=patch.py \
+./compile_vasp.sh vasp.6.3.0.tgz examples/makefile examples/makefile.include.vasp6
+```
+
+You can use any `makefile` and `makefile.include` for your specific compiler-OS combinations.
+For a detailed explanation please see the [**How-to**](#howto) section.
+
+
 ## Do I need these patches?
 
 If you're only using `VaspInteractive` for relaxation tasks which does not involve lattice change 
@@ -28,8 +58,9 @@ for better maintanance.
 
 ## Howto
 
-First, make sure you have uncompressed the VASP source code, modified `makefile` and `makefile.include`
-accordingly, and VASP program can compile succcessfully.
+`patch.py` modifies the `main.F` and `poscar.F` files of the VASP source code.
+First, make sure you have uncompressed the VASP source code, modified `makefile` and `makefile.include` accordingly, and VASP program can compile succcessfully. You can test that by running the **Example 1** in the [TLDR](#tl-dr) section.
+
 Locate the directory of the Fortran source codes, such as `~/vasp.6.3.0/src`, and use `patch.py` to apply the changes
 ```bash
 git clone https://github.com/ulissigroup/vasp-interactive.git
@@ -48,7 +79,7 @@ You should see both `main.F` and `poscar.F` in the grep results.
 Then compile VASP using the normal approach:
 ```bash
 cd ~/vasp.6.3.0
-make -j4 all
+make -j8 all
 ```
 
 ## Version compatibility
@@ -58,8 +89,8 @@ version 5.4, meaning the patches is quite likely compatible with even future rel
 Currently tested versions are:
 - 5.4.4pl2
 - 6.1.2
-- 6.2.0
-- 6.3.0
+- 6.2.x
+- 6.3.x
 
 Please contact the maintainer if you have issues applying the patches due to VASP source code change.
 
