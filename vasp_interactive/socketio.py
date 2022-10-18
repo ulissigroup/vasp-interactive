@@ -108,7 +108,7 @@ def main():
         params = {}
 
     user_inputs = json.loads(args.params)
-    print(user_inputs)
+    # print(user_inputs)
     params.update(**user_inputs)
 
     # 1. Use default Vasp loading for the calculators if exists and get parameters
