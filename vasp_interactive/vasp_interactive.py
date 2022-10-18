@@ -58,7 +58,8 @@ class VPISocketClient(SocketClient):
                 if (self.parent_calc is not None) and (
                     hasattr(self.parent_calc, "finalize")
                 ):
-                    self.parent_calc.finalize()
+                    if not self.parent_calc.final:
+                        self.parent_calc.finalize()
             self.closed = True
 
 
@@ -997,6 +998,8 @@ class VaspInteractive(Vasp):
         """Stop the stream calculator and finalize"""
         self._force_kill_process()
         self.final = True
+        if (self.socket_client is not None) and (not self.socket_client.closed):
+            self.socket_client.close()
         return
 
     def __enter__(self):
