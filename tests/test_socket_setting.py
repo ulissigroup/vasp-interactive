@@ -49,3 +49,23 @@ def test_socket_dryrun():
     server.close()
     assert vpi.socket_client.closed
     assert vpi.final
+
+def test_socket_port():
+    vpi = VaspInteractive(**params)
+    server = SocketIOCalculator(calc=vpi, port=31415)
+    # Using the wrapper, vpi is not directly used as a calculator
+    assert server.server is None
+    assert vpi.socket_client is None
+    atoms = water.copy()
+    atoms.calc = server
+    with server:
+        for i in range(2):
+            atoms.rattle()
+            # server.calculate(atoms)
+            e = atoms.get_potential_energy()
+            assert server.server is not None
+            assert server.server.proc is not None
+            assert vpi.socket_client is None
+            assert vpi.process is None
+            print(e)
+            # print(res)
