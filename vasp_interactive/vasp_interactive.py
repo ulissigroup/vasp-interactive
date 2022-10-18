@@ -109,8 +109,8 @@ class VaspInteractive(Vasp):
         log=None,
         **kwargs,
     ):
-        """Interactive mode calculator for VASP. 
-        
+        """Interactive mode calculator for VASP.
+
         `VaspInteractive` handles all compatible parameters with `ase.calculators.vasp.Vasp`.
         There are also additional parameters controlling the interactive mode and socket-I/O mode
         behavior:
@@ -119,10 +119,10 @@ class VaspInteractive(Vasp):
             `allow_restart_process`: if True, will restart the VASP process if it exits before user program ends
             `allow_mpi_pause`: whether the calculator can be paused.
             `allow_default_param_overwrite`: if True, use mandatory input parameters to overwrite (but give warnings)
-            `cell_tolerance`: tolerance threshold for detecting cell change. 
+            `cell_tolerance`: tolerance threshold for detecting cell change.
             `kill_timeout`: timeout in seconds before forcibly kill the vasp process
             `parse_vaspout`: Whether to parse vasp.out for incorrect energy and forces fields. Only relevant if using VASP 5.x
-        
+
         Parameters for socket-I/O mode:
             `use_socket`: if True, attach a socket client to the calculator and self.run() method
                           will be available. Note you don't need to set use_socket when passing through
@@ -130,17 +130,16 @@ class VaspInteractive(Vasp):
             `host`: hostname of the socket server running iPI protocol
             `port`: server port to connect to
             `unixsocket`: name of local unix socket
-            `timeout`: socket I/O timeout 
+            `timeout`: socket I/O timeout
             `log`: logfile for the socket client. If None, write to stdout
 
         Different behaviors compared with original `ase.calculators.vasp.Vasp`:
         - VaspInteractive can be run using the context manager (the `with`-clause)
         - Copies of the calculator do not duplicate the underlying VASP process
-        - self.command is by default set to calling the socket mode command line. 
+        - self.command is by default set to calling the socket mode command line.
           The actual VASP command passed in __init__ is stored in self._vasp_command
         """
 
-        
         for kw, val in VaspInteractive.mandatory_input.items():
             if kw in kwargs and val != kwargs[kw]:
                 if allow_default_param_overwrite:
@@ -245,7 +244,7 @@ class VaspInteractive(Vasp):
         )
         input_params.update(**kwargs)
 
-        # Store the original self.command to self._vasp_command since 
+        # Store the original self.command to self._vasp_command since
         # FileIOClientLauncher makes use of it. Leave the port & unixsocket as formatters
         # When starting the socket-I/O interface like SocketIOCalculator(calc=calc, **params)
         # there is no need to specify any socket parameters.

@@ -10,6 +10,7 @@ import sys
 
 def test_command_env():
     from ase.build import molecule
+
     # The behavior has changed since addition of socket io mode
     # When testing under the github action system, it should be
     # `mpirun -np 1 <options> <path>/vasp_gam`
