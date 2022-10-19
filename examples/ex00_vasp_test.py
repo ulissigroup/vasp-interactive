@@ -124,6 +124,7 @@ def demo_test():
         subprocess.run(["kill", "-9", str(pid)])
 
     print("Single point calculation finished. Checking output file parsing.")
+    status = None
     if vasprun_ok:
         cprint(f"vasprunxml: OK", color="OKGREEN")
     else:
@@ -137,11 +138,12 @@ def demo_test():
     else:
         cprint(f"VASP raw output: FAIL", color="FAIL")
 
-    if not vasprun_ok:
+    if not vaspout_ok:
         cprint(
             "VaspInteractive may not be compatible with your VASP setup. Please refer to the README for details.",
             color="FAIL",
         )
+        status = "incompatible"
     elif not outcar_ok:
         cprint(
             (
@@ -151,6 +153,7 @@ def demo_test():
             ),
             color="WARNING",
         )
+        status = "minimal support"
     elif not vasprun_ok:
         cprint(
             (
@@ -160,8 +163,16 @@ def demo_test():
             ),
             color="OKBLUE",
         )
+        status = "partial pass"
     else:
         cprint("All test pass! Enjoy coding.", color="OKGREEN")
+        status = "all pass"
+    
+
+    # Output the total status
+    print("#" * 80)
+    print(f"Test result: {status}")
+    print("#" * 80)
 
 
 if __name__ == "__main__":
