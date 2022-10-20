@@ -8,6 +8,7 @@ import tempfile
 from ase.build import molecule
 from ase.io import read
 from vasp_interactive import VaspInteractive
+from vasp_interactive.utils import time_limit
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -82,15 +83,17 @@ def demo_test():
             nsw=0,
             istart=0,
             xc="pbe",
-            directory="test1",
+            directory=tmpdir,
         )
         # Low level calculator interfacing
         
         with calc._txt_outstream() as out:
             try:
-                calc._run(atoms, out=out)
+                with time_limit(30):
+                    calc._run(atoms, out=out)
             except Exception:
                 pass
+        
         pid = calc.process.pid
 
         # Check vasprun.xml
