@@ -84,6 +84,7 @@ def demo_test():
             istart=0,
             xc="pbe",
             directory=tmpdir,
+            # directory="test1"
         )
         # Low level calculator interfacing
         
@@ -103,8 +104,11 @@ def demo_test():
         except Exception as e:
             vasprun_ok = False
 
-        # Check OUTCAR
-        outcar_lines = open(calc._indir("OUTCAR"), "r").readlines()
+        # Check OUTCAR. In some cases the OUTCAR may be non-existing
+        try:
+            outcar_lines = open(calc._indir("OUTCAR"), "r").readlines()
+        except Exception:
+            outcar_lines = []
         outcar_ok = False
         cond = 0
         matches = [
@@ -121,7 +125,11 @@ def demo_test():
             outcar_ok = True
 
         # Check vaspout
-        vaspout_lines = calc._txt_to_handler().readlines()
+        try:
+            vaspout_lines = calc._txt_to_handler().readlines()
+        except Exception:
+            vaspout_lines = []
+        print(vaspout_lines)
         vaspout_ok = False
         for line in vaspout_lines:
             if "FORCES" in line:
