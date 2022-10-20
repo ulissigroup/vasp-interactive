@@ -23,4 +23,11 @@ jobs:
         python -m pip install requests
     - name: Output render part
       run: |
-        python examples/command-test-examples/gist_to_table.py
+        python examples/command-test-examples/gist_to_table.py --update
+    - name: Update readme in current branch
+      uses: EndBug/add-and-commit@v9
+      with:
+        add: 'README.md'
+        author_name: Action Bot
+        author_email: alchem0x2a@gmail.com
+        push: true
