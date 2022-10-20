@@ -100,7 +100,11 @@ def demo_test():
         # Check vasprun.xml
         try:
             vrun = read(calc._indir("vasprun.xml"))
-            vasprun_ok = True
+            # In newer version of ase the vasprun parsing is enhanced
+            if vrun.calc is not None:
+                vasprun_ok = True
+            else:
+                vasprun_ok = False
         except Exception as e:
             vasprun_ok = False
 
