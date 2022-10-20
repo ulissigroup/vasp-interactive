@@ -10,6 +10,8 @@ from ase.io import read
 from vasp_interactive import VaspInteractive
 from vasp_interactive.utils import time_limit
 import warnings
+import traceback
+
 
 warnings.filterwarnings("ignore")
 
@@ -93,7 +95,9 @@ def demo_test():
                 # In some cases the vasp binary spin up can take longer
                 with time_limit(30):
                     calc._run(atoms, out=out)
-            except Exception:
+            except Exception as e:
+                print("Running VASP encountered problem ", e)
+                print(traceback.format_exc(limit=2))
                 pass
 
         pid = calc.process.pid
