@@ -1,0 +1,26 @@
+# Sending test jobs to NERSC (cori / perlmutter)
+# The ssh key needs to be updated frequently
+name: Render table part in readme
+
+on:
+  workflow_dispatch:
+
+jobs:
+  basic:
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+          
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - run: |
+        python -m pip install requests
+    - name: Output render part
+      run: |
+        python examples/command-test-examples/gist_to_table.py
