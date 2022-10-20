@@ -12,10 +12,10 @@ if os.environ.get("GIST_ID", None) is not None:
 
 tests = {
     "ulissi_docker": "Docker images (**)",
-    "cori_hsw": "Cori Haswell (†)"
-    "cori_knl": "Cori KNL (†)"
-    "perlmutter_cpu": "Perlmutter CPU (†)"
-    "perlmutter_gpu": "Perlmutter GPU (†)"
+    "cori_hsw": "Cori Haswell (†)",
+    "cori_knl": "Cori KNL (†)",
+    "perlmutter_cpu": "Perlmutter CPU (†)",
+    "perlmutter_gpu": "Perlmutter GPU (†)",
 }
 
 all_states = {
@@ -28,11 +28,13 @@ all_states = {
 
 vasp_versions = ("5.4", "6.1", "6.2", "6.3")
 
+
 def gen_badge(msg):
     assert msg in all_states.keys()
     color = all_states[msg]
     link = f"![](https://img.shields.io/badge/-{msg}-{color})"
     return link
+
 
 def parse_txt(txt):
     lines = txt.split("\n")
@@ -43,7 +45,7 @@ def parse_txt(txt):
         version, state = list(map(lambda s: s.strip(), line.split(",")))
         state = state.strip()
         state = state.replace(" ", "_")
-        tpc = ("-tpc" in version)
+        tpc = "-tpc" in version
         ver_maj = None
         for ver_dig in vasp_versions:
             if ver_dig in version:
@@ -52,6 +54,7 @@ def parse_txt(txt):
         assert ver_maj is not None, "Cannot read version!"
         all_matches.append((ver_maj, tpc, state))
     return all_matches
+
 
 def read_gist(gist_id=None, file_name=None):
     # Read from gist
@@ -64,6 +67,7 @@ def read_gist(gist_id=None, file_name=None):
     text = req.text
     return text
 
+
 def parse_all_states():
     res_dict = {}
     # Init dict
@@ -75,33 +79,46 @@ def parse_all_states():
                 dd[sys] = "not_available"
             d[tpc] = dd
         res_dict[ver] = d
-    
+
     for fn in tests.keys():
         text = read_gist(file_name=fn)
         all_matches = parse_txt(text)
         for res in all_matches:
             ver, tpc, state = res
             res_dict[ver][tpc][fn] = state
-        
-    header = "|" + " " * 10 + [f"| {disp_name} " for fn, disp_name in tests.items()] + " |"
+    return res_dict
+
+
+def render(res_dict):
+    header = (
+        "|"
+        + " " * 10
+        + "".join([f"| {disp_name} " for fn, disp_name in tests.items()])
+        + " |"
+    )
+    hline = "".join(["| ---------- " for i in range(len(tests) + 1)]) + " |"
     body = []
     for ver in vasp_versions:
         for tpc in (False, True):
             row = res_dict[ver][tpc]
-            if all([row[sys] is None for sys in tests]):
-                print(f"{ver}-{tpc} does not exist. pass")
+            if all([row[sys] == "not_available" for sys in tests]):
+                # print(f"{ver}-{tpc} does not exist. pass")
                 continue
             vasp_name = f"VASP {ver}.x"
             if tpc:
                 vasp_name += " - TPC (*)"
-            line = f"| {tpc} "
+            line = f"| {vasp_name} "
             for sys in tests:
                 state = row[sys]
                 if state is None:
                     state = "not_available"
-                line += "| " + gen_badge(badge) + " "
+                line += "| " + gen_badge(state) + " "
             line += " |"
-    text = "\n".join([header] + body)
+            body.append(line)
+    text = "\n".join([header, hline] + body)
     return text
-     
 
+
+if __name__ == "__main__":
+    res_dict = parse_all_states()
+    print(render(res_dict))
