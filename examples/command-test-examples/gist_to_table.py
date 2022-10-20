@@ -115,7 +115,7 @@ def render(res_dict):
                 line += "| " + gen_badge(state) + " "
             line += " |"
             body.append(line)
-    text = "\n".join([header, hline] + body)
+    text = "\n".join([header, hline] + body) + "\n"
     return text
 
 
@@ -145,8 +145,8 @@ if __name__ == "__main__":
         else:
             pass
     head = readme_content[:begin + 1]
-    tail = readme_content[end - 1:]
-    new_content = head + [update_text] + tail
+    tail = readme_content[end:]
+    new_content = head + ["\n" + update_text + "\n"] + tail
     print(new_content)
     with open(readme_bk, "w") as fd:
         fd.writelines(readme_content)

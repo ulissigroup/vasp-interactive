@@ -278,6 +278,7 @@ Below are some of the test results for various VASP builds we have access to, in
 from NERSC.
 
 <!-- PLACEHOLDER BEGIN -->
+
 |          | Docker images (**) | Cori Haswell (†) | Cori KNL (†) | Perlmutter CPU (†) | Perlmutter GPU (†)  |
 | ---------- | ---------- | ---------- | ---------- | ---------- | ----------  |
 | VASP 5.4.x | ![](https://img.shields.io/badge/-minimal_support-orange) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-minimal_support-orange) | ![](https://img.shields.io/badge/-not_available-lightgrey)  |
@@ -287,6 +288,7 @@ from NERSC.
 | VASP 6.2.x - TPC (*) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-partial_pass-olive)  |
 | VASP 6.3.x | ![](https://img.shields.io/badge/-partial_pass-olive) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-partial_pass-olive) | ![](https://img.shields.io/badge/-partial_pass-olive)  |
 | VASP 6.3.x - TPC (*) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-partial_pass-olive) | ![](https://img.shields.io/badge/-partial_pass-olive)  |
+
 <!-- PLACEHOLDER END -->
 
 - (*) TPC=third-party codes 
