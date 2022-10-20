@@ -119,7 +119,7 @@ def render(res_dict):
     return text
 
 
-if __name__ == "__main__":
+def main():
     import argparse
     from pathlib import Path
     curdir = Path(__file__).parent
@@ -133,7 +133,9 @@ if __name__ == "__main__":
     res_dict = parse_all_states()
     update_text = render(res_dict)
     if not args.update:
+        print("Output replacement only")
         print(update_text)
+        return
     readme_content = open(readme, "r").readlines()
     new_content = []
     begin, end = 0, 0
@@ -147,11 +149,17 @@ if __name__ == "__main__":
     head = readme_content[:begin + 1]
     tail = readme_content[end:]
     new_content = head + ["\n" + update_text + "\n"] + tail
-    print(new_content)
+    # print(new_content)
+
     with open(readme_bk, "w") as fd:
         fd.writelines(readme_content)
     print("Backed up readme")
-    
+
     with open(readme, "w") as fd:
         fd.writelines(new_content)
     print("Updated readme")
+
+if __name__ == "__main__":
+    main()
+        
+        
