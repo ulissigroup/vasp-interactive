@@ -84,7 +84,7 @@ def demo_test():
             istart=0,
             xc="pbe",
             directory=tmpdir,
-            # directory="test1"
+            #directory="test1"
         )
         # Low level calculator interfacing
         
@@ -124,6 +124,7 @@ def demo_test():
         ]
         for i, line in enumerate(outcar_lines):
             if any([m in line for m in matches]):
+                print(line)
                 cond += 1
         if cond >= 5:
             outcar_ok = True

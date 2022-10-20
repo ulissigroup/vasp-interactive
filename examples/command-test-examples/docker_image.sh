@@ -9,7 +9,8 @@ then
 fi
 
 
-uid=`uuidgen`
+uid=`python -c 'import uuid; print(uuid.uuid4())'`
+echo $uid
 root=$SCRATCH/vpi-runner/$uid
 mkdir -p $root && cd $root
 echo "Running tests under $root"
@@ -23,7 +24,8 @@ export TEMPDIR=$SCRATCH
 res="true"
 for ver in "vasp.5.4.4.pl2" "vasp.6.1.2_pgi_mkl" "vasp.6.2.0_pgi_mkl" "vasp.6.3.0_pgi_mkl"
 do
-    module load $ver
+    export VASP_COMMAND="mpirun -n 8 /opt/$ver/bin/vasp_std"
+    echo ${VASP_COMMAND}
     echo "Testing VaspInteractive on $ver"
     python examples/ex00_vasp_test.py | tee tmp.out
     RES=`sed -n "s/^Test result:\(.*\)$/\1/p" tmp.out`
