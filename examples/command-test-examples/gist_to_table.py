@@ -120,5 +120,38 @@ def render(res_dict):
 
 
 if __name__ == "__main__":
+    import argparse
+    from pathlib import Path
+    curdir = Path(__file__).parent
+    readme = curdir.parents[1] / "README.md"
+    readme_bk = curdir.parents[1] / "README.md.bk"
+    print(readme.is_file())
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--update", action="store_true")
+    args = parser.parse_args()
     res_dict = parse_all_states()
-    print(render(res_dict))
+    update_text = render(res_dict)
+    if not args.update:
+        print(update_text)
+    readme_content = open(readme, "r").readlines()
+    new_content = []
+    begin, end = 0, 0
+    for i, line in enumerate(readme_content):
+        if "PLACEHOLDER BEGIN" in line:
+            begin = i
+        elif "PLACEHOLDER END" in line:
+            end = i
+        else:
+            pass
+    head = readme_content[:begin + 1]
+    tail = readme_content[end - 1:]
+    new_content = head + [update_text] + tail
+    print(new_content)
+    with open(readme_bk, "w") as fd:
+        fd.writelines(readme_content)
+    print("Backed up readme")
+    
+    with open(readme, "w") as fd:
+        fd.writelines(new_content)
+    print("Updated readme")
