@@ -118,11 +118,11 @@ def demo_test():
         matches = [
             "FORCE on cell",
             "TOTAL-FORCE",
-            "energy  without entropy",
+            "FREE ENERGIE OF THE ION-ELECTRON SYSTEM",
             "VOLUME and BASIS-vectors",
             "E-fermi",
         ]
-        for line in outcar_lines:
+        for i, line in enumerate(outcar_lines):
             if any([m in line for m in matches]):
                 cond += 1
         if cond >= 5:
