@@ -91,7 +91,7 @@ def demo_test():
         with calc._txt_outstream() as out:
             try:
                 # In some cases the vasp binary spin up can take longer
-                with time_limit(120):
+                with time_limit(30):
                     calc._run(atoms, out=out)
             except Exception:
                 pass
