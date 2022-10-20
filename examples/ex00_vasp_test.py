@@ -84,17 +84,18 @@ def demo_test():
             istart=0,
             xc="pbe",
             directory=tmpdir,
-            #directory="test1"
+            # directory="test1"
         )
         # Low level calculator interfacing
-        
+
         with calc._txt_outstream() as out:
             try:
-                with time_limit(30):
+                # In some cases the vasp binary spin up can take longer
+                with time_limit(120):
                     calc._run(atoms, out=out)
             except Exception:
                 pass
-        
+
         pid = calc.process.pid
 
         # Check vasprun.xml
@@ -187,7 +188,6 @@ def demo_test():
     else:
         cprint("All test pass! Enjoy coding.", color="OKGREEN")
         status = "all pass"
-    
 
     # Output the total status
     print("#" * 80)
