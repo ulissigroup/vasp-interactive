@@ -279,7 +279,7 @@ from NERSC.
 
 <!-- PLACEHOLDER BEGIN -->
 
-|               | Ulissi docker images (**) | Cori Haswell (†) | Cori KNL (†) | Perlmutter CPU (†) | Perlmutter GPU (†) |
+|               | Docker images (**) | Cori Haswell (†) | Cori KNL (†) | Perlmutter CPU (†) | Perlmutter GPU (†) |
 | ------------- | -------------        | ------------ | -------- | -------------- | ------         |
 | VASP 5.4.4    | ![](https://img.shields.io/badge/-minimal_support-orange)      | ![](https://img.shields.io/badge/-all_pass-green)      | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-minimal_support-orange)  | ![](https://img.shields.io/badge/-not_available-lightgrey)  |
 | VASP 5.4.4 - TPC (*)    | ![](https://img.shields.io/badge/-not_available-lightgrey)      | ![](https://img.shields.io/badge/-all_pass-green)      | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-minimal_support-orange)  | ![](https://img.shields.io/badge/-not_available-lightgrey)  |
@@ -291,9 +291,8 @@ from NERSC.
 
 <!-- PLACEHOLDER END -->
 
-*Notes*
 - (*) TPC=third-party codes 
-- (**) Tested both on local cluster (Kubernetes) and NERSC shifter
+- (**) Internal docker images in ulissi-group. Tested both on local cluster (Kubernetes) and NERSC shifter
 - (†) Slurm jobs are calculated using `srun -u` option to supress any buffer in pipeline I/O. Necessary for Perlmutter CPU.
 
 In the all / partial pass cases, `VaspInteractive` should be able to handle I/O correctly, 
