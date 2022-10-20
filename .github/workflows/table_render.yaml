@@ -24,6 +24,8 @@ jobs:
     - name: Output render part
       run: |
         python examples/command-test-examples/gist_to_table.py --update
+        git diff README.md
+        cat README.md
     - name: Update readme in current branch
       uses: EndBug/add-and-commit@v9
       with:
