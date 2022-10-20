@@ -277,12 +277,24 @@ The compatibility test code in the [installation](#installation) section may sho
 Below are some of the test results for various VASP builds we have access to, including the [Cori](https://docs.nersc.gov/systems/cori/) and [Perlmutter](https://docs.nersc.gov/systems/perlmutter/) clusters
 from NERSC.
 
-|               | Ulissi docker images | Cori Haswell | Cori KNL | Perlmutter CPU | Perlmutter GPU |
+<!-- PLACEHOLDER BEGIN -->
+
+|               | Ulissi docker images (**) | Cori Haswell (†) | Cori KNL (†) | Perlmutter CPU (†) | Perlmutter GPU (†) |
 | ------------- | -------------        | ------------ | -------- | -------------- | ------         |
-| VASP 5.4.4    | <span style="color:orange">minimal support</span>      | <span style="color:green">all pass</span>     | <span style="color:green">all pass</span> | <span style="color:red">incompatible</span>  | not available  |
-| VASP 6.1.x    | <span style="color:olive">partial pass</span>         | <span style="color:green">all pass</span>     | <span style="color:green">all pass</span> | not available  | not available  |
-| VASP 6.2.x    | <span style="color:olive">partial pass</span>         | <span style="color:green">all pass</span>     | <span style="color:green">all pass</span> | not available  | <span style="color:olive">partial pass</span>   |
-| VASP 6.3.x    | <span style="color:olive">partial pass</span>         | <span style="color:green">all pass</span>     | <span style="color:green">all pass</span> | <span style="color:red">incompatible</span>   | not available  |
+| VASP 5.4.4    | ![](https://img.shields.io/badge/-minimal_support-orange)      | ![](https://img.shields.io/badge/-all_pass-green)      | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-minimal_support-orange)  | ![](https://img.shields.io/badge/-not_available-lightgrey)  |
+| VASP 5.4.4 - TPC (*)    | ![](https://img.shields.io/badge/-not_available-lightgrey)      | ![](https://img.shields.io/badge/-all_pass-green)      | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-minimal_support-orange)  | ![](https://img.shields.io/badge/-not_available-lightgrey)  |
+| VASP 6.1.x    | ![](https://img.shields.io/badge/-partial_pass-yellow)         | ![](https://img.shields.io/badge/-not_available-lightgrey)     |  ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-not_available-lightgrey)  | ![](https://img.shields.io/badge/-not_available-lightgrey)  |
+| VASP 6.2.x    | ![](https://img.shields.io/badge/-partial_pass-yellow)         | ![](https://img.shields.io/badge/-all_pass-green)     | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-not_available-lightgrey)  | ![](https://img.shields.io/badge/-partial_pass-yellow)   |
+| VASP 6.2.x - TPC (*)  | ![](https://img.shields.io/badge/-not_available-lightgrey)          | ![](https://img.shields.io/badge/-all_pass-green)     | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-not_available-lightgrey)  | ![](https://img.shields.io/badge/-partial_pass-yellow)   |
+| VASP 6.3.x    | ![](https://img.shields.io/badge/-partial_pass-yellow)         | ![](https://img.shields.io/badge/-all_pass-green)     | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-partial_pass-yellow)  | ![](https://img.shields.io/badge/-partial_pass-yellow)  |
+| VASP 6.3.x - TPC (*)  | ![](https://img.shields.io/badge/-not_available-lightgrey)         | ![](https://img.shields.io/badge/-all_pass-green)     | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-partial_pass-yellow)  | ![](https://img.shields.io/badge/-partial_pass-yellow)  |
+
+<!-- PLACEHOLDER END -->
+
+*Notes*
+- (*) TPC=third-party codes 
+- (**) Tested both on local cluster (Kubernetes) and NERSC shifter
+- (†) Slurm jobs are calculated using `srun -u` option to supress any buffer in pipeline I/O. Necessary for Perlmutter CPU.
 
 In the all / partial pass cases, `VaspInteractive` should be able to handle I/O correctly, 
 while in the case of minimal support (likely using VASP 5.4.x), only the energy and force information are parsed.
