@@ -129,7 +129,7 @@ def demo_test():
             vaspout_lines = calc._txt_to_handler().readlines()
         except Exception:
             vaspout_lines = []
-        print(vaspout_lines)
+        # print(vaspout_lines)
         vaspout_ok = False
         for line in vaspout_lines:
             if "FORCES" in line:
