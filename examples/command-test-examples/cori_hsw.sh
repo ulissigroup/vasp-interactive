@@ -1,18 +1,22 @@
 #!/bin/bash -l
 #SBATCH -N 1
 #SBATCH -C haswell
-#SBATCH -q debug
+#SBATCH -q premium
 #SBATCH -A m2755
 #SBATCH -t 00:10:00
 
+# For some reason the vasp/6.2.1-hsw and 6.3.2-hsw modules may complain missing dynamic lib
+# during runtime. Always use an interactive node and execute this script via bash
+
 CONDA_ROOT="/global/homes/t/ttian20/.conda/envs/vpi"
-export VASP_COMMAND="srun -n 1 -c 2 --cpu-bind=cores vasp_std"
+# unbuffered output
+export VASP_COMMAND="srun -u -n 32 -c 2 --cpu-bind=cores vasp_std"
 GIT_REPO="ulissigroup/vasp-interactive"
 if [ -z "$GIT_REF" ]
 then
     GIT_REF="main"
 fi
-#conda activate vpi
+# #conda activate vpi
 export PATH=${CONDA_ROOT}/bin:$PATH
 
 uid=`uuidgen`
@@ -30,15 +34,17 @@ export TEMPDIR=$SCRATCH
 
 res="true"
 for ver in "vasp/5.4.4-hsw" "vasp/6.2.1-hsw" "vasp/6.3.2-hsw" "vasp-tpc/5.4.4-hsw" "vasp-tpc/6.2.1-hsw" "vasp-tpc/6.3.2-hsw"
+# for ver in "vasp/6.3.2-hsw"
 do
     module load $ver
     which vasp_std
     echo "Testing VaspInteractive Compatibility on $ver"
+    # workdir="/global/u1/t/ttian20/vasp-interactive-test"
     python examples/ex00_vasp_test.py | tee tmp.out
     RES=`sed -n "s/^Test result:\(.*\)$/\1/p" tmp.out`
     echo $ver, $RES >> cori_hsw.txt
     rm tmp.out
-    #module unload vasp
+    module unload $ver
 done
 
 if [ -z "${GIST_ID}" ]

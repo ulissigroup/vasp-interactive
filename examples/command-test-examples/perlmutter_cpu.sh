@@ -9,7 +9,7 @@
 export OMP_NUM_THREADS=1
 
 CONDA_ROOT="/global/homes/t/ttian20/.conda/envs/vpi"
-export VASP_COMMAND="srun -n 1 -c 4 --cpu-bind=cores vasp_std"
+export VASP_COMMAND="srun -u -n 128 --cpu-bind=cores vasp_std"
 GIT_REPO="ulissigroup/vasp-interactive"
 if [ -z "$GIT_REF" ]
 then
@@ -28,7 +28,8 @@ gh repo clone $GIT_REPO
 cd vasp-interactive
 git checkout $GIT_REF
 echo "Check to $GIT_REF"
-export PYTHONPATH=`realpath .`
+CURDIR=`realpath .`
+export PYTHONPATH=$CURDIR:$PYTHONPATH
 export TEMPDIR=$SCRATCH
 
 for ver in  "vasp/5.4.4-cpu" "vasp/6.3.2-cpu" "vasp-tpc/5.4.4-cpu" "vasp-tpc/6.3.2-cpu"

@@ -5,8 +5,12 @@
 #SBATCH -A m2755
 #SBATCH -t 00:10:00
 
+# For some reason the vasp/6.2.1-hsw and 6.3.2-hsw modules may complain missing dynamic lib
+# during runtime. Always use an interactive node and execute this script via bash
+
 CONDA_ROOT="/global/homes/t/ttian20/.conda/envs/vpi"
-export VASP_COMMAND="srun -n 1 -c 4 --cpu-bind=cores vasp_std"
+# unbuffered output
+export VASP_COMMAND="srun -u -n 32 -c 4 --cpu-bind=cores vasp_std"
 GIT_REPO="ulissigroup/vasp-interactive"
 if [ -z "$GIT_REF" ]
 then
@@ -25,7 +29,8 @@ gh repo clone $GIT_REPO
 cd vasp-interactive
 git checkout $GIT_REF
 echo "Check to $GIT_REF"
-export PYTHONPATH=`realpath .`
+export PYTHONPATH=`realpath .`:$PYTHONPATH
+# export PYTHONPATH="/global/u1/t/ttian20/vasp-interactive-test":$PYTHONPATH
 export TEMPDIR=$SCRATCH
 
 res="true"
@@ -34,6 +39,7 @@ do
     module load $ver
     echo "Testing VaspInteractive Compatibility on $ver"
     which vasp_std
+    # workdir="/global/u1/t/ttian20/vasp-interactive-test"
     python examples/ex00_vasp_test.py | tee tmp.out
     RES=`sed -n "s/^Test result:\(.*\)$/\1/p" tmp.out`
     echo $ver, $RES >> cori_knl.txt

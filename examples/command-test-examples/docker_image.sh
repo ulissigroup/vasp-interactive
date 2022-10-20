@@ -8,26 +8,32 @@ then
     GIT_REF="main"
 fi
 
+if [ -z "$NCORES" ]
+then
+    NCORES=8
+fi
 
+conda activate base
 uid=`python -c 'import uuid; print(uuid.uuid4())'`
 echo $uid
 root=$SCRATCH/vpi-runner/$uid
 mkdir -p $root && cd $root
 echo "Running tests under $root"
-gh repo clone $GIT_REPO
+git clone https://github.com/ulissigroup/vasp-interactive.git
 cd vasp-interactive
 git checkout $GIT_REF
 echo "Check to $GIT_REF"
-export PYTHONPATH=`realpath .`
+export PYTHONPATH=`realpath .`:$PYTHONPATH
 export TEMPDIR=$SCRATCH
 
 res="true"
 for ver in "vasp.5.4.4.pl2" "vasp.6.1.2_pgi_mkl" "vasp.6.2.0_pgi_mkl" "vasp.6.3.0_pgi_mkl"
 do
-    export VASP_COMMAND="mpirun -n 8 /opt/$ver/bin/vasp_std"
+    export VASP_COMMAND="mpirun -n $NCORES --bind-to core /opt/$ver/bin/vasp_std"
     echo ${VASP_COMMAND}
     echo "Testing VaspInteractive on $ver"
-    python examples/ex00_vasp_test.py | tee tmp.out
+    # Force using the standard python
+    /opt/conda/bin/python examples/ex00_vasp_test.py | tee tmp.out
     RES=`sed -n "s/^Test result:\(.*\)$/\1/p" tmp.out`
     echo $ver, $RES >> ulissi_docker.txt
     rm tmp.out
