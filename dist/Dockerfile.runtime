@@ -19,6 +19,7 @@ FROM nvcr.io/nvidia/nvhpc:${HPCSDK_VERSION}-runtime-cuda${CUDA_LIB_VERSION}-ubun
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Minimal runtime dependencies
+RUN echo Using build env from ${BUILD_ENV}
 RUN apt-get update -y && apt-get install -y --no-install-recommends intel-mkl-full libfftw3-3 && rm -rf /var/lib/apt/lists/*
 
 # Copy in the qd library from compilers/extra and add it to the ld_library_path
