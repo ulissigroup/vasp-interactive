@@ -7,7 +7,8 @@ on:
 
 jobs:
   ulissi-docker:
-    run:
+    defaults"
+      run:
         shell: bash
     runs-on: ubuntu-latest
     container:
