@@ -57,6 +57,50 @@ jobs:
         with:
             src: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:build_env
             dst: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:build_env-HPCSDK21.2-20.04
+  
+  runtime:
+    needs: [build_env,]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: setup docker context for buildx
+        id: buildx-context
+        run: |
+          docker context create builders || :
+      - name: setup docker buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          endpoint: builders
+      - name: Login to Github Container Repo
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set lower case repository name
+        # Hit from https://github.community/t/github-actions-repository-name-must-be-lowercase/184924
+        run: |
+          echo "REPO_OWNER_LC=${OWNER,,}" >> ${GITHUB_ENV}
+        env:
+          OWNER: "${{ github.repository_owner }}"
+      - name: Build and push to GHCR
+        uses: docker/build-push-action@v2
+        with:
+          context: dist/
+          file: dist/Dockerfile.runtime
+          push: true
+          tags: |
+            ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Tag image version
+        uses: akhilerm/tag-push-action@v2.0.0
+        with:
+            src: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime
+            dst: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime-HPCSDK21.2-CUDA11.2-20.04
       # - name: Tag latest image GHCR
       #   uses: akhilerm/tag-push-action@v2.0.0
       #   with:
