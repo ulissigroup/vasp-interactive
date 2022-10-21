@@ -49,6 +49,6 @@ RUN wget https://github.com/vossjo/libbeef/archive/master.zip &&\
 	make install
 
 ADD compile_vasp.sh /opt/bin
-RUN chmod +x compile_vasp.sh
+RUN chmod +x /opt/bin/compile_vasp.sh
 ENV PATH=/opt/bin:$PATH
 
