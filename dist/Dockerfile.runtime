@@ -11,6 +11,7 @@ ARG HPCSDK_VERSION=21.2
 ARG CUDA_LIB_VERSION=11.2
 ARG UBUNTU_VERSION=20.04
 ARG BUILD_ENV=ghcr.io/ulissigroup/vasp-interactive:build_env-hpcsdk${HPCSDK_VERSION}-${UBUNTU_VERSION}
+ARG LIBBEEF=/opt/libbeef
 
 # Temporary cache
 FROM ${BUILD_ENV} as build
@@ -21,7 +22,8 @@ FROM nvcr.io/nvidia/nvhpc:${HPCSDK_VERSION}-runtime-cuda${CUDA_LIB_VERSION}-ubun
 ARG HPCSDK_VERSION
 ARG CUDA_LIB_VERSION
 ARG UBUNTU_VERSION
-ARG LIBBEEF=/opt/libbeef
+ARG BUILD_ENV
+ARG LIBBEEF
 
 
 
@@ -40,13 +42,13 @@ ENV NO_STOP_MESSAGE=1
 
 
 # Copy libbeef library
-COPY --from=${BUILD_ENV} /opt/libbeef /opt/libbeef
+COPY --from=build ${LIBBEEF} ${LIBBEEF}
 
 
 # Patching the libcusolver.so.10 (only temporary changes), no need to maintain this once vasp support for cuda11.2+ is out
-# COPY --from=${BUILD_ENV} \
-        # /opt/nvidia/hpc_sdk/Linux_x86_64/21.2/math_libs/11.0/lib64/libcusolver.so.10.6.0.245 \
-        # /opt/nvidia/hpc_sdk/Linux_x86_64/21.2/math_libs/11.2/lib64/libcusolver.so.10.6.0.245
+COPY --from=build \
+        /opt/nvidia/hpc_sdk/Linux_x86_64/21.2/math_libs/11.0/lib64/libcusolver.so.10.6.0.245 \
+        /opt/nvidia/hpc_sdk/Linux_x86_64/21.2/math_libs/11.2/lib64/libcusolver.so.10.6.0.245
 
 RUN ln -s /opt/nvidia/hpc_sdk/Linux_x86_64/21.2/math_libs/11.2/lib64/libcusolver.so.10.6.0.245 \
         /opt/nvidia/hpc_sdk/Linux_x86_64/21.2/math_libs/11.2/lib64/libcusolver.so.10
