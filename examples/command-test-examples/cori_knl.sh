@@ -19,6 +19,9 @@ fi
 # conda activate vpi
 export PATH=${CONDA_ROOT}/bin:$PATH
 
+# if the $GH_TOKEN variable is correctly set, should return auth-ed
+gh auth status
+
 uid=`uuidgen`
 root=$SCRATCH/vpi-runner/$uid
 mkdir -p $root && cd $root

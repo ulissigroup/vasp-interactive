@@ -18,6 +18,9 @@ fi
 # conda activate vpi
 export PATH=${CONDA_ROOT}/bin:$PATH
 
+# if the $GH_TOKEN variable is correctly set, should return good status
+gh auth status
+
 uid=`uuidgen`
 root=$SCRATCH/vpi-runner/$uid
 mkdir -p $root && cd $root
@@ -40,7 +43,7 @@ do
     RES=`sed -n "s/^Test result:\(.*\)$/\1/p" tmp.out`
     echo $ver, $RES >> perlmutter_cpu.txt
     rm tmp.out
-    #module unload vasp
+    module unload $ver
 done
 
 dat=`date +"%Y-%m-%dT%H:%M:%S%z"`

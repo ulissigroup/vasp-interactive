@@ -18,6 +18,9 @@ then
     export PATH=${CONDA_ROOT}/bin:$PATH
 fi
 
+# if the $GH_TOKEN variable is correctly set, should return good status
+gh auth status
+
 conda activate base
 uid=`python -c 'import uuid; print(uuid.uuid4())'`
 echo $uid
