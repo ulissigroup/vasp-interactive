@@ -12,6 +12,11 @@ if [ -z "$NCORES" ]
 then
     NCORES=8
 fi
+CONDA_ROOT="/global/homes/t/ttian20/.conda/envs/vpi"
+if [ -d "$CONDA_ROOT" ]
+then
+    export PATH=${CONDA_ROOT}:$PATH
+fi
 
 conda activate base
 uid=`python -c 'import uuid; print(uuid.uuid4())'`
@@ -38,6 +43,9 @@ do
     echo $ver, $RES >> ulissi_docker.txt
     rm tmp.out
 done
+
+dat=`date +"%Y-%m-%dT%H:%M:%S%z"`
+echo "#Last updated: $dat" >> cori_knl.txt
 
 if [ -z "${GIST_ID}" ]
 then

@@ -6,7 +6,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  ulissi-docker:
+  docker-github-runner:
+    # Some issues with vasp5.4 when running with large number of cores (>=8)
+    # may not be reproduced in github-runner which only used 2 cores
     defaults:
       run:
         shell: bash
@@ -24,9 +26,7 @@ jobs:
     - name: Package install
       run: |
         python -m pip install -e .
-   
-    - name: Run test
-      # Use explit conditions
+    - name: Run test (2 cores)
       run: |
         for ver in "vasp.5.4.4.pl2" "vasp.6.1.2_pgi_mkl" "vasp.6.2.0_pgi_mkl" "vasp.6.3.0_pgi_mkl"
         do
@@ -55,6 +55,9 @@ jobs:
           - host: cori
             url:  cori.nersc.gov
           - host: perlmutter
+            url:  perlmutter-p1.nersc.gov
+          # The login-only version is only used for shifter image testing
+          - host: perlmutter-login-only
             url:  perlmutter-p1.nersc.gov
     env:
       GIST_ID: afede700c2b7703c77e10e51333bfa75
@@ -92,28 +95,47 @@ jobs:
       if: ${{ matrix.host == 'perlmutter' }}
       env:
         JID: ${{ github.run_id }}
+    - name: Copy files Perlmutter-Login (shifter only)
+      run: |
+        scp -i ~/.ssh/nersc examples/command-test-examples/docker_image.sh \
+                            ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$SCRATCH/$JID-docker-img.sh"
+      if: ${{ matrix.host == 'perlmutter-login-only' }}
+      env:
+        JID: ${{ github.run_id }}
     - name: Interactive job Cori
       run: |
         echo $JID $SHA
         ssh -i ~/.ssh/nersc -tt ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
-            "echo 'GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-knl.sh' | salloc -N 1 -C knl -q interactive -t 00:15:00"
+            "echo 'GH_TOKEN=$GHT GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-knl.sh' | salloc -N 1 -C knl -q interactive -t 00:15:00"
         ssh -i ~/.ssh/nersc -tt ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
-            "echo 'GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-hsw.sh' | salloc -N 1 -C haswell -q interactive -t 00:15:00"
+            "echo 'GH_TOKEN=$GHT GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-hsw.sh' | salloc -N 1 -C haswell -q interactive -t 00:15:00"
       if: ${{ matrix.host == 'cori' }}
       env:
         JID: ${{ github.run_id }}
         SHA: ${{ steps.getshortsha.outputs.sha_short }}
+        GHT: ${{ secrets.GIST_SECRET }}
     - name: Interactive job Perlmutter
       run: |
         echo $JID $SHA
         ssh -i ~/.ssh/nersc -tt ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
-            "echo 'GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-cpu.sh' | salloc -N 1 -C cpu -q interactive -t 00:15:00"
+            "echo 'GH_TOKEN=$GHT GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-cpu.sh' | salloc -N 1 -C cpu -q interactive -t 00:15:00"
         ssh -i ~/.ssh/nersc -tt ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
-            "echo 'GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-gpu.sh' | salloc -N 1 -C gpu -q interactive -A m2755_g -t 00:15:00"
+            "echo 'GH_TOKEN=$GHT  GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-gpu.sh' | salloc -N 1 -C gpu -q interactive -A m2755_g -t 00:15:00"
       if: ${{ matrix.host == 'perlmutter' }}
       env:
         JID: ${{ github.run_id }}
         SHA: ${{ steps.getshortsha.outputs.sha_short }}
+        GHT: ${{ secrets.GIST_SECRET }}
+    - name: Testing Shifter on Perlmutter (login)
+      run: |
+        echo $JID $SHA
+        ssh -i ~/.ssh/nersc -tt ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+            "shifter --image=ulissigroup/kubeflow_vasp:beef_vdw -e GIT_REF=$SHA -e GIST_ID=$GIST_ID -e GH_TOKEN=$GHT -- bash \$SCRATCH/$JID-docker-img.sh'"
+      if: ${{ matrix.host == 'perlmutter-login-only' }}
+      env:
+        JID: ${{ github.run_id }}
+        SHA: ${{ steps.getshortsha.outputs.sha_short }}
+        GHT: ${{ secrets.GIST_SECRET }}
     - name: Cleanup ssh key
       run: |
         rm -rf ~/.ssh

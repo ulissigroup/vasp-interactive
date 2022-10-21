@@ -30,7 +30,6 @@ cd vasp-interactive
 git checkout $GIT_REF
 echo "Check to $GIT_REF"
 export PYTHONPATH=`realpath .`:$PYTHONPATH
-# export PYTHONPATH="/global/u1/t/ttian20/vasp-interactive-test":$PYTHONPATH
 export TEMPDIR=$SCRATCH
 
 res="true"
