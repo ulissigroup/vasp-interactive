@@ -6,6 +6,43 @@ on:
   workflow_dispatch:
 
 jobs:
+  ulissi-docker:
+    run:
+        shell: bash
+    runs-on: ubuntu-latest
+    container:
+      image: ulissigroup/kubeflow_vasp:extras-notebook
+      env: 
+        VASP_PREFIX: "mpirun -np 2 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 --allow-run-as-root"
+      options: --user root --entrypoint /bin/bash
+      credentials:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Package install
+      run: |
+        python -m pip install -e .
+   
+    - name: Run test
+      # Use explit conditions
+      run: |
+        for ver in "vasp.5.4.4.pl2" "vasp.6.1.2_pgi_mkl" "vasp.6.2.0_pgi_mkl" "vasp.6.3.0_pgi_mkl"
+        do
+          export VASP_COMMAND="$VASP_PREFIX /opt/$ver/bin/vasp_std"
+          echo ${VASP_COMMAND}
+          echo "Testing VaspInteractive on $ver"
+          # Force using the standard python
+          python examples/ex00_vasp_test.py | tee tmp.out
+          RES=`sed -n "s/^Test result:\(.*\)$/\1/p" tmp.out`
+          echo $ver, $RES >> ulissi_docker.txt
+          rm tmp.out
+        done
+        dat=`date +"%Y-%m-%dT%H:%M:%S%z"`
+        echo "#Last updated: $dat" >> ulissi_docker.txt
+        cat ulissi_docker.txt
+done
+
   submit-nersc-jobs:
     defaults:
       run:
