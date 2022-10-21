@@ -47,12 +47,16 @@ jobs:
         with:
           context: dist/
           file: dist/Dockerfile.build_env
-          push: false
-          # build-args: BLENDER_VERSION=${{ matrix.blender-version }}
+          push: true
           tags: |
             ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:build_env
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Tag image version
+        uses: akhilerm/tag-push-action@v2.0.0
+        with:
+            src: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:build_env
+            dst: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:build_env-HPCSDK21.2-20.04
       # - name: Tag latest image GHCR
       #   uses: akhilerm/tag-push-action@v2.0.0
       #   with:
