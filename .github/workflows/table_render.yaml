@@ -33,14 +33,28 @@ jobs:
         ssh-keyscan -H ${{ matrix.url }} >> ~/.ssh/known_hosts
       env:
         SSH_KEY: ${{ secrets.NERSC_SSH_KEY }}
-    - name: Interactive Job Cori
+    - name: Copy files
       run: |
-        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'hostname'
+        echo $JID
+        # ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'hostname'
+        scp -i ~/.ssh/nersc examples/command-test-examples/cori_hsw.sh \
+                            ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$SCRATCH/$JID-hsw.sh"
+        scp -i ~/.ssh/nersc examples/command-test-examples/cori_knl.sh \
+                            ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$SCRATCH/$JID-knl.sh"
       if: ${{ matrix.host == 'cori' }}
+      env:
+        JID: ${{ github.run_id }}
     - name: Interactive Job Perlmutter
       run: |
-        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'hostname'
+        echo $JID
+        # ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'hostname'
+        scp -i ~/.ssh/nersc examples/command-test-examples/perlmutter_cpu.sh \
+                            ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$SCRATCH/$JID-cpu.sh"
+        scp -i ~/.ssh/nersc examples/command-test-examples/perlmutter_gpu.sh \
+                            ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$SCRATCH/$JID-gpu.sh"
       if: ${{ matrix.host == 'perlmutter' }}
+      env:
+        JID: ${{ github.run_id }}
     # - name: SCP job file and enqueue
     #   run: |
     #     uuid=`uuidgen`
