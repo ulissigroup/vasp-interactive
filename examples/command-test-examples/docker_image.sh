@@ -48,7 +48,7 @@ do
 done
 
 dat=`date +"%Y-%m-%dT%H:%M:%S%z"`
-echo "#Last updated: $dat" >> cori_knl.txt
+echo "#Last updated: $dat" >> ulissi_docker.txt
 
 if [ -z "${GIST_ID}" ]
 then
