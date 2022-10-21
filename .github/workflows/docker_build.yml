@@ -56,7 +56,7 @@ jobs:
         uses: akhilerm/tag-push-action@v2.0.0
         with:
             src: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:build_env
-            dst: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:build_env-HPCSDK21.2-20.04
+            dst: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:build_env-hpcsdk21.2-20.04
   
   runtime:
     needs: [build_env,]
@@ -100,11 +100,4 @@ jobs:
         uses: akhilerm/tag-push-action@v2.0.0
         with:
             src: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime
-            dst: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime-HPCSDK21.2-CUDA11.2-20.04
-      # - name: Tag latest image GHCR
-      #   uses: akhilerm/tag-push-action@v2.0.0
-      #   with:
-      #     src: ghcr.io/${{ env.REPO_OWNER_LC }}/${{ env.IMAGE_NAME }}:blender${{ matrix.blender-version }}
-      #     dst: ghcr.io/${{ env.REPO_OWNER_LC }}/${{ env.IMAGE_NAME }}:latest
-      #   if: ${{ matrix.blender-version == env.LATEST_VERSION }}
-      # Keep the dockerhub images just for backward compatibility check. Ok to fail
+            dst: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime-hpcsdk21.2-cuda11.2-20.04

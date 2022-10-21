@@ -23,23 +23,23 @@ RUN echo Using build env from ${BUILD_ENV}
 RUN apt-get update -y && apt-get install -y --no-install-recommends intel-mkl-full libfftw3-3 && rm -rf /var/lib/apt/lists/*
 
 # Copy in the qd library from compilers/extra and add it to the ld_library_path
-COPY --from=${BUILD_ENV} /opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras /opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras
+# COPY --from=${BUILD_ENV} /opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras /opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras
 ENV LD_LIBRARY_PATH="/opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras/qd/lib:/opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/comm_libs/${CUDA_LIB_VERSION}/nccl/lib:${LD_LIBRARY_PATH}" 
 ENV OMP_NUM_THREADS=1 
 ENV NO_STOP_MESSAGE=1
 
 
 # Copy libbeef library
-COPY --from=${BUILD_ENV} /opt/libbeef /opt/libbeef
+# COPY --from=${BUILD_ENV} /opt/libbeef /opt/libbeef
 
 
 # Patching the libcusolver.so.10 (only temporary changes), no need to maintain this once vasp support for cuda11.2+ is out
-COPY --from=${BUILD_ENV} \
-        /opt/nvidia/hpc_sdk/Linux_x86_64/21.2/math_libs/11.0/lib64/libcusolver.so.10.6.0.245 \
-        /opt/nvidia/hpc_sdk/Linux_x86_64/21.2/math_libs/11.2/lib64/libcusolver.so.10.6.0.245
+# COPY --from=${BUILD_ENV} \
+#         /opt/nvidia/hpc_sdk/Linux_x86_64/21.2/math_libs/11.0/lib64/libcusolver.so.10.6.0.245 \
+#         /opt/nvidia/hpc_sdk/Linux_x86_64/21.2/math_libs/11.2/lib64/libcusolver.so.10.6.0.245
 
-RUN ln -s /opt/nvidia/hpc_sdk/Linux_x86_64/21.2/math_libs/11.2/lib64/libcusolver.so.10.6.0.245 \
-        /opt/nvidia/hpc_sdk/Linux_x86_64/21.2/math_libs/11.2/lib64/libcusolver.so.10
+# RUN ln -s /opt/nvidia/hpc_sdk/Linux_x86_64/21.2/math_libs/11.2/lib64/libcusolver.so.10.6.0.245 \
+#         /opt/nvidia/hpc_sdk/Linux_x86_64/21.2/math_libs/11.2/lib64/libcusolver.so.10
 
 #Fix permissions on opt
 RUN chmod -R +r /opt && find /opt -type d -exec chmod +x {} \; &&\
