@@ -41,7 +41,6 @@ jobs:
         dat=`date +"%Y-%m-%dT%H:%M:%S%z"`
         echo "#Last updated: $dat" >> ulissi_docker.txt
         cat ulissi_docker.txt
-done
 
   submit-nersc-jobs:
     defaults:
