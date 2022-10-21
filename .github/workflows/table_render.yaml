@@ -30,8 +30,7 @@ jobs:
         mkdir -p ~/.ssh
         echo "$SSH_KEY" > ~/.ssh/nersc
         chmod 600 ~/.ssh/nersc
-        ssh-keyscan -H {{ matrix.host }} >> ~/.ssh/known_hosts
-        ssh-keyscan -H perlmutter-p1.nersc.gov >> ~/.ssh/known_hosts
+        ssh-keyscan -H ${{ matrix.host }} >> ~/.ssh/known_hosts
       env:
         SSH_KEY: ${{ secrets.NERSC_SSH_KEY }}
     - name: Interactive Job Cori
