@@ -1,0 +1,32 @@
+# Simple manual action that only for the purpose of status badge
+name: Perlmutter CPU
+
+on:
+  workflow_dispatch:
+    inputs:
+      signal:
+        description: "Manual setting for the action status"
+        required: true
+        default: true
+      jobid:
+        description: "Job id from slurm queue for reference"
+        required: true
+        default: ""
+      path:
+        description: "Root path where the job runs"
+        required: true
+        default: ""
+
+jobs:
+  basic:
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-latest
+    steps:
+    - name: Manual succeed or fail
+      run: |
+        echo SIGNAL is ${{ github.event.inputs.signal }}
+        echo  ${{ github.event.inputs.jobid }}
+        echo  ${{ github.event.inputs.path }}
+        if [[ ${{ github.event.inputs.signal }} != "true" ]]; then exit 1; fi
