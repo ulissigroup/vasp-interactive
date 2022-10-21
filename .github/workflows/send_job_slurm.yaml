@@ -35,6 +35,9 @@ jobs:
           - host: perlmutter-gpu
             url:  perlmutter-p1.nersc.gov
             file: tests/nersc_scripts/job_test_perlmutter_gpu.sh
+          - host: perlmutter-cpu
+            url:  perlmutter-p1.nersc.gov
+            file: tests/nersc_scripts/job_test_perlmutter_cpu.sh
           - host: perlmutter-shifter
             url:  perlmutter-p1.nersc.gov
             file: tests/nersc_scripts/job_test_perlmutter_shifter.sh
@@ -63,30 +66,15 @@ jobs:
         which ssh
         which scp
         ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'hostname'
-    - name: SCP job file and enqueue
+    - name: SCP job file and enqueue. Pass GH_TOKEN so that gh-cli in the script can auth
       run: |
         uuid=`uuidgen`
-        scp -i ~/.ssh/nersc ${{ matrix.file }} ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$HOME/$uuid.sh"
-        ssh -i ~/.ssh/nersc ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} "sbatch \$HOME/$uuid.sh"
+        scp -i ~/.ssh/nersc ${{ matrix.file }} ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$SCRATCH/$uuid.sh"
+        ssh -i ~/.ssh/nersc ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} "sbatch --export=GH_TOKEN=$GHT \$SCRATCH/$uuid.sh"
+      env:
+        JID: ${{ github.run_id }}
+        SHA: ${{ steps.getshortsha.outputs.sha_short }}
+        GHT: ${{ secrets.GIST_SECRET }}
     - name: Cleanup ssh key
       run: |
         rm -rf ~/.ssh
-
-    # - name: Copy files over to the cluster
-    #   uses: garygrossgarten/github-action-scp@v0.7.3
-    #   with:
-    #     local: ${{ matrix.file }}
-    #     remote: "~/${{ matrix.host }}-${{ steps.getshortsha.outputs.sha_short }}/"
-    #     host: ${{ matrix.url }}
-    #     username: ttian20
-    #     privateKey: ${{ secrets.NERSC_SSH_KEY }}
-    # - name: Execute script to enqueue job in cluster
-    #   uses: appleboy/ssh-action@v0.1.3
-    #   with: 
-    #     host: ${{ secrets.SSH_HOST }}
-    #     username: ${{ secrets.SSH_USERNAME }}
-    #     password: ${{ secrets.SSH_PASSWORD }}
-    #     script: | 
-    #       cd "your-directory/${{ steps.getshortsha.outputs.sha_short }}"
-    #       mv job-sbatcher.sh ${{ steps.getshortsha.outputs.sha_short }}-job-sbatcher.sh
-    #       sbatch ${{ steps.getshortsha.outputs.sha_short }}-job-sbatcher.sh.sh
