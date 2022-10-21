@@ -1,0 +1,62 @@
+name: Build docker images (build-env & runtime)
+
+
+on:
+  push:
+    branches: [ main, vasp-build ]
+    paths:
+      - "dist/**"
+      - ".github/workflows/docker_build.yml"
+  pull_request:
+    branches:  [ main ]
+    paths:
+      - "dist/**"
+      - ".github/workflows/docker_build.yml"
+  workflow_dispatch:
+
+jobs:
+  build_env:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: setup docker context for buildx
+        id: buildx-context
+        run: |
+          docker context create builders || :
+      - name: setup docker buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          endpoint: builders
+      - name: Login to Github Container Repo
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set lower case repository name
+        # Hit from https://github.community/t/github-actions-repository-name-must-be-lowercase/184924
+        run: |
+          echo "REPO_OWNER_LC=${OWNER,,}" >> ${GITHUB_ENV}
+        env:
+          OWNER: "${{ github.repository_owner }}"
+      - name: Build and push to GHCR
+        uses: docker/build-push-action@v2
+        with:
+          context: dist/
+          file: Dockerfile.build_env
+          push: false
+          # build-args: BLENDER_VERSION=${{ matrix.blender-version }}
+          tags: |
+            ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:build_env
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      # - name: Tag latest image GHCR
+      #   uses: akhilerm/tag-push-action@v2.0.0
+      #   with:
+      #     src: ghcr.io/${{ env.REPO_OWNER_LC }}/${{ env.IMAGE_NAME }}:blender${{ matrix.blender-version }}
+      #     dst: ghcr.io/${{ env.REPO_OWNER_LC }}/${{ env.IMAGE_NAME }}:latest
+      #   if: ${{ matrix.blender-version == env.LATEST_VERSION }}
+      # Keep the dockerhub images just for backward compatibility check. Ok to fail

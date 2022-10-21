@@ -1,0 +1,53 @@
+#########################################################################
+# Create a docker base image for building VASP using NVCC / PGI compilers
+# For multilayer compilation / debug only. Do not use it for production.
+# If you wish to change the hpcsdk version and cuda lib version, 
+# provide them via docker build commandline options
+# 
+# Additional components
+# - compiled BEEF-vdW library at /opt/libbeef for binding
+#########################################################################
+
+ARG HPCSDK_VERSION=21.2
+ARG CUDA_LIB_VERSION=11.2
+ARG UBUNTU_VERSION=20.04
+ARG LIBBEEF=/opt/libbeef
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Use many-target cuda to avoid issue with openacc
+FROM nvcr.io/nvidia/nvhpc:${HPCSDK_VERSION}-devel-cuda_multi-ubuntu${UBUNTU_VERSION}
+
+RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+
+# Minimal builder requirements
+RUN apt-get update -y && \
+	apt-get install -y --no-install-recommends \
+	make \
+	intel-mkl-full \
+	makedepf90 \
+	libfftw3-3 \
+	libfftw3-dev \
+	ca-certificates \
+	rsync \
+	unzip \
+	wget \
+    git \
+    python3 \
+    python3-pip &&\
+    rm -rf /var/lib/apt/lists/*
+
+
+### libbeef only for linking purpose
+WORKDIR /opt
+RUN wget https://github.com/vossjo/libbeef/archive/master.zip &&\
+	unzip master.zip &&\
+	mkdir libbeef &&\
+	cd libbeef-master &&\
+	./configure --prefix=/opt/libbeef &&\
+	make -j4 &&\
+	make install
+
+ADD compile_vasp.sh /opt/bin
+RUN chmod +x compile_vasp.sh
+ENV PATH=/opt/bin:$PATH
+
