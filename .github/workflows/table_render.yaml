@@ -19,6 +19,8 @@ jobs:
             url:  cori.nersc.gov
           - host: perlmutter
             url:  perlmutter-p1.nersc.gov
+    env:
+      GIST_ID: afede700c2b7703c77e10e51333bfa75
     steps:
     # Copied from https://thepaulo.medium.com/scheduling-jobs-in-a-super-computer-cluster-using-github-actions-2ee83405cb69
     - uses: actions/checkout@v2
@@ -33,10 +35,9 @@ jobs:
         ssh-keyscan -H ${{ matrix.url }} >> ~/.ssh/known_hosts
       env:
         SSH_KEY: ${{ secrets.NERSC_SSH_KEY }}
-    - name: Copy files
+    - name: Copy files Cori
       run: |
         echo $JID
-        # ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'hostname'
         scp -i ~/.ssh/nersc examples/command-test-examples/cori_hsw.sh \
                             ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$SCRATCH/$JID-hsw.sh"
         scp -i ~/.ssh/nersc examples/command-test-examples/cori_knl.sh \
@@ -44,10 +45,9 @@ jobs:
       if: ${{ matrix.host == 'cori' }}
       env:
         JID: ${{ github.run_id }}
-    - name: Interactive Job Perlmutter
+    - name: Copy files Perlmutter
       run: |
         echo $JID
-        # ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'hostname'
         scp -i ~/.ssh/nersc examples/command-test-examples/perlmutter_cpu.sh \
                             ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$SCRATCH/$JID-cpu.sh"
         scp -i ~/.ssh/nersc examples/command-test-examples/perlmutter_gpu.sh \
@@ -55,11 +55,28 @@ jobs:
       if: ${{ matrix.host == 'perlmutter' }}
       env:
         JID: ${{ github.run_id }}
-    # - name: SCP job file and enqueue
-    #   run: |
-    #     uuid=`uuidgen`
-    #     scp -i ~/.ssh/nersc ${{ matrix.file }} ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$HOME/$uuid.sh"
-    #     ssh -i ~/.ssh/nersc ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} "sbatch \$HOME/$uuid.sh"
+    - name: Interactive job Cori
+      run: |
+        echo $JID $SHA
+        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+            "echo 'GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-knl.sh' | salloc -N 1 -C knl -q interactive -t 00:15:00"
+        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+            "echo 'GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-hsw.sh' | salloc -N 1 -C haswell -q interactive -t 00:15:00"
+      if: ${{ matrix.host == 'cori' }}
+      env:
+        JID: ${{ github.run_id }}
+        SHA: ${{ steps.getshortsha.outputs.sha_short }}
+    - name: Copy files Perlmutter
+      run: |
+        echo $JID $SHA
+        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+            "echo 'GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-cpu.sh' | salloc -N 1 -C cpu -q interactive -t 00:15:00"
+        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+            "echo 'GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-gpu.sh' | salloc -N 1 -C gpu -q interactive -A m2755_g -t 00:15:00"
+      if: ${{ matrix.host == 'perlmutter' }}
+      env:
+        JID: ${{ github.run_id }}
+        SHA: ${{ steps.getshortsha.outputs.sha_short }}
     - name: Cleanup ssh key
       run: |
         rm -rf ~/.ssh
