@@ -6,14 +6,60 @@ on:
   workflow_dispatch:
 
 jobs:
-  basic:
+  submit-nersc-jobs:
     defaults:
       run:
         shell: bash
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-          
+      matrix:
+        include:
+          - host: cori
+            url:  cori.nersc.gov
+          - host: perlmutter-gpu
+            url:  perlmutter-p1.nersc.gov
+    steps:
+    # Copied from https://thepaulo.medium.com/scheduling-jobs-in-a-super-computer-cluster-using-github-actions-2ee83405cb69
+    - uses: actions/checkout@v2
+    - name: Get a short version of the GIT commit SHA to use in naming files
+      id: getshortsha
+      run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+    - name: Create local ssh key
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_KEY" > ~/.ssh/nersc
+        chmod 600 ~/.ssh/nersc
+        ssh-keyscan -H {{ matrix.host }} >> ~/.ssh/known_hosts
+        ssh-keyscan -H perlmutter-p1.nersc.gov >> ~/.ssh/known_hosts
+      env:
+        SSH_KEY: ${{ secrets.NERSC_SSH_KEY }}
+    - name: Interactive Job Cori
+      run: |
+        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'hostname'
+      if:
+        ${{ matrix.host == "cori" }}
+    - name: Interactive Job Perlmutter
+      run: |
+        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'hostname'
+      if:
+        ${{ matrix.host == "perlmutter" }}
+    # - name: SCP job file and enqueue
+    #   run: |
+    #     uuid=`uuidgen`
+    #     scp -i ~/.ssh/nersc ${{ matrix.file }} ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$HOME/$uuid.sh"
+    #     ssh -i ~/.ssh/nersc ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} "sbatch \$HOME/$uuid.sh"
+    - name: Cleanup ssh key
+      run: |
+        rm -rf ~/.ssh
+
+  render-table:
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false   
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v4
