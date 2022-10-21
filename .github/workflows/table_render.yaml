@@ -66,7 +66,7 @@ jobs:
       env:
         JID: ${{ github.run_id }}
         SHA: ${{ steps.getshortsha.outputs.sha_short }}
-    - name: Copy files Perlmutter
+    - name: Interactive job Perlmutter
       run: |
         echo $JID $SHA
         ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
@@ -82,6 +82,7 @@ jobs:
         rm -rf ~/.ssh
 
   render-table:
+    needs: [submit-nersc-jobs,]
     defaults:
       run:
         shell: bash

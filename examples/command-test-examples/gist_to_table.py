@@ -40,7 +40,7 @@ def parse_txt(txt):
     lines = txt.split("\n")
     all_matches = []
     for line in lines:
-        if "," not in line:
+        if ("," not in line) or (line.startswith("#")):
             continue
         version, state = list(map(lambda s: s.strip(), line.split(",")))
         state = state.strip()

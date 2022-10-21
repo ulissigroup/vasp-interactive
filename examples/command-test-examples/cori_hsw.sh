@@ -47,6 +47,9 @@ do
     module unload $ver
 done
 
+dat=`date +"%Y-%m-%dT%H:%M:%S%z"`
+echo "#Last updated: $dat" >> cori_hsw.txt
+
 if [ -z "${GIST_ID}" ]
 then
     echo "No gist ID provided, I'll skip the update part"

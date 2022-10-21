@@ -43,6 +43,9 @@ do
     #module unload vasp
 done
 
+dat=`date +"%Y-%m-%dT%H:%M:%S%z"`
+echo "#Last updated: $dat" >> perlmutter_cpu.txt
+
 if [ -z "${GIST_ID}" ]
 then
     echo "No gist ID provided, I'll skip the update part"
