@@ -15,7 +15,7 @@ fi
 CONDA_ROOT="/global/homes/t/ttian20/.conda/envs/vpi"
 if [ -d "$CONDA_ROOT" ]
 then
-    export PATH=${CONDA_ROOT}:$PATH
+    export PATH=${CONDA_ROOT}/bin:$PATH
 fi
 
 conda activate base
