@@ -117,9 +117,9 @@ jobs:
     - name: Interactive job Perlmutter
       run: |
         echo $JID $SHA
-        ssh -i ~/.ssh/nersc -tt ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
             "echo 'GH_TOKEN=$GHT GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-cpu.sh' | salloc -N 1 -C cpu -q interactive -t 00:8:00"
-        ssh -i ~/.ssh/nersc -tt ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
             "echo 'GH_TOKEN=$GHT  GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-gpu.sh' | salloc -N 1 -C gpu -q interactive -A m2755_g -t 00:8:00"
       if: ${{ matrix.host == 'perlmutter' }}
       env:
@@ -129,7 +129,7 @@ jobs:
     - name: Testing Shifter on Perlmutter (login)
       run: |
         echo $JID $SHA
-        ssh -i ~/.ssh/nersc -tt ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+        ssh -i ~/.ssh/nersc ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
             "shifter --image=ulissigroup/kubeflow_vasp:beef_vdw -e GIT_REF=$SHA -e GIST_ID=$GIST_ID -e GH_TOKEN=$GHT -- bash \$SCRATCH/$JID-docker-img.sh"
       if: ${{ matrix.host == 'perlmutter-login-only' }}
       env:
