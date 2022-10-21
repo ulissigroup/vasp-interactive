@@ -46,7 +46,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: dist/
-          file: Dockerfile.build_env
+          file: dist/Dockerfile.build_env
           push: false
           # build-args: BLENDER_VERSION=${{ matrix.blender-version }}
           tags: |
