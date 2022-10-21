@@ -95,9 +95,9 @@ jobs:
     - name: Interactive job Cori
       run: |
         echo $JID $SHA
-        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+        ssh -i ~/.ssh/nersc -tt ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
             "echo 'GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-knl.sh' | salloc -N 1 -C knl -q interactive -t 00:15:00"
-        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+        ssh -i ~/.ssh/nersc -tt ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
             "echo 'GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-hsw.sh' | salloc -N 1 -C haswell -q interactive -t 00:15:00"
       if: ${{ matrix.host == 'cori' }}
       env:
@@ -106,9 +106,9 @@ jobs:
     - name: Interactive job Perlmutter
       run: |
         echo $JID $SHA
-        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+        ssh -i ~/.ssh/nersc -tt ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
             "echo 'GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-cpu.sh' | salloc -N 1 -C cpu -q interactive -t 00:15:00"
-        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+        ssh -i ~/.ssh/nersc -tt ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
             "echo 'GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-gpu.sh' | salloc -N 1 -C gpu -q interactive -A m2755_g -t 00:15:00"
       if: ${{ matrix.host == 'perlmutter' }}
       env:
