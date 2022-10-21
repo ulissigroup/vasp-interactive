@@ -17,7 +17,7 @@ jobs:
         include:
           - host: cori
             url:  cori.nersc.gov
-          - host: perlmutter-gpu
+          - host: perlmutter
             url:  perlmutter-p1.nersc.gov
     steps:
     # Copied from https://thepaulo.medium.com/scheduling-jobs-in-a-super-computer-cluster-using-github-actions-2ee83405cb69
@@ -37,11 +37,11 @@ jobs:
     - name: Interactive Job Cori
       run: |
         ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'hostname'
-      if: ${{ matrix.host == "cori" }}
+      if: ${{ matrix.host == 'cori' }}
     - name: Interactive Job Perlmutter
       run: |
         ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} 'hostname'
-      if: ${{ matrix.host == "perlmutter" }}
+      if: ${{ matrix.host == 'perlmutter' }}
     # - name: SCP job file and enqueue
     #   run: |
     #     uuid=`uuidgen`
