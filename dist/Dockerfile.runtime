@@ -10,6 +10,10 @@
 ARG HPCSDK_VERSION=21.2
 ARG CUDA_LIB_VERSION=11.2
 ARG UBUNTU_VERSION=20.04
+ARG BUILD_ENV=ghcr.io/ulissigroup/vasp-interactive:build_env-hpcsdk${HPCSDK_VERSION}-${UBUNTU_VERSION}
+
+# Temporary cache
+FROM ${BUILD_ENV} as build
 
 
 FROM nvcr.io/nvidia/nvhpc:${HPCSDK_VERSION}-runtime-cuda${CUDA_LIB_VERSION}-ubuntu${UBUNTU_VERSION}
@@ -18,18 +22,18 @@ ARG HPCSDK_VERSION
 ARG CUDA_LIB_VERSION
 ARG UBUNTU_VERSION
 ARG LIBBEEF=/opt/libbeef
-ARG BUILD_ENV=ghcr.io/ulissigroup/vasp-interactive:build_env-hpcsdk${HPCSDK_VERSION}-${UBUNTU_VERSION}
+
 
 
 # Install libfftw
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Minimal runtime dependencies
-RUN echo Using build env from ${BUILD_ENV}
+RUN echo ${HPCSDK_VERSION} ${CUDA_LIB_VERSION} ${UBUNTU_VERSION}
 RUN apt-get update -y && apt-get install -y --no-install-recommends intel-mkl-full libfftw3-3 && rm -rf /var/lib/apt/lists/*
 
 # Copy in the qd library from compilers/extra and add it to the ld_library_path
-COPY --from=${BUILD_ENV} /opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras /opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras
+COPY --from=build /opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras /opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras
 ENV LD_LIBRARY_PATH="/opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras/qd/lib:/opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/comm_libs/${CUDA_LIB_VERSION}/nccl/lib:${LD_LIBRARY_PATH}" 
 ENV OMP_NUM_THREADS=1 
 ENV NO_STOP_MESSAGE=1
