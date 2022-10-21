@@ -12,7 +12,7 @@ ARG HPCSDK_VERSION=21.2
 ARG CUDA_LIB_VERSION=11.2
 ARG UBUNTU_VERSION=20.04
 ARG LIBBEEF=/opt/libbeef
-ARG DEBIAN_FRONTEND=noninteractive
+
 
 # Use many-target cuda to avoid issue with openacc
 FROM nvcr.io/nvidia/nvhpc:${HPCSDK_VERSION}-devel-cuda_multi-ubuntu${UBUNTU_VERSION}
@@ -20,6 +20,7 @@ FROM nvcr.io/nvidia/nvhpc:${HPCSDK_VERSION}-devel-cuda_multi-ubuntu${UBUNTU_VERS
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 
 # Minimal builder requirements
+ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -y && \
 	apt-get install -y --no-install-recommends \
 	make \
