@@ -8,7 +8,10 @@ import tempfile
 from ase.build import molecule
 from ase.io import read
 from vasp_interactive import VaspInteractive
+from vasp_interactive.utils import time_limit
 import warnings
+import traceback
+
 
 warnings.filterwarnings("ignore")
 
@@ -82,39 +85,61 @@ def demo_test():
             nsw=0,
             istart=0,
             xc="pbe",
-            directory="test1",
+            directory=tmpdir,
+            # directory="test1"
         )
         # Low level calculator interfacing
+
         with calc._txt_outstream() as out:
-            calc._run(atoms, out=out)
+            try:
+                # In some cases the vasp binary spin up can take longer
+                with time_limit(30):
+                    calc._run(atoms, out=out)
+            except Exception as e:
+                print("Running VASP encountered problem ", e)
+                print(traceback.format_exc(limit=2))
+                pass
+
         pid = calc.process.pid
 
         # Check vasprun.xml
         try:
             vrun = read(calc._indir("vasprun.xml"))
-            vasprun_ok = True
+            # In newer version of ase the vasprun parsing is enhanced
+            if vrun.calc is not None:
+                vasprun_ok = True
+            else:
+                vasprun_ok = False
         except Exception as e:
             vasprun_ok = False
 
-        # Check OUTCAR
-        outcar_lines = open(calc._indir("OUTCAR"), "r").readlines()
+        # Check OUTCAR. In some cases the OUTCAR may be non-existing
+        try:
+            outcar_lines = open(calc._indir("OUTCAR"), "r").readlines()
+        except Exception:
+            outcar_lines = []
         outcar_ok = False
         cond = 0
         matches = [
             "FORCE on cell",
             "TOTAL-FORCE",
-            "energy  without entropy",
+            "FREE ENERGIE OF THE ION-ELECTRON SYSTEM",
             "VOLUME and BASIS-vectors",
             "E-fermi",
         ]
-        for line in outcar_lines:
+        for i, line in enumerate(outcar_lines):
             if any([m in line for m in matches]):
+                print(line)
                 cond += 1
         if cond >= 5:
             outcar_ok = True
 
         # Check vaspout
-        vaspout_lines = calc._txt_to_handler().readlines()
+        try:
+            vaspout_lines = calc._txt_to_handler().readlines()
+        except Exception:
+            vaspout_lines = []
+        # print(vaspout_lines)
         vaspout_ok = False
         for line in vaspout_lines:
             if "FORCES" in line:
@@ -124,6 +149,7 @@ def demo_test():
         subprocess.run(["kill", "-9", str(pid)])
 
     print("Single point calculation finished. Checking output file parsing.")
+    status = None
     if vasprun_ok:
         cprint(f"vasprunxml: OK", color="OKGREEN")
     else:
@@ -137,11 +163,12 @@ def demo_test():
     else:
         cprint(f"VASP raw output: FAIL", color="FAIL")
 
-    if not vasprun_ok:
+    if not vaspout_ok:
         cprint(
             "VaspInteractive may not be compatible with your VASP setup. Please refer to the README for details.",
             color="FAIL",
         )
+        status = "incompatible"
     elif not outcar_ok:
         cprint(
             (
@@ -151,6 +178,7 @@ def demo_test():
             ),
             color="WARNING",
         )
+        status = "minimal support"
     elif not vasprun_ok:
         cprint(
             (
@@ -160,8 +188,15 @@ def demo_test():
             ),
             color="OKBLUE",
         )
+        status = "partial pass"
     else:
         cprint("All test pass! Enjoy coding.", color="OKGREEN")
+        status = "all pass"
+
+    # Output the total status
+    print("#" * 80)
+    print(f"Test result: {status}")
+    print("#" * 80)
 
 
 if __name__ == "__main__":
