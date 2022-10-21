@@ -76,7 +76,6 @@ jobs:
         for f in tests/test*.py; do echo $f; coverage run -a -m pytest -s $f; killall vasp_std || echo ""; done
         coverage json --omit=test*
         COVERAGE=`cat coverage.json | jq .totals.percent_covered | xargs printf '%.*f' 0`
-        #COVERAGE=80
         echo "Current coverage is $COVERAGE"
         echo "COV=$COVERAGE" >> $GITHUB_ENV
     - name: Create Awesome Badge
@@ -84,7 +83,7 @@ jobs:
       with:
         auth: ${{ secrets.GIST_SECRET }}
         gistID: ${{ secrets.COV_BADGE_GIST_ID }}
-        filename: test.json
+        filename: vpi_coverage.json
         label: Code Coverage
         message: ${{ env.COV }}%
         color: yellowgreen
