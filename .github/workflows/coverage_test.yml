@@ -1,6 +1,6 @@
 # Workflow runs simple package installation & unittest.
 # All python unittests should be relatively fast (1 core + gam)
-name: Ulissigroup docker image
+name: Code coverage test
 
 on:
   push:
@@ -31,7 +31,8 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.9"]
-        vasp-version: ["vasp.5.4.4.pl2", "vasp.6.1.2_pgi_mkl_beef", "vasp.6.2.0_pgi_mkl", "vasp.6.3.0_pgi_mkl"]
+        vasp-version: ["vasp63"]
+        variant: ["patch"]
         
 
     steps:
@@ -39,10 +40,19 @@ jobs:
       run: |
         echo "${{ github.workspace }}"
     - uses: actions/checkout@v2
+    - name: Download test binaries
+      run: |
+        wget --no-verbose https://github.com/ulissigroup/vasp-interactive/releases/download/v0.0.1/test_binaries.zip
+        unzip -d vasp -P $MYPWD test_binaries.zip 
+        VASP_ROOT=`realpath vasp`
+        echo "VASP_ROOT=${VASP_ROOT}" >> $GITHUB_ENV
+      env:
+        MYPWD: ${{ secrets.TEST_BINARY_KEY }}
+
     - name: setup conda version
       run: |
         conda create --name actions -c conda-forge \
-          python=${{ matrix.python-version }} pip flake8 pytest
+          python=${{ matrix.python-version }} pip flake8 pytest coverage jq
         conda init bash
         source activate actions
     - name: Lint with flake8
@@ -57,18 +67,24 @@ jobs:
       run: |
         source activate actions
         python -m pip install --upgrade .
-    - name: Test with pytest vasp6+
-      if: ${{ matrix.vasp-version != 'vasp.5.4.4.pl2' }}
+    - name: Unit test
       run: |
         source activate actions
-        export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_std"
+        echo ${VASP_ROOT}
+        export VASP_COMMAND="${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std"
         echo $VASP_COMMAND
-        for f in tests/test*.py; do echo $f; python -m pytest -s $f; killall vasp_std || echo ""; done
-    - name: Test with pytest vasp5
-      if: ${{ matrix.vasp-version == 'vasp.5.4.4.pl2' }}
-      run: |
-        source activate actions
-        export VASP_COMMAND="${VASP_PREFIX} /opt/${{ matrix.vasp-version }}/bin/vasp_std"
-        echo $VASP_COMMAND
-        for f in tests/test*.py; do echo $f; python -m pytest -s $f; killall vasp_std || echo ""; done
-        # python -m pytest -s tests/test_vasp_version.py
+        for f in tests/test*.py; do echo $f; coverage run -a -m pytest -s $f; killall vasp_std || echo ""; done
+        coverage json --omit=test*
+        COVERAGE=`cat coverage.json | jq .totals.percent_covered | xargs printf '%.*f' 0`
+        #COVERAGE=80
+        echo "Current coverage is $COVERAGE"
+        echo "COV=$COVERAGE" >> $GITHUB_ENV
+    - name: Create Awesome Badge
+      uses: schneegans/dynamic-badges-action@v1.5.0
+      with:
+        auth: ${{ secrets.GIST_SECRET }}
+        gistID: ${{ secrets.COV_BADGE_GIST_ID }}
+        filename: test.json
+        label: Code Coverage
+        message: ${{ env.COV }}%
+        color: yellowgreen
