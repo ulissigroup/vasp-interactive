@@ -46,7 +46,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: vasp-build/
-          file: dist/Dockerfile.build_env
+          file: vasp-build/Dockerfile.build_env
           push: true
           tags: |
             ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:build_env
@@ -90,7 +90,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: vasp-build/
-          file: dist/Dockerfile.runtime
+          file: vasp-build/Dockerfile.runtime
           push: true
           tags: |
             ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime
