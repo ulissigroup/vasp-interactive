@@ -5,12 +5,12 @@ on:
   push:
     branches: [ main, vasp-build ]
     paths:
-      - "dist/**"
+      - "vasp-build/**"
       - ".github/workflows/docker_build.yml"
   pull_request:
     branches:  [ main ]
     paths:
-      - "dist/**"
+      - "vasp-build/**"
       - ".github/workflows/docker_build.yml"
   workflow_dispatch:
 
@@ -45,7 +45,7 @@ jobs:
       - name: Build and push to GHCR
         uses: docker/build-push-action@v2
         with:
-          context: dist/
+          context: vasp-build/
           file: dist/Dockerfile.build_env
           push: true
           tags: |
@@ -89,7 +89,7 @@ jobs:
       - name: Build and push to GHCR
         uses: docker/build-push-action@v2
         with:
-          context: dist/
+          context: vasp-build/
           file: dist/Dockerfile.runtime
           push: true
           tags: |
