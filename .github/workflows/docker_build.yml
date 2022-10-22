@@ -101,3 +101,34 @@ jobs:
         with:
             src: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime
             dst: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime-hpcsdk21.2-cuda11.2-20.04
+  test:
+    needs: [runtime,]
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime
+      env: 
+        VASP_PREFIX: "mpirun -np 1 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 --allow-run-as-root"
+      options: --user root --entrypoint /bin/bash
+      credentials:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        vasp-version: ["vasp54", "vasp61", "vasp62", "vasp63"]
+        variant: ["patch", "pristine"]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Download test binaries
+      run: |
+        wget --no-verbose https://github.com/ulissigroup/vasp-interactive/releases/download/v0.0.1/test_binaries.zip
+        unzip -d vasp -P $MYPWD test_binaries.zip 
+        VASP_ROOT=`realpath vasp`
+        echo "VASP_ROOT=${VASP_ROOT}" >> $GITHUB_ENV
+      env:
+        MYPWD: ${{ secrets.TEST_BINARY_KEY }}
+    - name: Run vasp binary (let it fail)
+      run: |
+        ${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std
