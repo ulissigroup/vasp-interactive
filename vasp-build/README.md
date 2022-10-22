@@ -77,7 +77,7 @@ docker run -it --rm -v $(pwd):/work \
 ```
 And run the `compile_vasp.sh`:
 ```bash
-INTERACTIVE_PATCH=patch.py ROOT=/tmp VASP_BINARY_PATH=/work/bin
+INTERACTIVE_PATCH=patch.py ROOT=/tmp VASP_BINARY_PATH=/work/bin \
 ./compile_vasp.sh vasp.X.Y.Z.tgz \
                   makefile_examples/makefile \
                   makefile_examples/makefile.include.vaspX
@@ -172,7 +172,25 @@ Please contact us if you have issues applying the patches due to VASP source cod
 
 ## Advanced: building native socket interface to VASP
 
+The iPI project (https://github.com/i-pi/i-pi) also provides a Fortran plugin that 
+can add native support for the socket protocal to VASP. 
+We have provided a separate script [`patch_ipi.py`](./patch_ipi.py) to wrap up such process which works indepedent of the VASP version. 
+`patch_ipi.py` can be combined with `patch.py` and an example of compilation 
+is like follows:
+```bash
+ROOT=/tmp VASP_BINARY_PATH=/work/bin \
+INTERACTIVE_PATCH=patch.py \
+IPI_PATCH=patch_ipi.py \
+./compile_vasp.sh vasp.X.Y.Z.tgz \
+                  makefile_examples/makefile \
+                  makefile_examples/makefile.include.vaspX
+```
 
+The main difference is
+`VaspInteractive` adds the socket communication on top of a local VASP calculator while 
+iPI-patch VASP has the socket interface statically compiled. 
+In addition, as mentioned in [the introduction](#do-i-need-these-patches), `VaspInteractive` provides ad-hoc socket communication compatibility without patching VASP, 
+if no lattice change is involved.
 
 
 
