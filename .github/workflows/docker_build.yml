@@ -105,7 +105,7 @@ jobs:
     needs: [runtime,]
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime
+      image: ghcr.io/ulissigroup/vasp-interactive:runtime
       env: 
         VASP_PREFIX: "mpirun -np 1 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 --allow-run-as-root"
       options: --user root --entrypoint /bin/bash
