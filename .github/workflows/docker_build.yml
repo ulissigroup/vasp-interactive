@@ -110,7 +110,6 @@ jobs:
         VASP_PREFIX: "mpirun -np 1 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 --allow-run-as-root"
       options: --user root --entrypoint /bin/bash
       credentials:
-        registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     strategy:
