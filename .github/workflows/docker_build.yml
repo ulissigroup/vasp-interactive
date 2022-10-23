@@ -130,4 +130,7 @@ jobs:
         MYPWD: ${{ secrets.TEST_BINARY_KEY }}
     - name: Run vasp binary (let it fail)
       run: |
-        ${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std
+        ${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std > /tmp/vasp.out 2>&1 || true
+        grep " I REFUSE TO CONTINUE WITH THIS SICK JOB" /tmp/vasp.out || grep "Error reading item" /tmp/vasp.out
+        rm -rf /tmp/vasp.out
+    # - name: Check if error message exists
