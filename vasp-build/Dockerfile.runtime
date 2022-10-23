@@ -32,7 +32,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 # Minimal runtime dependencies
 RUN echo ${HPCSDK_VERSION} ${CUDA_LIB_VERSION} ${UBUNTU_VERSION} ${BUILD_ENV} ${LIBBEEF}
-RUN apt-get update -y && apt-get install -y --no-install-recommends ca-certificates intel-mkl-full libfftw3-3 wget htop unzip tee && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y && apt-get install -y --no-install-recommends ca-certificates intel-mkl-full libfftw3-3 wget htop unzip && rm -rf /var/lib/apt/lists/*
 
 # Copy in the qd library from compilers/extra and add it to the ld_library_path
 COPY --from=build /opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras /opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras
