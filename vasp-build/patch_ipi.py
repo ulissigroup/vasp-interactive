@@ -802,6 +802,7 @@ patches.append(
         "replace_func": insert,
     }
 )
+# VASP6-specific, use PROCESS_INCAR
 patches.append(
     {
         "name": "reader.F",
@@ -809,8 +810,21 @@ patches.append(
         "pattern": r"(IF \(IBRION.*\) NSW=1\s*$\n)([\s\S]*?)(^\s*CALL PROCESS_INCAR\(.*NSW.*$)",
         "patch_content": patch_reader_F[2],
         "replace_func": insert,
+        "version": "vasp6"
     }
 )
+# VASP5-specific, use RDATAB
+patches.append(
+    {
+        "name": "reader.F",
+        "desc": "2: Add NSW setting for ibrion 23",
+        "pattern": r"(IF \(IBRION.*\) NSW=1\s*$\n)([\s\S]*?)(^\s*CALL RDATAB\(.*NSW.*$)",
+        "patch_content": patch_reader_F[2],
+        "replace_func": insert,
+        "version": "vasp5"
+    }
+)
+# VASP6-specific, use PROCESS_INCAR
 patches.append(
     {
         "name": "reader.F",
@@ -818,8 +832,21 @@ patches.append(
         "pattern": r"(IF \(IBRION.*\) ISIF=0\s*$\n)([\s\S]*?)(^\s*CALL PROCESS_INCAR\(.*ISIF)",
         "patch_content": patch_reader_F[3],
         "replace_func": insert,
+        "version": "vasp6"
     }
 )
+# VASP5-specific, use RDATAB
+patches.append(
+    {
+        "name": "reader.F",
+        "desc": "3: Add ISIF setting for ibrion 23",
+        "pattern": r"(IF \(IBRION.*\) ISIF=0\s*$\n)([\s\S]*?)(^\s*CALL RDATAB\(.*ISIF)",
+        "patch_content": patch_reader_F[3],
+        "replace_func": insert,
+        "version": "vasp5"
+    }
+)
+# VASP6-specific, use PROCESS_INCAR
 patches.append(
     {
         "name": "reader.F",
@@ -827,8 +854,21 @@ patches.append(
         "pattern": r"(IWAVPR=MOD[\s\S]*#endif\s*\n)([\s\S]*?)(\n^! switch on symmetry)",
         "patch_content": patch_reader_F[5],
         "replace_func": insert,
+        "version": "vasp6"
     }
 )
+# VASP5-specific, use PROCESS_INCAR
+patches.append(
+    {
+        "name": "reader.F",
+        "desc": "4: Additional setting for IBRION == 23 (VASP5)",
+        "pattern": r"(CALL XML_INCAR\('IWAVPR'.*$\n)([\s\S]*?)(\n^! switch on symmetry)",
+        "patch_content": patch_reader_F[4],
+        "replace_func": insert,
+        "version": "vasp5"
+    }
+)
+# VASP6 specific
 patches.append(
     {
         "name": "reader.F",
@@ -836,6 +876,18 @@ patches.append(
         "pattern": r"(^! switch on symmetry[\s\S]*?ISYM=2\s*?$\n)([\s\S]*?)(^\s*CALL PROCESS_INCAR\(.*ISYM)",
         "patch_content": patch_reader_F[6],
         "replace_func": insert,
+        "version": "vasp6"
+    }
+)
+# VASP5 specific
+patches.append(
+    {
+        "name": "reader.F",
+        "desc": "6: Disable symmetry for IBRION 23",
+        "pattern": r"(^! switch on symmetry[\s\S]*?ISYM=2\s*?$\n)([\s\S]*?)(^\s*CALL RDATAB\(.*ISYM)",
+        "patch_content": patch_reader_F[6],
+        "replace_func": insert,
+        "version": "vasp5"
     }
 )
 
@@ -918,14 +970,28 @@ def main():
     )
     args = parser.parse_args()
     src = Path(os.path.expanduser(args.src)).resolve()
+    # Check if it's version 5 or 6
+    content_reader = open(src / "reader.F", "r").read()
+    version = None
+    if "RDATAB" in content_reader:
+        version = "vasp5"
+    elif "PROCESS_INCAR" in content_reader:
+        version = "vasp6"
+    else:
+        raise ValueError("Unrecognized reader.F format!")
+    print(version)
     for patch in patches:
-        old_file = src / patch["name"]
-        patch_content = patch["patch_content"]
-        pattern = patch["pattern"]
-        func = patch["replace_func"]
-        print(patch["desc"])
-        print(f"Making patch for {old_file.as_posix()}")
-        patch_txt(old_file, pattern, patch_content, func)
+        pv = patch.get("version", None)
+        if (pv is None) or (pv == version):
+            old_file = src / patch["name"]
+            patch_content = patch["patch_content"]
+            pattern = patch["pattern"]
+            func = patch["replace_func"]
+            print(patch["desc"])
+            print(f"Making patch for {old_file.as_posix()}")
+            patch_txt(old_file, pattern, patch_content, func)
+        else:
+            print(f"Skip {patch['desc']} due to version mismatch!")
     print("Success")
     return
 
