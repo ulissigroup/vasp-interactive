@@ -151,3 +151,6 @@ sandbox/
 **/func_code.py
 README.md.bk
 vasp.*.tgz
+vasp.*/
+patch-54
+patch-6*
