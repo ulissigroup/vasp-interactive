@@ -9,11 +9,14 @@ import shutil
 fpath = Path(__file__)
 fdir = fpath.parent
 
+
 def replace(s):
     return s
 
+
 def insert(s):
     return r"\1" + s + r"\3"
+
 
 patch_fsockets_f90 = """!F90 ISO_C_BINGING wrapper for socket communication.
 
@@ -220,7 +223,7 @@ patch_fsockets_f90 = """!F90 ISO_C_BINGING wrapper for socket communication.
 
 """
 
-patch_socket_c = """/* A minimal wrapper for socket communication.
+patch_sockets_c = """/* A minimal wrapper for socket communication.
 
 Copyright (C) 2013, Joshua More and Michele Ceriotti
 
@@ -465,6 +468,251 @@ patch_reader_F = [
     "      IF (IBRION==23) ISYM=0 ! default no symm for ipi driver mode\n",
 ]
 
+patch_ipi_open_socket = """ !-----------------------------------------------------------------------
+! ipi open socket
+!-----------------------------------------------------------------------
+#ifdef MPI
+      IF (DYN%IBRION==23) THEN
+        IF (COMM%NODE_ME == 1) THEN
+          WRITE(TIU0,*) " DRIVER - Connecting to host ", TRIM(IHOST)
+          IF (INET > 0) THEN
+            WRITE(TIU0,*) " on port ", PORT, " using an internet socket."
+          ELSE
+            WRITE(TIU0,*) " using UNIX socket."
+          ENDIF
+          CALL open_socket(SOCKET, INET, PORT, TRIM(IHOST))
+          WRITE(TIU0,*) "VASP ipi driver (written by Wei Fang) successfully starting"
+        ENDIF
+        ! get initial geometries from ipi
+      driver_init: DO
+        ! do communication on master node only
+        IF (COMM%NODE_ME == 1) THEN
+          CALL readbuffer(SOCKET, HEADER, MSGLEN)
+          IF (TRIM(HEADER) == "STATUS") THEN
+            IMSG=1
+          ELSE IF (TRIM(HEADER) == "POSDATA") THEN
+            IMSG=2
+          ELSE
+            IMSG=4
+          ENDIF
+        ENDIF
+        CALL M_bcast_i(COMM,IMSG,1)
+        IF (COMM%NODE_ME == 1) WRITE(TIU0,*) " @ DRIVER MODE: Message from server: ", TRIM(HEADER)
+        IF (IMSG == 1) THEN
+          IF (COMM%NODE_ME == 1) THEN  ! does not need init
+            CALL writebuffer(SOCKET, "READY       ", MSGLEN)
+          ENDIF
+        ELSE IF (IMSG == 2) THEN
+          ! receives the positions & the cell data
+          IF (COMM%NODE_ME == 1) THEN    ! first the cell and the number of atoms
+            CALL readbuffer(SOCKET, CELL_H, 9)
+            CALL readbuffer(SOCKET, CELL_IH, 9)
+            CALL readbuffer(SOCKET, NAT)
+          ENDIF
+          ! broadcast to all nodes
+          CALL M_bcast_d(COMM,CELL_H,9)
+          CALL M_bcast_d(COMM,CELL_IH,9)
+          CALL M_bcast_i(COMM,NAT,1)
+          ! convert to vasp LATT_CUR%A & %B format & units conversion
+          DO NI=1,3
+            LATT_CUR%A(NI,1) = CELL_H(NI*3-2)*AUTOA
+            LATT_CUR%A(NI,2) = CELL_H(NI*3-1)*AUTOA
+            LATT_CUR%A(NI,3) = CELL_H(NI*3)*AUTOA
+          ENDDO
+          DO NI=1,3
+            LATT_CUR%B(NI,1) = CELL_IH(NI*3-2)/AUTOA
+            LATT_CUR%B(NI,2) = CELL_IH(NI*3-1)/AUTOA
+            LATT_CUR%B(NI,3) = CELL_IH(NI*3)/AUTOA
+          ENDDO
+          CALL LATTIC(LATT_CUR)
+ 2333     FORMAT(' @DRIVER MODE: Received direct lattice vectors',17X,'reciprocal lattice vectors'/ &
+       &   3(2(3X,3F13.9)/) /)
+          IF (COMM%NODE_ME == 1) THEN
+            WRITE(TIU0,*) " @ DRIVER MODE: Received initial lattice "
+            WRITE(TIU6,2333) ((LATT_CUR%A(I,J),I=1,3),(LATT_CUR%B(I,J),I=1,3),J=1,3)
+          ENDIF
+          ! then we can allocate the buffer for the positions, and receive them
+          ALLOCATE(IPIATOMS(3*NAT))
+          ALLOCATE(IPIFORCES(3*NAT))
+          IF (COMM%NODE_ME == 1) CALL readbuffer(SOCKET, IPIATOMS, NAT*3)
+          CALL M_bcast_d(COMM,IPIATOMS,NAT*3) ! and broadcast them to all nodes
+          ! convert to vasp DYN%POSION format & units conversion
+          DO NI=1,NAT
+            DYN%POSION(1,NI) = IPIATOMS(NI*3-2)*AUTOA
+            DYN%POSION(2,NI) = IPIATOMS(NI*3-1)*AUTOA
+            DYN%POSION(3,NI) = IPIATOMS(NI*3)*AUTOA
+          ENDDO
+          CALL KARDIR(NAT,DYN%POSION,LATT_CUR%B)
+          CALL TOPRIM(NAT,DYN%POSION)
+          DYN%POSIOC=DYN%POSION
+          IF (COMM%NODE_ME == 1) WRITE(TIU0,*) " @ DRIVER MODE: Received initial positions "
+          EXIT driver_init
+        ELSE
+          INFO%LSTOP=.TRUE.
+          IF (COMM%NODE_ME == 1) WRITE(TIU0,*) "EXIT driver or unknow msg received"
+          EXIT driver_init
+        ENDIF
+      ENDDO driver_init
+      ENDIF
+#endif
+
+!-----------------------------------------------------------------------
+"""
+
+patch_ipi_driver = """ !=======================================================================
+ ! DYN%IBRION =
+! 23  driver mode for ipi
+!=======================================================================
+#ifdef MPI
+      ELSE IF (DYN%IBRION==23) THEN
+        DYN%POSIOC=DYN%POSION
+        HASDATA=.TRUE.
+
+      driver_loop: DO
+        ! do communication on master node only
+        IF (COMM%NODE_ME == 1) THEN
+          CALL readbuffer(SOCKET, HEADER, MSGLEN)
+          IF (TRIM(HEADER) == "STATUS") THEN
+            IMSG=1
+          ELSE IF (TRIM(HEADER) == "POSDATA") THEN
+            IMSG=2
+          ELSE IF (TRIM(HEADER) == "GETFORCE") THEN
+            IMSG=3
+          ELSE
+            IMSG=4
+          ENDIF
+        ENDIF
+        CALL M_bcast_i(COMM,IMSG,1)
+        IF (COMM%NODE_ME == 1) WRITE(TIU0,*) " @ DRIVER MODE: Message from server: ", TRIM(HEADER)
+        IF (IMSG == 1) THEN
+          IF (COMM%NODE_ME == 1) THEN
+            IF (HASDATA) THEN
+              CALL writebuffer(SOCKET,"HAVEDATA    ",MSGLEN)
+            ELSE
+              CALL writebuffer(SOCKET,"READY       ",MSGLEN)
+            ENDIF
+          ENDIF
+        ELSE IF (IMSG == 2) THEN
+          ! receives cell data
+          IF (COMM%NODE_ME == 1) THEN
+            CALL readbuffer(SOCKET, CELL_H, 9)
+            CALL readbuffer(SOCKET, CELL_IH, 9)
+            CALL readbuffer(SOCKET, NAT)
+          ENDIF
+          ! broadcast to all nodes
+          CALL M_bcast_d(COMM,CELL_H,9)
+          CALL M_bcast_d(COMM,CELL_IH,9)
+          CALL M_bcast_i(COMM,NAT,1)
+          ! convert to vasp LATT_CUR%A & %B format & units conversion
+          DO NI=1,3
+            LATT_CUR%A(NI,1) = CELL_H(NI*3-2)*AUTOA
+            LATT_CUR%A(NI,2) = CELL_H(NI*3-1)*AUTOA
+            LATT_CUR%A(NI,3) = CELL_H(NI*3)*AUTOA
+          ENDDO
+          DO NI=1,3
+            LATT_CUR%B(NI,1) = CELL_IH(NI*3-2)/AUTOA
+            LATT_CUR%B(NI,2) = CELL_IH(NI*3-1)/AUTOA
+            LATT_CUR%B(NI,3) = CELL_IH(NI*3)/AUTOA
+          ENDDO
+          CALL LATTIC(LATT_CUR)
+          IF (COMM%NODE_ME == 1) THEN
+            WRITE(TIU0,*) " @ DRIVER MODE: Received lattice"
+            WRITE(TIU6,2333) ((LATT_CUR%A(I,J),I=1,3),(LATT_CUR%B(I,J),I=1,3),J=1,3)
+          ENDIF
+          ! receives positions
+          IF (COMM%NODE_ME == 1) CALL readbuffer(SOCKET, IPIATOMS, NAT*3)
+          CALL M_bcast_d(COMM,IPIATOMS,NAT*3) ! and broadcast them to all nodes
+          ! convert to vasp DYN%POSION format & units conversion
+          DO NI=1,NAT
+            DYN%POSION(1,NI) = IPIATOMS(NI*3-2)*AUTOA
+            DYN%POSION(2,NI) = IPIATOMS(NI*3-1)*AUTOA
+            DYN%POSION(3,NI) = IPIATOMS(NI*3)*AUTOA
+          ENDDO
+          CALL KARDIR(NAT,DYN%POSION,LATT_CUR%B)
+          CALL TOPRIM(NAT,DYN%POSION)
+          IF (COMM%NODE_ME == 1) write(TIU0,*) " @ DRIVER MODE: Received positions "
+          ! move on to the next DO ion
+          EXIT driver_loop
+        ELSE IF (IMSG == 3) THEN
+          ! communicates energy info back to i-pi
+          IF (COMM%NODE_ME == 1) THEN
+            WRITE(TIU0,*) " @ DRIVER MODE: Returning v,forces,stress "
+            IPIPOT = (TOTEN-E%EENTROPY/(2+NORDER))*EVTOHA
+            DO NI=1,NAT
+              IPIFORCES(NI*3-2) = TIFOR(1,NI)*FOCTOAU
+              IPIFORCES(NI*3-1) = TIFOR(2,NI)*FOCTOAU
+              IPIFORCES(NI*3) = TIFOR(3,NI)*FOCTOAU
+            ENDDO
+            DO NI=1,3
+              VIRIAL(NI*3-2) = TSIF(1,NI)*EVTOHA
+              VIRIAL(NI*3-1) = TSIF(2,NI)*EVTOHA
+              VIRIAL(NI*3) = TSIF(3,NI)*EVTOHA
+            ENDDO
+            CALL writebuffer(SOCKET,"FORCEREADY  ",MSGLEN)
+            CALL writebuffer(SOCKET,IPIPOT)
+            CALL writebuffer(SOCKET,NAT)
+            CALL writebuffer(SOCKET,IPIFORCES,3*NAT)
+            CALL writebuffer(SOCKET,VIRIAL,9)
+            ! i-pi can also receive an arbitrary string, we just send back zero characters.
+            CALL writebuffer(SOCKET,0)
+          ENDIF
+          HASDATA=.FALSE.
+        ELSE
+          INFO%LSTOP=.TRUE.
+          IF (COMM%NODE_ME == 1) WRITE(TIU0,*) "EXIT driver or unknow msg received"
+          EXIT driver_loop
+        ENDIF
+      ENDDO driver_loop
+#endif
+
+!=======================================================================
+"""
+
+patch_main_F = [
+    # 0: ipi socket declarations
+    """! ipi socket module
+      USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer
+! end ipi socket module
+""",
+    # 1: ipi variables declaration
+    """      
+      ! ipi socket variables
+      INTEGER, PARAMETER :: MSGLEN=12 ! length of headers of driver/wrapper commun. protocol
+      INTEGER :: SOCKET, PORT       ! socket ID, port
+      INTEGER :: INET               ! socket mode: 0 = unix, 1 = inet
+      CHARACTER(LEN=1024) :: IHOST  ! address of the server
+      CHARACTER(LEN=12) :: HEADER   ! socket communication buffers
+      INTEGER :: IMSG               ! 1 status, 2 posdata, 3 getforce, 4 other
+      LOGICAL :: HASDATA
+      ! ipi variables for the system
+      INTEGER :: NAT
+      REAL(q) :: IPIPOT
+      REAL(q), ALLOCATABLE :: IPIATOMS(:), IPIFORCES(:)
+      REAL(q) :: CELL_H(9), CELL_IH(9), VIRIAL(9)
+      ! unit conversion
+      REAL(q) :: EVTOHA, FOCTOAU
+
+""",
+    # 2: ipi variables init
+    """      ! ipi initialize variables
+      EVTOHA = 1_q/(2_q*RYTOEV)
+      FOCTOAU = AUTOA*EVTOHA
+      HASDATA = .FALSE.
+
+""",
+    # 3: ipi incar params
+    """! -ipi- additional params for READER
+         ,IHOST,PORT,INET &
+""",
+    # 4: ipi open socket
+    patch_ipi_open_socket,
+    # 5: Entropy contribution fix
+    """IF (DYN%IBRION==-1 .OR. DYN%IBRION==5 .OR. DYN%IBRION==6 .OR. &
+           DYN%IBRION==7 .OR. DYN%IBRION==8 .OR. DYN%IBRION==23) THEN
+""",
+    # 6: ipi driver mode
+    patch_ipi_driver,
+]
 
 
 def patch_txt(old_file, pattern, patch_content, replace_func):
@@ -479,7 +727,9 @@ def patch_txt(old_file, pattern, patch_content, replace_func):
         matches = re.findall(pattern, txt, flags=(re.MULTILINE | re.IGNORECASE))
         assert len(matches) == 1
         # print(matches[0])
-        txt_new = re.sub(pattern, repl, txt, count=1, flags=(re.MULTILINE | re.IGNORECASE))
+        txt_new = re.sub(
+            pattern, repl, txt, count=1, flags=(re.MULTILINE | re.IGNORECASE)
+        )
         backup_file = old_file.with_suffix(old_file.suffix + ".bak")
         shutil.copy(old_file, backup_file)
     with open(old_file, "w") as fd:
@@ -494,6 +744,15 @@ patches.append(
         "desc": "Create new fsockets.f90",
         "pattern": None,
         "patch_content": patch_fsockets_f90,
+        "replace_func": None,
+    }
+)
+patches.append(
+    {
+        "name": "sockets.c",
+        "desc": "Create new sockets.c",
+        "pattern": None,
+        "patch_content": patch_sockets_c,
         "replace_func": None,
     }
 )
@@ -580,7 +839,74 @@ patches.append(
     }
 )
 
+patches.append(
+    {
+        "name": "main.F",
+        "desc": "0: ipi socket declarations",
+        # There is a blank link after USE dvvtrajectory so use it wisely
+        "pattern": r"(USE dvvtrajectory\n)([\s\S]*?)(^\s*?$\n)",
+        "patch_content": patch_main_F[0],
+        "replace_func": insert,
+    },
+)
 
+patches.append(
+    {
+        "name": "main.F",
+        "desc": "1: ipi socket variables declaration",
+        "pattern": r"(COMMON \/WAVCUT\/.*?$\n)([\s\S]*?)(^$\n)",
+        "patch_content": patch_main_F[1],
+        "replace_func": insert,
+    },
+)
+
+patches.append(
+    {
+        "name": "main.F",
+        "desc": "2: ipi variables init",
+        "pattern": r"(initialise \/ set constants and parameters.*?$\n[!=]*?$\n)(^[\s\S]*?)(^$\n)",
+        "patch_content": patch_main_F[2],
+        "replace_func": insert,
+    },
+)
+
+patches.append(
+    {
+        "name": "main.F",
+        "desc": "3: ipi incar params",
+        "pattern": r"(CALL READER\([\s\S]*?#ifdef libbeef[\s\S]*?#endif\s*?$\n)([\s\S]*?)(^\s*?\)\s*?$\n)",
+        "patch_content": patch_main_F[3],
+        "replace_func": insert,
+    },
+)
+
+patches.append(
+    {
+        "name": "main.F",
+        "desc": "4: ipi open socket",
+        "pattern": r"(no INCAR reading from here[\s\S]*?-{60}$\n)([\s\S]*?)(^#ifdef\s+(?:_OPENACC|CUDA_GPU))",
+        "patch_content": patch_main_F[4],
+        "replace_func": insert,
+    },
+)
+patches.append(
+    {
+        "name": "main.F",
+        "desc": "5: Entropy contribution fix",
+        "pattern": r"IF \(DYN%IBRION==-1.*?$\n.*?\) THEN",
+        "patch_content": patch_main_F[5],
+        "replace_func": replace,
+    },
+)
+patches.append(
+    {
+        "name": "main.F",
+        "desc": "6: ipi driver mode",
+        "pattern": r"(77280 FORMAT\(.*?\)\s*$\n)([\s\S]*?)(^![-=\s]*$\n.*?DYN%IBRION =)",
+        "patch_content": patch_main_F[6],
+        "replace_func": insert,
+    },
+)
 
 
 def main():
