@@ -691,14 +691,12 @@ patch_main_F = [
       REAL(q) :: CELL_H(9), CELL_IH(9), VIRIAL(9)
       ! unit conversion
       REAL(q) :: EVTOHA, FOCTOAU
-
 """,
     # 2: ipi variables init
     """      ! ipi initialize variables
       EVTOHA = 1_q/(2_q*RYTOEV)
       FOCTOAU = AUTOA*EVTOHA
       HASDATA = .FALSE.
-
 """,
     # 3: ipi incar params
     """! -ipi- additional params for READER
