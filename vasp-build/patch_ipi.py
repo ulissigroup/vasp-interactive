@@ -668,6 +668,12 @@ patch_ipi_driver = """ !========================================================
 !=======================================================================
 """
 
+patch_objects = """
+SOURCE+=\
+    sockets.o \
+    fsockets.o
+"""
+
 patch_main_F = [
     # 0: ipi socket declarations
     """! ipi socket module
@@ -756,6 +762,15 @@ patches.append(
 )
 patches.append(
     {
+        "name": ".objects",
+        "desc": "Add more objects",
+        "pattern": r"(SOURCE=\\[\s\S]*?(?<!\\)$)([\s\S]*?)(\n^SOURCE_O1)",
+        "patch_content": patch_objects,
+        "replace_func": insert,
+    }
+)
+patches.append(
+    {
         "name": "makefile",
         "desc": "Remove unwanted sockets.o <- sockets.f90 dependency",
         "pattern": r"(^F90SRC\+=main\.f90$\n)([\s\S]*?)(^\s*?$\n)",
@@ -795,7 +810,7 @@ patches.append(
     {
         "name": "reader.F",
         "desc": "1: ipi type configs",
-        "pattern": r"(SUBROUTINE READER[\s\S]*?#endif\s*?$\n)([\s\S]*?)(^\s*?&\s*?\))",
+        "pattern": r"(!-MM- end of addition\s*$\n)([\s\S]*?)(^$\n)",
         "patch_content": patch_reader_F[1],
         "replace_func": insert,
     }
