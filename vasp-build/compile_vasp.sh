@@ -97,28 +97,23 @@ fi
 if [[ ! -z "$INTERACTIVE_PATCH" ]]
 then
     echo "Patch interactive mode in VASP source code"
-    PATCH_PY=${INTERACTIVE_PATCH}/patch.py
-    if [[ ! -f "${PATCH_PY}" ]]
+    if [[ ! -f "${INTERACTIVE_PATCH}" ]]
     then
         echo "Cannot find the interactive patch script!"
         exit 1
     fi
-    python3 ${INTERACTIVE_PATCH}/patch.py ${NEW_ROOT}/src
+    python3 ${INTERACTIVE_PATCH} ${NEW_ROOT}/src
 fi
 
 if [[ ! -z "${IPI_PATCH}" ]]
 then
     echo "Patch iPi interface in VASP source code"
-    if [[ ! -d "${IPI_PATCH}" ]]
+    if [[ ! -f "${IPI_PATCH}" ]]
     then
-        echo "Cannot find the iPI patch files!"
+        echo "Cannot find the iPI patch script!"
         exit 1
     fi
-    cp ${IPI_PATCH}/*.c ${IPI_PATCH}/*.f90 ${NEW_ROOT}/src/
-    patch -d ${NEW_ROOT} -p0 < ${IPI_PATCH}/.objects.patch &&\
-	patch -d ${NEW_ROOT} -p0 < ${IPI_PATCH}/main.F.patch &&\
-	patch -d ${NEW_ROOT} -p0 < ${IPI_PATCH}/makefile.patch &&\
-	patch -d ${NEW_ROOT} -p0 < ${IPI_PATCH}/reader.F.patch
+    python3 ${IPI_PATCH} ${NEW_ROOT}/src
 fi
 
 sleep 2

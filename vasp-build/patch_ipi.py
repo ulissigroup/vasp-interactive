@@ -810,7 +810,7 @@ patches.append(
     {
         "name": "reader.F",
         "desc": "1: ipi type configs",
-        "pattern": r"(!-MM- end of addition\s*$\n)([\s\S]*?)(^$\n)",
+        "pattern": r"(!-MM- end of addition\s*?$\n)([\s\S]*?)(^$\n)",
         "patch_content": patch_reader_F[1],
         "replace_func": insert,
     }
@@ -820,10 +820,10 @@ patches.append(
     {
         "name": "reader.F",
         "desc": "2: Add NSW setting for ibrion 23",
-        "pattern": r"(IF \(IBRION.*\) NSW=1\s*$\n)([\s\S]*?)(^\s*CALL PROCESS_INCAR\(.*NSW.*$)",
+        "pattern": r"(IF \(IBRION.*\) NSW=1\s*?$\n)([\s\S]*?)(^\s*?CALL PROCESS_INCAR\(.*?NSW.*?$)",
         "patch_content": patch_reader_F[2],
         "replace_func": insert,
-        "version": "vasp6"
+        "version": "vasp6",
     }
 )
 # VASP5-specific, use RDATAB
@@ -831,10 +831,10 @@ patches.append(
     {
         "name": "reader.F",
         "desc": "2: Add NSW setting for ibrion 23",
-        "pattern": r"(IF \(IBRION.*\) NSW=1\s*$\n)([\s\S]*?)(^\s*CALL RDATAB\(.*NSW.*$)",
+        "pattern": r"(IF \(IBRION.*?\) NSW=1\s*?$\n)([\s\S]*?)(^\s*?CALL RDATAB\(.*?NSW.*?$)",
         "patch_content": patch_reader_F[2],
         "replace_func": insert,
-        "version": "vasp5"
+        "version": "vasp5",
     }
 )
 # VASP6-specific, use PROCESS_INCAR
@@ -842,10 +842,10 @@ patches.append(
     {
         "name": "reader.F",
         "desc": "3: Add ISIF setting for ibrion 23",
-        "pattern": r"(IF \(IBRION.*\) ISIF=0\s*$\n)([\s\S]*?)(^\s*CALL PROCESS_INCAR\(.*ISIF)",
+        "pattern": r"(IF \(IBRION.*?\) ISIF=0\s*?$\n)([\s\S]*?)(^\s*?CALL PROCESS_INCAR\(.*?ISIF)",
         "patch_content": patch_reader_F[3],
         "replace_func": insert,
-        "version": "vasp6"
+        "version": "vasp6",
     }
 )
 # VASP5-specific, use RDATAB
@@ -853,10 +853,10 @@ patches.append(
     {
         "name": "reader.F",
         "desc": "3: Add ISIF setting for ibrion 23",
-        "pattern": r"(IF \(IBRION.*\) ISIF=0\s*$\n)([\s\S]*?)(^\s*CALL RDATAB\(.*ISIF)",
+        "pattern": r"(IF \(IBRION.*?\) ISIF=0\s*?$\n)([\s\S]*?)(^\s*?CALL RDATAB\(.*?ISIF)",
         "patch_content": patch_reader_F[3],
         "replace_func": insert,
-        "version": "vasp5"
+        "version": "vasp5",
     }
 )
 # VASP6-specific, use PROCESS_INCAR
@@ -864,10 +864,10 @@ patches.append(
     {
         "name": "reader.F",
         "desc": "5: same as 4 but for VASP 6 (use PROCESS_INCAR), much shorter",
-        "pattern": r"(IWAVPR=MOD[\s\S]*#endif\s*\n)([\s\S]*?)(\n^! switch on symmetry)",
+        "pattern": r"(IWAVPR=MOD[\s\S]*?#endif\s*?\n)([\s\S]*?)(\n^! switch on symmetry)",
         "patch_content": patch_reader_F[5],
         "replace_func": insert,
-        "version": "vasp6"
+        "version": "vasp6",
     }
 )
 # VASP5-specific, use PROCESS_INCAR
@@ -875,10 +875,10 @@ patches.append(
     {
         "name": "reader.F",
         "desc": "4: Additional setting for IBRION == 23 (VASP5)",
-        "pattern": r"(CALL XML_INCAR\('IWAVPR'.*$\n)([\s\S]*?)(\n^! switch on symmetry)",
+        "pattern": r"(CALL XML_INCAR\('IWAVPR'.*?$\n)([\s\S]*?)(\n^! switch on symmetry)",
         "patch_content": patch_reader_F[4],
         "replace_func": insert,
-        "version": "vasp5"
+        "version": "vasp5",
     }
 )
 # VASP6 specific
@@ -886,10 +886,10 @@ patches.append(
     {
         "name": "reader.F",
         "desc": "6: Disable symmetry for IBRION 23",
-        "pattern": r"(^! switch on symmetry[\s\S]*?ISYM=2\s*?$\n)([\s\S]*?)(^\s*CALL PROCESS_INCAR\(.*ISYM)",
+        "pattern": r"(^! switch on symmetry[\s\S]*?ISYM=2\s*?$\n)([\s\S]*?)(^\s*?CALL PROCESS_INCAR\(.*?ISYM)",
         "patch_content": patch_reader_F[6],
         "replace_func": insert,
-        "version": "vasp6"
+        "version": "vasp6",
     }
 )
 # VASP5 specific
@@ -897,10 +897,10 @@ patches.append(
     {
         "name": "reader.F",
         "desc": "6: Disable symmetry for IBRION 23",
-        "pattern": r"(^! switch on symmetry[\s\S]*?ISYM=2\s*?$\n)([\s\S]*?)(^\s*CALL RDATAB\(.*ISYM)",
+        "pattern": r"(^! switch on symmetry[\s\S]*?ISYM=2\s*?$\n)([\s\S]*?)(^\s*?CALL RDATAB\(.*?ISYM)",
         "patch_content": patch_reader_F[6],
         "replace_func": insert,
-        "version": "vasp5"
+        "version": "vasp5",
     }
 )
 
@@ -967,7 +967,7 @@ patches.append(
     {
         "name": "main.F",
         "desc": "6: ipi driver mode",
-        "pattern": r"(77280 FORMAT\(.*?\)\s*$\n)([\s\S]*?)(^![-=\s]*$\n.*?DYN%IBRION =)",
+        "pattern": r"(77280 FORMAT\(.*?\)\s*?$\n)([\s\S]*?)(^![-=\s]*?$\n.*?DYN%IBRION =)",
         "patch_content": patch_main_F[6],
         "replace_func": insert,
     },
