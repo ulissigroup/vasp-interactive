@@ -174,9 +174,9 @@ Please contact us if you have issues applying the patches due to VASP source cod
 
 The iPI project (https://github.com/i-pi/i-pi) also provides a Fortran plugin that 
 can add native support for the socket protocal to VASP. 
-We have provided a separate script [`patch_ipi.py`](./patch_ipi.py) to wrap up such process which works indepedent of the VASP version. 
-`patch_ipi.py` can be combined with `patch.py` and an example of compilation 
-is like follows:
+We have provided a separate script [`patch_ipi.py`](./patch_ipi.py) to wrap up such process which works indepedent of the VASP version 
+(i.e. no need to apply a patch file for each minor version of VASP). 
+Since both `patch.py` and `patch_ipi.py` work by matching regex patterns, they can be applied separatedly to the same source files:
 ```bash
 ROOT=/tmp VASP_BINARY_PATH=/work/bin \
 INTERACTIVE_PATCH=patch.py \
@@ -186,10 +186,11 @@ IPI_PATCH=patch_ipi.py \
                   makefile_examples/makefile.include.vaspX
 ```
 
-The main difference is
+The main difference is that
 `VaspInteractive` adds the socket communication on top of a local VASP calculator while 
 iPI-patch VASP has the socket interface statically compiled. 
-In addition, as mentioned in [the introduction](#do-i-need-these-patches), `VaspInteractive` provides ad-hoc socket communication compatibility without patching VASP, 
+In addition, as mentioned in [the introduction](#do-i-need-these-patches),
+ `VaspInteractive` provides ad-hoc socket communication compatibility without patching VASP, 
 if no lattice change is involved.
 
 
