@@ -11,7 +11,7 @@
 # INTERACTIVE_PATCH: if set and not empty, apply the interactive patch
 # IPI_PATCH: if set and not empty, apply the ipi patch
 # VASP_BINARY_PATH: if set and not empty, sync the executables to this folder
-# LIBBEEF: if set and not empty, link libbeef to VASP (e.g. /opt/beef)
+# LIBBEEF: if set and not empty, link libbeef to VASP (e.g. /opt/beef/lib)
 ##########################################################################
 
 # NVHPC-specific directives
@@ -85,13 +85,13 @@ if [[ ! -z "$LIBBEEF" ]]
 then
     echo "Add BEEF-vdW to VASP"
     LIBBEEF=`realpath ${LIBBEEF}`
-    if [[ ! -d ${LIBBEEF}/lib ]]
+    if [[ ! -d ${LIBBEEF} ]]
     then
-        echo "Directory ${LIBBEEF}/lib does not exist!"
+        echo "Directory ${LIBBEEF} does not exist!"
         exit 1
     fi
     sed -i "/^CPP .*/i #Add\nCPP_OPTIONS += -Dlibbeef" ${NEW_ROOT}/makefile.include
-	echo -e "\n#LibBEEF support\nLLIBS += -L${LIBBEEF}/lib -lbeef" >> ${NEW_ROOT}/makefile.include
+	echo -e "\n#LibBEEF support\nLLIBS += -L${LIBBEEF} -lbeef" >> ${NEW_ROOT}/makefile.include
 fi
 
 if [[ ! -z "$INTERACTIVE_PATCH" ]]
