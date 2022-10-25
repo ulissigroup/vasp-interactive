@@ -25,6 +25,9 @@ However, you may consider apply our patches for the following reasons:
 2. Supporting input of lattice change (e.g. performing lattice optimization, fitting EOS curve)
 3. Full compatibility with the iPI socket protocol via `VaspInteractive`
 
+Note we also provide a patch script inspired by the [iPI project](https://github.com/i-pi/i-pi/tree/master/examples/VASP) to add native socket support 
+into VASP (5.4 and up). Please check [the advanced topic](#building-native-socket-interface-to-vasp) for more details.
+
 <!-- Note you can also compile the VASP source code to support direct iPI protocol using patches provided with the 
 [iPI package](https://github.com/i-pi/i-pi/tree/master/examples/VASP) but currently limited to VASP 5.x. Our patch 
 focuses only to enhance be behavior of the interactive mode of VASP code, and leaves the socket-I/O to `VaspInteractive`,
@@ -170,7 +173,8 @@ this is because the interactive mode in VASP source code has not been significan
 
 Please contact us if you have issues applying the patches due to VASP source code change.
 
-## Advanced: building native socket interface to VASP
+## Advanced topics
+### Building native socket interface to VASP
 
 The iPI project (https://github.com/i-pi/i-pi) also provides a Fortran plugin that 
 can add native support for the socket protocal to VASP. 
