@@ -138,18 +138,19 @@ jobs:
         cd vasp/tests/beef
         bash test.sh
       env:
-        VASP_COMMAND: ${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std
+        VASP_COMMAND: "${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std"
+        
     - name: Do test interactive mode
       run: |
         cd vasp/tests/interactive
         bash test.sh
       env:
-        VASP_COMMAND: ${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std
+        VASP_COMMAND: "${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std"
       if: ${{ matrix.variant == 'patch' }}
     - name: Do test ipi-patch
       run: |
         cd vasp/tests/ipi-socket
         bash test.sh
       env:
-        VASP_COMMAND: ${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std
+        VASP_COMMAND: "${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std"
       if: ${{ matrix.variant == 'patch' }}
