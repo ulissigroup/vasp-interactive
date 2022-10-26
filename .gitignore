@@ -156,3 +156,9 @@ examples/test-ipi/vasp.err
 patches/vasp.*.tgz
 .vpi_param.pkl
 .vpi_params.pkl
+README.md.bk
+vasp.*.tgz
+vasp.*/
+patch-54
+patch-6*
+.DS_Store

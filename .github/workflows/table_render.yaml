@@ -1,0 +1,169 @@
+# Sending test jobs to NERSC (cori / perlmutter)
+# The ssh key needs to be updated frequently
+name: Render table part in readme
+
+on:
+  workflow_dispatch:
+
+jobs:
+  docker-github-runner:
+    # Some issues with vasp5.4 when running with large number of cores (>=8)
+    # may not be reproduced in github-runner which only used 2 cores
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-latest
+    container:
+      image: ulissigroup/kubeflow_vasp:extras-notebook
+      env: 
+        VASP_PREFIX: "mpirun -np 2 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 --allow-run-as-root"
+      options: --user root --entrypoint /bin/bash
+      credentials:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Package install
+      run: |
+        python -m pip install -e .
+    - name: Run test (2 cores)
+      run: |
+        for ver in "vasp.5.4.4.pl2" "vasp.6.1.2_pgi_mkl" "vasp.6.2.0_pgi_mkl" "vasp.6.3.0_pgi_mkl"
+        do
+          export VASP_COMMAND="$VASP_PREFIX /opt/$ver/bin/vasp_std"
+          echo ${VASP_COMMAND}
+          echo "Testing VaspInteractive on $ver"
+          # Force using the standard python
+          python examples/ex00_vasp_test.py | tee tmp.out
+          RES=`sed -n "s/^Test result:\(.*\)$/\1/p" tmp.out`
+          echo $ver, $RES >> ulissi_docker.txt
+          rm tmp.out
+        done
+        dat=`date +"%Y-%m-%dT%H:%M:%S%z"`
+        echo "#Last updated: $dat" >> ulissi_docker.txt
+        cat ulissi_docker.txt
+
+  submit-nersc-jobs:
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host: cori
+            url:  cori.nersc.gov
+          - host: perlmutter
+            url:  perlmutter-p1.nersc.gov
+          # The login-only version is only used for shifter image testing
+          - host: perlmutter-login-only
+            url:  perlmutter-p1.nersc.gov
+    env:
+      GIST_ID: afede700c2b7703c77e10e51333bfa75
+    steps:
+    # Copied from https://thepaulo.medium.com/scheduling-jobs-in-a-super-computer-cluster-using-github-actions-2ee83405cb69
+    - uses: actions/checkout@v2
+    - name: Get a short version of the GIT commit SHA to use in naming files
+      id: getshortsha
+      run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+    - name: Create local ssh key
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_KEY" > ~/.ssh/nersc
+        chmod 600 ~/.ssh/nersc
+        ssh-keyscan -H ${{ matrix.url }} >> ~/.ssh/known_hosts
+      env:
+        SSH_KEY: ${{ secrets.NERSC_SSH_KEY }}
+    - name: Copy files Cori
+      run: |
+        echo $JID
+        scp -i ~/.ssh/nersc examples/command-test-examples/cori_hsw.sh \
+                            ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$SCRATCH/$JID-hsw.sh"
+        scp -i ~/.ssh/nersc examples/command-test-examples/cori_knl.sh \
+                            ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$SCRATCH/$JID-knl.sh"
+      if: ${{ matrix.host == 'cori' }}
+      env:
+        JID: ${{ github.run_id }}
+    - name: Copy files Perlmutter
+      run: |
+        echo $JID
+        scp -i ~/.ssh/nersc examples/command-test-examples/perlmutter_cpu.sh \
+                            ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$SCRATCH/$JID-cpu.sh"
+        scp -i ~/.ssh/nersc examples/command-test-examples/perlmutter_gpu.sh \
+                            ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$SCRATCH/$JID-gpu.sh"
+      if: ${{ matrix.host == 'perlmutter' }}
+      env:
+        JID: ${{ github.run_id }}
+    - name: Copy files Perlmutter-Login (shifter only)
+      run: |
+        scp -i ~/.ssh/nersc examples/command-test-examples/docker_image.sh \
+                            ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }}:"\$SCRATCH/$JID-docker-img.sh"
+      if: ${{ matrix.host == 'perlmutter-login-only' }}
+      env:
+        JID: ${{ github.run_id }}
+    - name: Interactive job Cori
+      run: |
+        echo $JID $SHA
+        ssh -i ~/.ssh/nersc -tt ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+            "echo 'GH_TOKEN=$GHT GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-knl.sh' | salloc -N 1 -C knl -q interactive -t 00:8:00"
+        ssh -i ~/.ssh/nersc -tt ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+            "echo 'GH_TOKEN=$GHT GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-hsw.sh' | salloc -N 1 -C haswell -q interactive -t 00:8:00"
+      if: ${{ matrix.host == 'cori' }}
+      env:
+        JID: ${{ github.run_id }}
+        SHA: ${{ steps.getshortsha.outputs.sha_short }}
+        GHT: ${{ secrets.GIST_SECRET }}
+    - name: Interactive job Perlmutter
+      run: |
+        echo $JID $SHA
+        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+            "echo 'GH_TOKEN=$GHT GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-cpu.sh' | salloc -N 1 -C cpu -q interactive -t 00:8:00"
+        ssh -i ~/.ssh/nersc -t ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+            "echo 'GH_TOKEN=$GHT  GIT_REF=$SHA GIST_ID=$GIST_ID bash \$SCRATCH/$JID-gpu.sh' | salloc -N 1 -C gpu -q interactive -A m2755_g -t 00:8:00"
+      if: ${{ matrix.host == 'perlmutter' }}
+      env:
+        JID: ${{ github.run_id }}
+        SHA: ${{ steps.getshortsha.outputs.sha_short }}
+        GHT: ${{ secrets.GIST_SECRET }}
+    - name: Testing Shifter on Perlmutter (login)
+      run: |
+        echo $JID $SHA
+        ssh -i ~/.ssh/nersc ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
+            "shifter --image=ulissigroup/kubeflow_vasp:beef_vdw -e GIT_REF=$SHA -e GIST_ID=$GIST_ID -e GH_TOKEN=$GHT -- bash \$SCRATCH/$JID-docker-img.sh"
+      if: ${{ matrix.host == 'perlmutter-login-only' }}
+      env:
+        JID: ${{ github.run_id }}
+        SHA: ${{ steps.getshortsha.outputs.sha_short }}
+        GHT: ${{ secrets.GIST_SECRET }}
+    - name: Cleanup ssh key
+      run: |
+        rm -rf ~/.ssh
+
+  render-table:
+    needs: [submit-nersc-jobs,]
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false   
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - run: |
+        python -m pip install requests
+    - name: Output render part
+      run: |
+        python examples/command-test-examples/gist_to_table.py --update
+        git diff README.md
+        cat README.md
+    - name: Update readme in current branch
+      uses: EndBug/add-and-commit@v9
+      with:
+        add: 'README.md'
+        author_name: Action Bot
+        author_email: alchem0x2a@gmail.com
+        push: true
