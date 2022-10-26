@@ -133,4 +133,17 @@ jobs:
         ${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std > /tmp/vasp.out 2>&1 || true
         grep " I REFUSE TO CONTINUE WITH THIS SICK JOB" /tmp/vasp.out || grep "Error reading item" /tmp/vasp.out
         rm -rf /tmp/vasp.out
-    # - name: Check if error message exists
+    - name: Do test beef
+      run: |
+        cd vasp/tests/beef
+        bash test.sh
+    - name: Do test interactive mode
+      run: |
+        cd vasp/tests/interactive
+        bash test.sh
+      if: ${{ matrix.variant == 'patch' }}
+    - name: Do test ipi-patch
+      run: |
+        cd vasp/tests/ipi-socket
+        bash test.sh
+      if: ${{ matrix.variant == 'patch' }}
