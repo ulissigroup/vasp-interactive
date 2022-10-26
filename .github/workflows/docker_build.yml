@@ -45,8 +45,8 @@ jobs:
       - name: Build and push to GHCR
         uses: docker/build-push-action@v2
         with:
-          context: vasp-build/
-          file: vasp-build/Dockerfile.build_env
+          context: vasp-build/extras/
+          file: vasp-build/extras/Dockerfile.build_env
           push: true
           tags: |
             ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:build_env
@@ -89,8 +89,8 @@ jobs:
       - name: Build and push to GHCR
         uses: docker/build-push-action@v2
         with:
-          context: vasp-build/
-          file: vasp-build/Dockerfile.runtime
+          context: vasp-build/extras/
+          file: vasp-build/extras/Dockerfile.runtime
           push: true
           tags: |
             ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime
