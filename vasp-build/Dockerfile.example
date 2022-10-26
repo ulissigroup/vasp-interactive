@@ -1,0 +1,115 @@
+###############################################################################
+# Example Dockerfile to compile VASP binaries
+# Please edit the sections marked as EDITME according to your needs
+# See README.md for details
+###############################################################################
+ARG HPCSDK_VERSION=21.2
+ARG CUDA_LIB_VERSION=11.2
+ARG UBUNTU_VERSION=20.04
+ARG BUILD_ENV=ghcr.io/ulissigroup/vasp-interactive:build_env-hpcsdk${HPCSDK_VERSION}-${UBUNTU_VERSION}
+ARG LIBBEEF=/opt/libbeef
+ARG NCORES=8
+
+# Stage 0: builder --> patch and compile VASP source codes
+FROM nvcr.io/nvidia/nvhpc:${HPCSDK_VERSION}-devel-cuda_multi-ubuntu${UBUNTU_VERSION} as builder
+ARG CUDA_LIB_VERSION
+ARG LIBBEEF
+
+RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+
+# Minimal builder requirements
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update -y && \
+	apt-get install -y --no-install-recommends \
+	make \
+	intel-mkl-full \
+	makedepf90 \
+	libfftw3-3 \
+	libfftw3-dev \
+	ca-certificates \
+	rsync \
+	unzip \
+	zip \
+	wget \
+    git \
+    python3 \
+    python3-pip &&\
+    rm -rf /var/lib/apt/lists/*
+
+
+### libbeef only for linking purpose
+WORKDIR /opt
+RUN echo ${LIBBEEF} &&\	
+	wget https://github.com/vossjo/libbeef/archive/master.zip &&\
+	unzip master.zip &&\
+	mkdir libbeef &&\
+	cd libbeef-master &&\
+	./configure --prefix=${LIBBEEF} &&\
+	make -j4 &&\
+	make install &&\
+	rm -rf /opt/libbeef-master /opt/master.zip
+
+###############################################################################
+# EDITME!
+# 1. Place your vasp.X.Y.Z.tgz at the same level as this Dockerfile
+# 2. Replace / edit the makefiles if necessary
+# 3. Modify the variables passed to compile_vasp.sh as you wish
+# 4. You can use multiple build stages for different VASP versions and 
+#    copy them into the main stage
+###############################################################################
+WORKDIR /tmp
+# Change vasp.6.3.0.tgz to your actual vasp tarball name
+COPY compile_vasp.sh ./
+COPY vasp.6.3.0.tgz ./
+COPY makefile_examples/makefile ./makefile
+# Change to makefile_examples/makefile.include.vasp6 if you're building on VASP 5.x
+COPY makefile_examples/makefile.include.vasp6 ./makefile.include
+COPY patch.py ./
+COPY patch_ipi.py ./
+RUN mkdir -p /vasp/bin
+# Example: build vasp 6.3.0 to /tmp/vasp.6.3.0/bin with enhanced interactive mode
+RUN NCORES=${NCORES} INTERACTIVE_PATCH=patch.py IPI_PATCH=patch_ipi.py \
+     VASP_BINARY_PATH=/vasp/bin bash ./compile_vasp.sh vasp.6.3.0.tgz makefile makefile.include
+
+FROM nvcr.io/nvidia/nvhpc:${HPCSDK_VERSION}-runtime-cuda${CUDA_LIB_VERSION}-ubuntu${UBUNTU_VERSION} as main
+ARG HPCSDK_VERSION
+ARG CUDA_LIB_VERSION
+# Install libfftw
+ARG DEBIAN_FRONTEND=noninteractive
+# Minimal requirements for the runtime image
+RUN apt-get update -y && apt-get install -y --no-install-recommends ca-certificates intel-mkl-full libfftw3-3 wget htop unzip && rm -rf /var/lib/apt/lists/*
+
+# Copy in the qd library from compilers/extra and add it to the ld_library_path
+COPY --from=builder /opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras /opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras
+ENV LD_LIBRARY_PATH="/opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/compilers/extras/qd/lib:/opt/nvidia/hpc_sdk/Linux_x86_64/${HPCSDK_VERSION}/comm_libs/${CUDA_LIB_VERSION}/nccl/lib:${LD_LIBRARY_PATH}" 
+ENV OMP_NUM_THREADS=1 
+ENV NO_STOP_MESSAGE=1
+
+#####################################################################
+# EDITME!
+# This part installs extra apt packages that to be used in the runtime
+# image
+#####################################################################
+RUN apt-get update -y &&\
+    apt-get install -y --no-install-recommends \
+    # Add more packages here
+    htop &&\
+    rm -rf /var/lib/apt/lists/*
+
+#####################################################################
+# EDITME!
+# The example shows how to transfer the VASP binaries from builder
+# stage to the main image under /vasp/bin
+#####################################################################
+COPY --from=builder /vasp/bin /vasp/bin
+RUN chmod 550 -R /vasp/bin
+
+#####################################################################
+# EDITME!
+# COPY the VASP Pseudopotential files and other necessary files into
+# the image
+#####################################################################
+
+
+
+
