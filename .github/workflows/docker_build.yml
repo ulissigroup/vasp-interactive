@@ -115,7 +115,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        vasp-version: ["vasp54", "vasp61", "vasp62", "vasp63"]
+        vasp-version: ["54", "61", "62", "63"]
         variant: ["patch", "pristine"]
     steps:
     - name: Checkout
