@@ -166,6 +166,8 @@ the minimal dependencies are:
 - `python3`
 
 
+
+
 ## Version compatibility
 
 `patch.py` is meant to work for (theoretically) any VASP version > 5.4, 
@@ -196,6 +198,20 @@ iPI-patch VASP has the socket interface statically compiled.
 In addition, as mentioned in [the introduction](#do-i-need-these-patches),
  `VaspInteractive` provides ad-hoc socket communication compatibility without patching VASP, 
 if no lattice change is involved.
+
+### Compilation jobs on kubernetes (internal use)
+
+The building process inside container can also be automated on a kubernetes cluster, as the example
+in [`k8s-vasp-build.yaml`](./k8s-vasp-build.yaml) shows:
+```bash
+# Perform a fresh building
+kubectl delete -f k8s-vasp-build.yaml
+kubectl apply -f k8s-vasp-build.yaml
+```
+You will find the compiled VASP binaries (pristine and patched) under the `workingDir`, which are
+the actual ones used for our CI/CD pipelines.
+
+
 
 
 
