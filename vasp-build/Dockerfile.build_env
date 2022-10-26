@@ -53,6 +53,11 @@ RUN echo ${LIBBEEF} &&\
 	rm -rf /opt/libbeef-master /opt/master.zip
 
 COPY compile_vasp.sh /opt/bin/
+WORKDIR /opt
+RUN git clone https://github.com/MestreLion/git-tools.git &&\
+	cp git-tools/git* bin/ &&\
+	rm -rf git-tools
+    
 RUN ls -al /opt/bin && chmod +x /opt/bin/compile_vasp.sh
 ENV PATH=/opt/bin:$PATH
 
