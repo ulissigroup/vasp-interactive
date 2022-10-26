@@ -45,7 +45,7 @@ jobs:
       - name: Build and push to GHCR
         uses: docker/build-push-action@v2
         with:
-          context: vasp-build/extras/
+          context: vasp-build/
           file: vasp-build/extras/Dockerfile.build_env
           push: true
           tags: |
@@ -89,7 +89,7 @@ jobs:
       - name: Build and push to GHCR
         uses: docker/build-push-action@v2
         with:
-          context: vasp-build/extras/
+          context: vasp-build/
           file: vasp-build/extras/Dockerfile.runtime
           push: true
           tags: |
