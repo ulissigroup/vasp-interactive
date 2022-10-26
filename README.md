@@ -4,7 +4,7 @@
 ![version](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/alchem0x2a/afede700c2b7703c77e10e51333bfa75/raw/version.json)
 ![docker image](https://github.com/ulissigroup/vasp-interactive/actions/workflows/package_and_unittest.yml/badge.svg)
 
-![docker image](https://github.com/ulissigroup/vasp-interactive/actions/workflows/package_and_unittest.yml/badge.svg)
+
 [![Cori Haswell](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml)
 [![Cori KNL](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml)
 [![Cori Shifter](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_shifter_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_shifter_status.yaml)
@@ -24,7 +24,8 @@ cycle compared with the original `Vasp` implementation can be achieved (see [Ben
 pip install git+https://github.com/ulissigroup/vasp-interactive.git
 ```
 
-After [setting proper environmental variables](https://databases.fysik.dtu.dk/ase/ase/calculators/vasp.html#environment-variables),
+After [setting proper environmental variables](https://databases.fysik.dtu.dk/ase/ase/calculators/vasp.html#environment-variables) 
+(e.g. `$VASP_COMMAND`, `$VASP_PP_PATH`, etc.),
 download the script and run the compatibility test with your local VASP setup:
 
 ```bash
@@ -38,32 +39,46 @@ If the compatibility test fails, your VASP build may truncate output. See the [*
 ### Basic usage
 
 Existing code written with ase's `Vasp` calculator can be easily replaced by `VaspInteractive`, 
-the following example shows how to run a structural optimization using `VaspInteractive` with an BFGS optimizer:
+the following example shows how to run a structural optimization using `VaspInteractive` with an BFGS optimizer. 
+Note the calculator is wrapped within a with-clause to ensure graceful exit of VASP process"
 ```python
 from ase.optimize import BFGS
 from vasp_interactive import VaspInteractive
 # atoms: an ase.atoms.Atoms object
 # parameters: parameters compatible with ase.calculators.vasp.Vasp
-atoms.calc = VaspInteractive(**parameters)
-dyn = BFGS(atoms)
-dyn.run()
-# Special to `VaspInteractive`: close the stream manually
-calc.finalize()
-```
-
-#### (Recommended) `VaspInteractive` in context-mode
-
-To prevent orphan VASP process running in the background if `calc.finalized()` is not properly added,
-we recommend using `VaspInteractive` within a context manager (i.e. using the `with`-clause):
-```python
-from ase.optimize import BFGS
-from vasp_interactive import VaspInteractive
-# Exiting the with-clause kills the background VASP process
 with VaspInteractive(**parameters) as calc:
     atoms.calc = calc
     dyn = BFGS(atoms)
     dyn.run()
 ```
+If you are using `VaspInteractive` without the with-clause, we recommend adding
+ `calc.finalize()` to manually stop the VASP process.
+
+### Using `VaspInteractive` as i-PI-compatible socket client calculator
+
+Since version `v0.1.0`, `VaspInteractive` allows communication over socket for external codes 
+that are compatible with the [`i-PI`](https://github.com/i-pi/i-pi) protocol. We have added an implementation
+of the socket client layer based on the 
+[ASE `SocketClient`](https://wiki.fysik.dtu.dk/ase/ase/calculators/socketio/socketio.html), which does not require patching the VASP source code (*). 
+An minimal example below shows socket communication using `SocketIOCalculator`:
+```python
+# atoms: an ase.atoms.Atoms object
+# parameters: parameters compatible with ase.calculators.vasp.Vasp 
+#             no need to specify `command`, `port` or `unixsocket` 
+#             as they are automatically replaced by parent `SocketIOCalculator`
+vpi = VaspInteractive(**parameters)
+# Open a socket on default port localhost:31415
+with SocketIOCalculator(vpi) as calc:
+    opt = BFGS(atoms)
+    atoms.calc = calc
+    opt.run(fmax=0.05)
+# Port closes and VASP program exits
+```
+
+For a detailed explanations of the socket mode in `VaspInteractive`, please refer to []().
+
+(*) 
+
 
 ## How does it work?
 
@@ -106,10 +121,11 @@ However there are several things to note:
 
 ### Limitations
 
-Most of the issues comes from the way original VASP code is written. If you want more flexible control over
+Most of the issues comes from the way original VASP code is written. 
+<!-- If you want more flexible control over
 how the DFT calculator interacts with your own optimizer, and is comfortable to switch to other DFT codes, 
 the [i-Pi calculator protocol](https://wiki.fysik.dtu.dk/ase/ase/calculators/socketio/socketio.html) may be an
-alternative.
+alternative. -->
 
 - `VaspInteractive` currently does not support change of unit cell. 
 - An additional ionic step (with 1 electronic step) will be added to the end of the calculation as a result of STOPCAR 
