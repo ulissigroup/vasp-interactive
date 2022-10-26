@@ -17,6 +17,7 @@ ARG LIBBEEF=/opt/libbeef
 
 # Use many-target cuda to avoid issue with openacc
 FROM nvcr.io/nvidia/nvhpc:${HPCSDK_VERSION}-devel-cuda_multi-ubuntu${UBUNTU_VERSION}
+ARG LIBBEEF
 
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 
@@ -41,13 +42,15 @@ RUN apt-get update -y && \
 
 ### libbeef only for linking purpose
 WORKDIR /opt
-RUN wget https://github.com/vossjo/libbeef/archive/master.zip &&\
+RUN echo ${LIBBEEF} &&\	
+	wget https://github.com/vossjo/libbeef/archive/master.zip &&\
 	unzip master.zip &&\
 	mkdir libbeef &&\
 	cd libbeef-master &&\
 	./configure --prefix=${LIBBEEF} &&\
 	make -j4 &&\
-	make install
+	make install &&\
+	rm -rf /opt/libbeef-master /opt/master.zip
 
 COPY compile_vasp.sh /opt/bin/
 RUN ls -al /opt/bin && chmod +x /opt/bin/compile_vasp.sh
