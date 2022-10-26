@@ -43,7 +43,7 @@ RUN apt-get update -y && \
 
 ### libbeef only for linking purpose
 WORKDIR /opt
-RUN echo ${LIBBEEF} &&\	
+RUN echo ${LIBBEEF} &&\
 	wget https://github.com/vossjo/libbeef/archive/master.zip &&\
 	unzip master.zip &&\
 	mkdir libbeef &&\
@@ -53,12 +53,17 @@ RUN echo ${LIBBEEF} &&\
 	make install &&\
 	rm -rf /opt/libbeef-master /opt/master.zip
 
-COPY compile_vasp.sh /opt/bin/
+
 WORKDIR /opt
-RUN git clone https://github.com/MestreLion/git-tools.git &&\
+RUN mkdir -p ./bin ./vasp-build &&\
+	git clone https://github.com/MestreLion/git-tools.git &&\
 	cp git-tools/git* bin/ &&\
 	rm -rf git-tools
+
+COPY ./compile_vasp.sh /opt/vasp-build/
+COPY ./makefile_examples /opt/vasp-build/
+
     
-RUN ls -al /opt/bin && chmod +x /opt/bin/compile_vasp.sh
+RUN ln -s /opt/vasp-build/compile_vasp.sh /opt/bin/ && ls -al /opt/bin && chmod 755 /opt/bin/compile_vasp.sh
 ENV PATH=/opt/bin:$PATH
 
