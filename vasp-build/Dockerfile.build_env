@@ -33,6 +33,7 @@ RUN apt-get update -y && \
 	ca-certificates \
 	rsync \
 	unzip \
+	zip \
 	wget \
     git \
     python3 \
