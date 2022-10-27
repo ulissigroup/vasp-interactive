@@ -105,6 +105,8 @@ In this way, the interactive mode reduces the number of electronic self-consiste
 starting the VASP process at each ionic step. `VaspInteractive` is designed as a user-friendly interface to 
 automate the I/O in the interactive mode. 
 
+We also provide a [patch script](./vasp-build/patch.py) to allow the interactive mode read new lattice from stdin. Please refer to the [advanced topics](#enhanced-interactive-mode-by-patching-vasp-source-codes) as well as the [readme](./vasp-build/README.md) for details.
+
 ### Input parameters
 
 Most of the parameters in `ase.calculators.vasp.Vasp` are compatible with `VaspInteractive`. 
@@ -115,51 +117,15 @@ However there are several things to note:
 3. Symmetry is disabled (`isym=0`) to avoid spurious error due to wavefunction symmetry mismatch between the steps. 
 4. Wavefunction extrapolation is enabled using `lwavepr=11` to ensure convergence. If you want to overwrite this parameter, do your own test.
 
-### The socket interface
-
 
 
 ### Limitations
 
 Most of the issues comes from the way original VASP code is written. 
-<!-- If you want more flexible control over
-how the DFT calculator interacts with your own optimizer, and is comfortable to switch to other DFT codes, 
-the [i-Pi calculator protocol](https://wiki.fysik.dtu.dk/ase/ase/calculators/socketio/socketio.html) may be an
-alternative. -->
 
-- `VaspInteractive` currently does not support change of unit cell. 
+- `VaspInteractive` supports only positional change due to limitation of the original VASP source code. User can choose our custom patch to add support for lattice change (see [advanced topics](#enhanced-interactive-mode-by-patching-vasp-source-codes) for details).
 - An additional ionic step (with 1 electronic step) will be added to the end of the calculation as a result of STOPCAR 
-- Compatibility with VASP depends on the version and how the code is compiled. More details see [**Troubleshooting**](#troubleshooting) section
-
-
-<!-- 
-
-The ionic cycles of interactive mode VASP can be terminated by any of the following:
-
-1) setting `NSW` values
-2) writing STOPCAR file to the calculation directory
-3) invalid inputs to stdin (such as `Ctrl+C`)
-
-`VaspInteractive` uses method 2) to stop the ionic cycles. In general, `VaspInteractive` can save up to 50% of the wall 
-time compared with classic `Vasp` calculator (combined with ASE optimizers such as BFGS), since less electronic steps are
-required and program spin-up time is drastically reduced.  -->
-<!-- When combined with active learning frameworks like [Finetuna](https://github.com/ulissigroup/finetuna) it can speed up DFT relaxation up to 1 order of magnitude. -->
-
-<!-- **NOTE: some builds of VASP 5.x may be incompatible wih `VaspInteractive`.**
-
-See this [issue](https://github.com/ulissigroup/vasp-interactive/issues/6.) for details. 
-We have seen some builds of VASP 5.x incompatible with `VaspInteractive` due to broken output files.  Switching to VASP version > 6 (if available) or
-recompile your VASP binaries may help. 
-
-**Minimal VASP 5.x support**: starting from version 0.0.9, `VaspInteractive` supports VASP 5.x by parsing the raw output (e.g. `vasp.out` file) in case of broken `OUTCAR` / `vasprun.xml` files, although there are several limitations:
-1. Only energy and forces can be get from the calculator
-2. `VaspInteractive` must not have the `txt` option set to (`"-"` or `None`)
-
-
-### Note:
-For `VaspInteractive` to work properly, the VASP executable (i.e. environment variable `$ASE_VASP_COMMAND` or `$VASP_COMMAND`) must not
-filter or redirect the stdout from `vasp_std`. If you want to set the file name for capturing the stdout, add `txt=<your-custom-stdout-file>` to the 
-initial parameters of `VaspInteractive`. -->
+- Compatibility with VASP depends on the version and how the code is compiled. More details see [**Troubleshooting**](#troubleshooting) section.
 
 ## Benchmark
 
@@ -266,11 +232,22 @@ do_some_cpu_intensive_calculation()
 - Each pause / resume cycle adds an overhead of 0.5 ~ 5 s depending on your system load.
 
 
-
-
-
-
 ### Enhanced interactive mode by patching VASP source codes
+
+Original interactive mode in VASP only reads positions via stdin (using the `INPOS` subroutine). 
+As a result, some optimization tasks such as equation of state (EOS) calculation and bulk lattice relaxation
+are not feasible. Here we provide a patch script at [`vasp-build/patch.py`](./vasp-build/patch.py) to add support for lattice input into VASP source codes (adding a new subroutine `INLATT`)
+`patch.py` is designed to work for any VASP version >= 5.4 and only requires python3 standard library. Simply uncompress the VASP source code and run 
+```bash
+python patch.py vasp.X.Y.Z/src
+```
+where `vasp.X.Y.Z` is the root directory of uncompressed VASP tarball. 
+The patches should only modify `src/main.F` and `src/poscar.F`. 
+You can then use your normal `makefile` and `makefile.include` to compile the source codes 
+(see official VASP documentation for details).
+For a detailed description of the patch and our reproducible build environment, see [`vasp-interactive/REAME.md`](./vasp-build/README.md).
+
+
 
 ### The socket interface
 
