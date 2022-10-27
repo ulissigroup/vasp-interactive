@@ -266,12 +266,17 @@ As the scheme on the left shows, the socket interface of `VaspInteractive` is bu
 as a pure python layer on top of the interactive mode.
 This means any codes that work with `VaspInteractive` via stdin can be converted to use socket interface, without modifying the VASP codes[^1]. 
 The socket interface is controlled via the following init parameters:
-- `use_socket`: switching between local and socket mode. Default is `False` (local stdio)
-- `host`: hostname of socket server
-- `port`: socket port 
-- `unixsocket`: identifier of the unix socket (bind to file `/tmp/ipi_{unixsocket}`)
 
-`host`, `port` and `unixsocket` are compatible with the API in [`ase.calculators.socketio`](https://gitlab.com/ase/ase/-/blob/master/ase/calculators/socketio.py).
+`use_socket`: switching between local and socket mode. Default is `False` (local stdio)
+
+`host`: hostname of socket server
+
+`port`: socket port 
+
+`unixsocket`: identifier of the unix socket (bind to file `/tmp/ipi_{unixsocket}`)
+
+The meaning and behavior of `host`, `port` and `unixsocket` are compatible with the API in [`ase.calculators.socketio`](https://gitlab.com/ase/ase/-/blob/master/ase/calculators/socketio.py). 
+
 
 
 
@@ -291,14 +296,43 @@ with SocketIOCalculator(vpi) as calc:
 ```
 
 
-
 2) Start the server and launch `VaspInteractive` client separately (Machine A can be different from Machine B)
+
+On machine A:
+```python
+with SocketIOCalculator(port=12345) as calc:
+    # Server waits for connection until calculation can proceed
+    atoms.calc = calc
+    dyn = Optimizer(atoms)
+    dyn.run()
+```
+
+On machine B:
+```python
+# atoms should be the same as on machine A (or at least with same chemical symbols)
+with VaspInteractive(use_socket=True, port=12345, **params) as calc:
+    # Main event loop
+    calc.run(atoms)
+```
 
 3)  Start the server and call `vasp_interactive.socketio` module to launch a client (Machine A can be different from Machine B)
 
-`
+On machine A:
+```python
+with SocketIOCalculator(port=12345) as calc:
+    # Server waits for connection until calculation can proceed
+    atoms.calc = calc
+    dyn = Optimizer(atoms)
+    dyn.run()
+```
 
+On machine B, in a folder where the VASP input files (`INCAR`, `POSCAR`, `POTCAR`, `KPOINTS`) of the
+atoms exist, you can launch the socket client using command line:
+```bash
+python -m vasp_interactive.socketio -port 12345
+```
 
+In fact, in method 1 the `VaspInteractive` calculator automatically sets its `self.command` to the format `python -m vasp_interactive.socketio --port {port} --socketname {unixsocket}`. `SocketIOCalculator` then uses [`FileIOClientLauncher`](https://gitlab.com/ase/ase/-/blob/master/ase/calculators/socketio.py#L226) to initialize a socket client using the above command. In this case, the user does not need to set `use_socket`, `host`, `port` or `unixsocket`.
 
 
 
