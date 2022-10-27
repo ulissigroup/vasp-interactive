@@ -242,14 +242,28 @@ are not feasible. Here we provide a patch script at [`vasp-build/patch.py`](./va
 python patch.py vasp.X.Y.Z/src
 ```
 where `vasp.X.Y.Z` is the root directory of uncompressed VASP tarball. 
-The patches should only modify `src/main.F` and `src/poscar.F`. 
+The patches should only modify `src/main.F` and `src/poscar.F`. You can check that by verifying 
+the `INLATT` subroutine only exists in these 2 files:
+```bash
+grep INLATT -5 ~/vasp.6.3.0/src/*.F
+```
+
 You can then use your normal `makefile` and `makefile.include` to compile the source codes 
 (see official VASP documentation for details).
-For a detailed description of the patch and our reproducible build environment, see [`vasp-interactive/REAME.md`](./vasp-build/README.md).
+For a detailed description of the patch and our reproducible build environment, see [`vasp-interactive/REAME.md`](./vasp-build/README.md). 
 
-
+Please note this patch also flushes the I/O buffer at the end of every ionic step in the interactive mode,
+which solves the issue of truncated `vasprun.xml` and `OUTCAR` in original VASP builds (see [Troubleshooting](#compatibility-test-fails)).
 
 ### The socket interface
+
+<img align="left" src="figs/socket-mode.png" width=250>
+
+As the scheme on the left shows, the socket-I/O interface in `VaspInteractive` is built 
+as a pure python layer on top of the interactive mode. 
+A socket client 
+
+
 
 ## More examples
 - [examples/ex01_h2_relax.py](examples/ex01_h2_relax.py): Basic example of structural relaxation
