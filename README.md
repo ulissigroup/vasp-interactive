@@ -16,7 +16,8 @@
 `VaspInteractive` is a faster yet fully-compatible replacement for the original `Vasp` calculator from the 
 [Atomic Simulation Environment (`ase`)](https://databases.fysik.dtu.dk/ase/ase/calculators/vasp.html) 
 by leveraging the interactive mode of Vienna Ab Initio Package (VASP). Up to 75% reduction of DFT electronic self-consistent 
-cycle compared with the original `Vasp` implementation can be achieved (see [Benchmark](#benchmark) section).
+cycle compared with the original `Vasp` implementation can be achieved (see [Benchmark](#benchmark) section). 
+It can be used both as a file I/O calculator and communicate with external server via the socket interface.
 
 ### Installation
 
