@@ -382,19 +382,28 @@ from NERSC.
 In the all / partial pass cases, `VaspInteractive` should be able to handle I/O correctly, 
 while in the case of minimal support (likely using VASP 5.4.x), only the energy and force information are parsed.
 
-If you have an incompatible VASP build, consult your sysadmin or use VASP in container images.
+If you have an incompatible VASP build, consider use our 
+[custom patch script](./vasp-build/patch.py) (more details see the [advanced topics](#enhanced-interactive-mode-by-patching-vasp-source-codes) and [readme](./vasp-build/README.md)). 
+
 
 ### `VaspInteractive` fails to parse VASP 5.4.x outputs
 
 As stated above, in some VASP 5 cases the support is minimal. Please ensure the flag `parse_vaspout=True` is set during the
-calculator initialization and `txt` parameter is neither `"-"` nor `None`, because the parsing of VASP raw output requires a 
-real file on disk.
+calculator initialization and `txt` parameter is neither `"-"` nor `None`, because the parsing of VASP raw output requires a real file on disk.
 
 ### `VaspInteractive` hangs up forever after the first ionic step
 
-First, make sure the [compatibility test](#installation) passes. Please also disable any output redirection in the VASP command
+First, make sure the [compatibility test](#installation) passes. 
+and check if `vasp.out` is empty.
+If so, disable any output redirection in the VASP command
 env variables. If you want to achieve something like `mpirun -n 16 vasp_std > vasp.out`, 
-set the `txt` parameter of the calculator instead.
+set the `txt` parameter of the calculator instead. 
+
+If the issue occurs on a batch job system (slurm, lsf, pbs, etc), 
+check if I/O buffer can be disable via the job launcher 
+(for example the ["unbeffered"](https://slurm.schedmd.com/srun.html#OPT_unbuffered) option of slurm `srun`).
+
+
 
 ### "The OUTCAR and vasprun.xml outputs may be incomplete" warning
 
@@ -415,7 +424,7 @@ There may be several causes for this:
     You will be notified by a warning like: `
     Cannot find the mpi process or you're using different ompi wrapper. Will not send continue signal to mpi.
     `
-    
+
 
 2. The SIGTSTP / SIGCONT signals sent to associated processes are not properly propagated. 
 
