@@ -55,12 +55,13 @@ with VaspInteractive(**parameters) as calc:
 If you are using `VaspInteractive` without the with-clause, we recommend adding
  `calc.finalize()` to manually stop the VASP process.
 
-### Using `VaspInteractive` as socket client calculator
+### Using `VaspInteractive` as socket client calculator (driver mode)
 
 Since version `v0.1.0`, `VaspInteractive` allows communication over socket for external codes 
 that are compatible with the [`i-PI`](https://github.com/i-pi/i-pi) protocol. We have added an implementation
 of the socket client layer based on the 
-[ASE `SocketClient`](https://wiki.fysik.dtu.dk/ase/ase/calculators/socketio/socketio.html), which does not require patching the VASP source code[^1]. 
+[ASE `SocketClient`](https://wiki.fysik.dtu.dk/ase/ase/calculators/socketio/socketio.html), 
+which does not require patching the VASP source code[^1]. 
 An minimal example below shows socket communication using `SocketIOCalculator`:
 ```python
 from vasp_interactive import VaspInteractive
@@ -73,9 +74,9 @@ with SocketIOCalculator(vpi) as calc:
     opt.run(fmax=0.05)
 ```
 Note you don't need to specify `command`, `port` or `unixsocket` when creating the `VaspInteractive` calculator as they are automatically replaced by parent `SocketIOCalculator`.
-For a detailed explanation of the socket mode in `VaspInteractive` see [here](#the-socket-interface).
+For a detailed explanation of the socket driver mode in `VaspInteractive` see [here](#the-socket-interface).
 
-[^1]: `VaspInteractive` and its socket mode will only support change of ionic positions in this case. 
+[^1]: `VaspInteractive` and its driver mode will only support change of ionic positions in this case. 
 You may want to consider adding lattice input support by using [our VASP patches](#enhanced-interactive-mode-by-patching-vasp-source-codes)
 
 
@@ -145,11 +146,11 @@ Two quantities are compared:
 Performance of relaxation using pure VASP routines (`IBRION=2`, conjugate gradient) is used as the baseline reference. 
 `VaspInteractive` reduces the wall time and electronic steps compared with the classic VASP+BFGS appraoch.
 
-<img align="center" src="examples/benchmark.png" width=800/>
+<img align="center" src="examples/benchmark.png" width=600/>
 
 Below are the details about the ionic and electronic steps (using system CAu8O):
 
-<img align="center" src="examples/details.png" width=600/>
+<img align="center" src="examples/details.png" width=400/>
 
 In the case of CO+Au(111) slab system, `VaspInteractive` seems even to better
 than the VASP CG optimizer. Note such results can be tuned by parameters such as IBRION or IWAVEPR.
@@ -157,7 +158,7 @@ than the VASP CG optimizer. Note such results can be tuned by parameters such as
 A more detailed example comparing the wall time and SCF cycles for `VaspInteractive` and classic `Vasp` combined with various ASE-optimizers can be find in the following figure. The horizontal broken lines are the lowest value among all optimizers
 for the same structure.
 
-<img align="center" src="examples/benchmark-large.png" width=800/>
+<img align="center" src="examples/benchmark-large.png" width=600/>
 
 In addition to the constant time reduction using `VaspInteractive+ASE` compared with `Vasp+ASE`, 
 `GPMin` seems to be the most reliable optimizer to be combined. In most cases `VaspInteractive+GPMin` 
@@ -170,7 +171,7 @@ The benchmark from previous section shows when combining with better optimizers,
 using active learning algorithms such as [FINETUNA](https://github.com/ulissigroup/finetuna) 
 ([Musielewicz et al. *Mach. Learn.: Sci. Technol.* **3** 03LT01](https://iopscience.iop.org/article/10.1088/2632-2153/ac8fe0)). An excerpt from the FINETUNA study regarding the performance can be seen in the following figure:
 
-<img align="center" src="figs/finetuna_perf.png" width="800">
+<img align="center" src="figs/finetuna_perf.png" width="600">
 
 The combination of `FINETUNA` + `VaspInteractive` can achieve up to 10x walltime boost compared with internal VASP CG optimizer.
 
@@ -214,7 +215,7 @@ with calc.pause():
 ```
 
 An example can be found in [ex13_pause_mpi.py](examples/ex13_pause_mpi.py), where computationally expensive operations (e.g. `numpy` huge matrix multiplication **A·B**) occur between VASP ionic steps. 
-The figures below show the CPU usage of VASP and Numpy processes without intervention (upper panel) and with MPI pause / resume (lower panel). With the pause / resume functionality, the `numpy` threads can gain almost 100% CPU, saving the total computational time.
+The figures below show the CPU usage of VASP and Numpy processes without intervention (upper panel) and with MPI[^2][^3] pause / resume (lower panel). With the pause / resume functionality, the `numpy` threads can gain almost 100% CPU, saving the total computational time[^4].
  
 <img align="center" src="examples/ex13_time_cpu_refined.png" width=800>
 
@@ -230,9 +231,9 @@ do_some_cpu_intensive_calculation()
 ```
 
 **Notes**
-- The MPI process pause / resume has been tested on OpenMPI > 1.3.0. For some systems you may need to explicitly add the flag `--mca orte_forward_job_control 1`.
-- If your VASP commands are run by SLURM job manager's `srun` command, the signal is sent by `scancel` utility instead of forwarding to `mpirun` directly. Make sure you have access to these utilities in your environment
-- Each pause / resume cycle adds an overhead of 0.5 ~ 5 s depending on your system load.
+[^2]: The MPI process pause / resume has been tested on OpenMPI > 1.3.0. For some systems you may need to explicitly add the flag `--mca orte_forward_job_control 1`.
+[^3]: If your VASP commands are run by SLURM job manager's `srun` command, the signal is sent by `scancel` utility instead of forwarding to `mpirun` directly. Make sure you have access to these utilities in your environment.
+[^4]: Each pause / resume cycle adds an overhead of 0.5 ~ 5 s depending on your system load.
 
 
 ### Enhanced interactive mode by patching VASP source codes
@@ -354,10 +355,11 @@ In fact, in method 1 the `VaspInteractive` calculator automatically sets its `se
 
 The compatibility test code in the [installation](#installation) section may show several different outputs
 
-1. <span style="color:green">**All pass**</span>: Raw output, OUTCAR and vasprun.xml are all complete
-2. <span style="color:olive">**Partial pass**</span>: Raw output and OUTCAR files can be parsed by vasprun.xml is truncated
-3. <span style="color:orange">**Minimal support**</span>: Raw output can be parsed while OUTCAR & vasprun.xml are both truncated
-4. <span style="color:red">**Incompatible**</span>: VASP does not print stdout during interactive mode
+1. ![](https://img.shields.io/badge/-all_pass-green): Raw output, OUTCAR and vasprun.xml are all complete
+2. ![](https://img.shields.io/badge/-partial_pass-olive): Raw output and OUTCAR files can be parsed by vasprun.xml is truncated
+3. ![](https://img.shields.io/badge/-minimal_support-orange): Raw output can be parsed while OUTCAR & vasprun.xml are both truncated
+4. ![](https://img.shields.io/badge/-incompatible-red): VASP does not print stdout during interactive mode
+
 
 Below are some of the test results for various VASP builds we have access to, including the [Cori](https://docs.nersc.gov/systems/cori/) and [Perlmutter](https://docs.nersc.gov/systems/perlmutter/) clusters
 from NERSC.
