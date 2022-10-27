@@ -54,12 +54,12 @@ with VaspInteractive(**parameters) as calc:
 If you are using `VaspInteractive` without the with-clause, we recommend adding
  `calc.finalize()` to manually stop the VASP process.
 
-### Using `VaspInteractive` as i-PI-compatible socket client calculator
+### Using `VaspInteractive` as socket client calculator
 
 Since version `v0.1.0`, `VaspInteractive` allows communication over socket for external codes 
 that are compatible with the [`i-PI`](https://github.com/i-pi/i-pi) protocol. We have added an implementation
 of the socket client layer based on the 
-[ASE `SocketClient`](https://wiki.fysik.dtu.dk/ase/ase/calculators/socketio/socketio.html), which does not require patching the VASP source code (*). 
+[ASE `SocketClient`](https://wiki.fysik.dtu.dk/ase/ase/calculators/socketio/socketio.html), which does not require patching the VASP source code [^1]. 
 An minimal example below shows socket communication using `SocketIOCalculator`:
 ```python
 # atoms: an ase.atoms.Atoms object
@@ -75,9 +75,10 @@ with SocketIOCalculator(vpi) as calc:
 # Port closes and VASP program exits
 ```
 
-For a detailed explanations of the socket mode in `VaspInteractive`, please refer to []().
+For a detailed explanation of the socket mode in `VaspInteractive` see [here](#the-socket-interface).
 
-(*) 
+[^1] `VaspInteractive` and its socket mode will only support change of ionic positions in this case. You may want to consider
+adding lattice input support by using [our VASP patches](#enhanced-interactive-mode-by-patching-vasp-source-codes)
 
 
 ## How does it work?
@@ -118,6 +119,10 @@ However there are several things to note:
 2. Make sure the `nsw` value (maximum ionic steps of VASP) is no less than the maximum allowed steps in your optimizer (default `nsw=2000`)
 3. Symmetry is disabled (`isym=0`) to avoid spurious error due to wavefunction symmetry mismatch between the steps. 
 4. Wavefunction extrapolation is enabled using `lwavepr=11` to ensure convergence. If you want to overwrite this parameter, do your own test.
+
+### The socket interface
+
+
 
 ### Limitations
 
@@ -266,6 +271,13 @@ do_some_cpu_intensive_calculation()
 - Each pause / resume cycle adds an overhead of 0.5 ~ 5 s depending on your system load.
 
 
+
+
+
+
+### Enhanced interactive mode by patching VASP source codes
+
+### The socket interface
 
 ## More examples
 - [examples/ex01_h2_relax.py](examples/ex01_h2_relax.py): Basic example of structural relaxation
