@@ -59,26 +59,21 @@ If you are using `VaspInteractive` without the with-clause, we recommend adding
 Since version `v0.1.0`, `VaspInteractive` allows communication over socket for external codes 
 that are compatible with the [`i-PI`](https://github.com/i-pi/i-pi) protocol. We have added an implementation
 of the socket client layer based on the 
-[ASE `SocketClient`](https://wiki.fysik.dtu.dk/ase/ase/calculators/socketio/socketio.html), which does not require patching the VASP source code [^1]. 
+[ASE `SocketClient`](https://wiki.fysik.dtu.dk/ase/ase/calculators/socketio/socketio.html), which does not require patching the VASP source code[^1]. 
 An minimal example below shows socket communication using `SocketIOCalculator`:
 ```python
-# atoms: an ase.atoms.Atoms object
-# parameters: parameters compatible with ase.calculators.vasp.Vasp 
-#             no need to specify `command`, `port` or `unixsocket` 
-#             as they are automatically replaced by parent `SocketIOCalculator`
 vpi = VaspInteractive(**parameters)
 # Open a socket on default port localhost:31415
 with SocketIOCalculator(vpi) as calc:
     opt = BFGS(atoms)
     atoms.calc = calc
     opt.run(fmax=0.05)
-# Port closes and VASP program exits
 ```
-
+Note you don't need to specify `command`, `port` or `unixsocket` when creating the `VaspInteractive` calculator as they are automatically replaced by parent `SocketIOCalculator`.
 For a detailed explanation of the socket mode in `VaspInteractive` see [here](#the-socket-interface).
 
-[^1] `VaspInteractive` and its socket mode will only support change of ionic positions in this case. You may want to consider
-adding lattice input support by using [our VASP patches](#enhanced-interactive-mode-by-patching-vasp-source-codes)
+[^1]: `VaspInteractive` and its socket mode will only support change of ionic positions in this case. 
+You may want to consider adding lattice input support by using [our VASP patches](#enhanced-interactive-mode-by-patching-vasp-source-codes)
 
 
 ## How does it work?
