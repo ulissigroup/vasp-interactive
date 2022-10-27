@@ -62,6 +62,8 @@ of the socket client layer based on the
 [ASE `SocketClient`](https://wiki.fysik.dtu.dk/ase/ase/calculators/socketio/socketio.html), which does not require patching the VASP source code[^1]. 
 An minimal example below shows socket communication using `SocketIOCalculator`:
 ```python
+from vasp_interactive import VaspInteractive
+from ase.calculators.socketio import SocketIOCalculator
 vpi = VaspInteractive(**parameters)
 # Open a socket on default port localhost:31415
 with SocketIOCalculator(vpi) as calc:
@@ -259,9 +261,44 @@ which solves the issue of truncated `vasprun.xml` and `OUTCAR` in original VASP 
 
 <img align="left" src="figs/socket-mode.png" width=250>
 
-As the scheme on the left shows, the socket-I/O interface in `VaspInteractive` is built 
-as a pure python layer on top of the interactive mode. 
-A socket client 
+`VaspInteractive` supports socket communication using the [i-PI protocol](https://github.com/i-pi/i-pi). 
+As the scheme on the left shows, the socket interface of `VaspInteractive` is built 
+as a pure python layer on top of the interactive mode.
+This means any codes that work with `VaspInteractive` via stdin can be converted to use socket interface, without modifying the VASP codes[^1]. 
+The socket interface is controlled via the following init parameters:
+- `use_socket`: switching between local and socket mode. Default is `False` (local stdio)
+- `host`: hostname of socket server
+- `port`: socket port 
+- `unixsocket`: identifier of the unix socket (bind to file `/tmp/ipi_{unixsocket}`)
+
+`host`, `port` and `unixsocket` are compatible with the API in [`ase.calculators.socketio`](https://gitlab.com/ase/ase/-/blob/master/ase/calculators/socketio.py).
+
+
+
+There are multiple ways to use the socket interface:
+
+1) Use  `SocketIOCalculator` wrapper on a single machine (i.e. Machine A == Machine B)
+
+```python
+from vasp_interactive import VaspInteractive
+from ase.calculators.socketio import SocketIOCalculator
+vpi = VaspInteractive(**parameters)
+# Open a socket on default port localhost:31415
+with SocketIOCalculator(vpi) as calc:
+    opt = BFGS(atoms)
+    atoms.calc = calc
+    opt.run(fmax=0.05)
+```
+
+
+
+2) Start the server and launch `VaspInteractive` client separately (Machine A can be different from Machine B)
+
+3)  Start the server and call `vasp_interactive.socketio` module to launch a client (Machine A can be different from Machine B)
+
+`
+
+
 
 
 
