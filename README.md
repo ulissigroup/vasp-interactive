@@ -269,7 +269,7 @@ as a pure python layer on top of the interactive mode.
 This means any codes that work with `VaspInteractive` via stdin can be converted to use socket driver mode, without modifying the VASP codes[^1]. 
 The socket interface is controlled via the following init parameters:
 
-`use_socket`: switching between local and socket mode. Default is `False` (local stdio)
+`use_socket`: switching between local and driver mode. Default is `False` (local stdio)
 
 `host`: hostname of socket server
 
