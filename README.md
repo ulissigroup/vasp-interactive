@@ -266,7 +266,7 @@ which solves the issue of truncated `vasprun.xml` and `OUTCAR` in original VASP 
 `VaspInteractive` supports socket communication using the [i-PI protocol](https://github.com/i-pi/i-pi). 
 As the scheme on the left shows, the socket interface of `VaspInteractive` is built 
 as a pure python layer on top of the interactive mode.
-This means any codes that work with `VaspInteractive` via stdin can be converted to use socket interface, without modifying the VASP codes[^1]. 
+This means any codes that work with `VaspInteractive` via stdin can be converted to use socket driver mode, without modifying the VASP codes[^1]. 
 The socket interface is controlled via the following init parameters:
 
 `use_socket`: switching between local and socket mode. Default is `False` (local stdio)
@@ -280,9 +280,7 @@ The socket interface is controlled via the following init parameters:
 The meaning and behavior of `host`, `port` and `unixsocket` are compatible with the API in [`ase.calculators.socketio`](https://gitlab.com/ase/ase/-/blob/master/ase/calculators/socketio.py). 
 
 
-
-
-There are multiple ways to use the socket interface:
+There are multiple ways to use `VaspInteractive` in driver mode:
 
 1) Use  `SocketIOCalculator` wrapper on a single machine (i.e. Machine A == Machine B)
 
@@ -317,6 +315,7 @@ with VaspInteractive(use_socket=True, port=12345, **params) as calc:
     calc.run(atoms)
 ```
 
+
 3)  Start the server and call `vasp_interactive.socketio` module to launch a client (Machine A can be different from Machine B)
 
 On machine A:
@@ -334,7 +333,10 @@ atoms exist, you can launch the socket client using command line:
 python -m vasp_interactive.socketio -port 12345
 ```
 
-In fact, in method 1 the `VaspInteractive` calculator automatically sets its `self.command` to the format `python -m vasp_interactive.socketio --port {port} --socketname {unixsocket}`. `SocketIOCalculator` then uses [`FileIOClientLauncher`](https://gitlab.com/ase/ase/-/blob/master/ase/calculators/socketio.py#L226) to initialize a socket client using the above command. In this case, the user does not need to set `use_socket`, `host`, `port` or `unixsocket`.
+In fact, in method 1 the `VaspInteractive` calculator automatically sets its `self.command` to 
+the format `python -m vasp_interactive.socketio --port {port} --socketname {unixsocket}`. 
+`SocketIOCalculator` then uses [`FileIOClientLauncher`](https://gitlab.com/ase/ase/-/blob/master/ase/calculators/socketio.py#L226) to initialize a socket client with the above command. 
+In this case, the user does not need to set `use_socket`, `host`, `port` or `unixsocket`.
 
 
 
