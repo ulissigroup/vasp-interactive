@@ -15,7 +15,8 @@
 `VaspInteractive` is a faster yet fully-compatible replacement for the original `Vasp` calculator from the 
 [Atomic Simulation Environment (`ase`)](https://databases.fysik.dtu.dk/ase/ase/calculators/vasp.html) 
 by leveraging the interactive mode of Vienna Ab Initio Package (VASP). Up to 75% reduction of DFT electronic self-consistent 
-cycle compared with the original `Vasp` implementation can be achieved (see [Benchmark](#benchmark) section).
+cycle compared with the original `Vasp` implementation can be achieved (see [Benchmark](#benchmark) section). 
+It can be used both as a file I/O calculator and communicate with external server via the socket interface.
 
 ### Installation
 
@@ -23,7 +24,8 @@ cycle compared with the original `Vasp` implementation can be achieved (see [Ben
 pip install git+https://github.com/ulissigroup/vasp-interactive.git
 ```
 
-After [setting proper environmental variables](https://databases.fysik.dtu.dk/ase/ase/calculators/vasp.html#environment-variables),
+After [setting proper environmental variables](https://databases.fysik.dtu.dk/ase/ase/calculators/vasp.html#environment-variables) 
+(e.g. `$VASP_COMMAND`, `$VASP_PP_PATH`, etc.),
 download the script and run the compatibility test with your local VASP setup:
 
 ```bash
@@ -37,32 +39,45 @@ If the compatibility test fails, your VASP build may truncate output. See the [*
 ### Basic usage
 
 Existing code written with ase's `Vasp` calculator can be easily replaced by `VaspInteractive`, 
-the following example shows how to run a structural optimization using `VaspInteractive` with an BFGS optimizer:
+the following example shows how to run a structural optimization using `VaspInteractive` with an BFGS optimizer. 
+Note the calculator is wrapped within a with-clause to ensure graceful exit of VASP process"
 ```python
 from ase.optimize import BFGS
 from vasp_interactive import VaspInteractive
 # atoms: an ase.atoms.Atoms object
 # parameters: parameters compatible with ase.calculators.vasp.Vasp
-atoms.calc = VaspInteractive(**parameters)
-dyn = BFGS(atoms)
-dyn.run()
-# Special to `VaspInteractive`: close the stream manually
-calc.finalize()
-```
-
-#### (Recommended) `VaspInteractive` in context-mode
-
-To prevent orphan VASP process running in the background if `calc.finalized()` is not properly added,
-we recommend using `VaspInteractive` within a context manager (i.e. using the `with`-clause):
-```python
-from ase.optimize import BFGS
-from vasp_interactive import VaspInteractive
-# Exiting the with-clause kills the background VASP process
 with VaspInteractive(**parameters) as calc:
     atoms.calc = calc
     dyn = BFGS(atoms)
     dyn.run()
 ```
+If you are using `VaspInteractive` without the with-clause, we recommend adding
+ `calc.finalize()` to manually stop the VASP process.
+
+### Using `VaspInteractive` as socket client calculator (driver mode)
+
+Since version `v0.1.0`, `VaspInteractive` allows communication over socket for external codes 
+that are compatible with the [`i-PI`](https://github.com/i-pi/i-pi) protocol. We have added an implementation
+of the socket client layer based on the 
+[ASE `SocketClient`](https://wiki.fysik.dtu.dk/ase/ase/calculators/socketio/socketio.html), 
+which does not require patching the VASP source code[^1]. 
+An minimal example below shows socket communication using `SocketIOCalculator`:
+```python
+from vasp_interactive import VaspInteractive
+from ase.calculators.socketio import SocketIOCalculator
+vpi = VaspInteractive(**parameters)
+# Open a socket on default port localhost:31415
+with SocketIOCalculator(vpi) as calc:
+    opt = BFGS(atoms)
+    atoms.calc = calc
+    opt.run(fmax=0.05)
+```
+Note you don't need to specify `command`, `port` or `unixsocket` when creating the `VaspInteractive` calculator as they are automatically replaced by parent `SocketIOCalculator`.
+For a detailed explanation of the socket driver mode in `VaspInteractive` see [here](#the-socket-interface).
+
+[^1]: `VaspInteractive` and its driver mode will only support change of ionic positions in this case. 
+You may want to consider adding lattice input support by using [our VASP patches](#enhanced-interactive-mode-by-patching-vasp-source-codes)
+
 
 ## How does it work?
 
@@ -93,6 +108,8 @@ In this way, the interactive mode reduces the number of electronic self-consiste
 starting the VASP process at each ionic step. `VaspInteractive` is designed as a user-friendly interface to 
 automate the I/O in the interactive mode. 
 
+We also provide a [patch script](./vasp-build/patch.py) to allow the interactive mode read new lattice from stdin. Please refer to the [advanced topics](#enhanced-interactive-mode-by-patching-vasp-source-codes) as well as the [readme](./vasp-build/README.md) for details.
+
 ### Input parameters
 
 Most of the parameters in `ase.calculators.vasp.Vasp` are compatible with `VaspInteractive`. 
@@ -103,46 +120,15 @@ However there are several things to note:
 3. Symmetry is disabled (`isym=0`) to avoid spurious error due to wavefunction symmetry mismatch between the steps. 
 4. Wavefunction extrapolation is enabled using `lwavepr=11` to ensure convergence. If you want to overwrite this parameter, do your own test.
 
+
+
 ### Limitations
 
-Most of the issues comes from the way original VASP code is written. If you want more flexible control over
-how the DFT calculator interacts with your own optimizer, and is comfortable to switch to other DFT codes, 
-the [i-Pi calculator protocol](https://wiki.fysik.dtu.dk/ase/ase/calculators/socketio/socketio.html) may be an
-alternative.
+Most of the issues comes from the way original VASP code is written. 
 
-- `VaspInteractive` currently does not support change of unit cell. 
+- `VaspInteractive` supports only positional change due to limitation of the original VASP source code. User can choose our custom patch to add support for lattice change (see [advanced topics](#enhanced-interactive-mode-by-patching-vasp-source-codes) for details).
 - An additional ionic step (with 1 electronic step) will be added to the end of the calculation as a result of STOPCAR 
-- Compatibility with VASP depends on the version and how the code is compiled. More details see [**Troubleshooting**](#troubleshooting) section
-
-
-<!-- 
-
-The ionic cycles of interactive mode VASP can be terminated by any of the following:
-
-1) setting `NSW` values
-2) writing STOPCAR file to the calculation directory
-3) invalid inputs to stdin (such as `Ctrl+C`)
-
-`VaspInteractive` uses method 2) to stop the ionic cycles. In general, `VaspInteractive` can save up to 50% of the wall 
-time compared with classic `Vasp` calculator (combined with ASE optimizers such as BFGS), since less electronic steps are
-required and program spin-up time is drastically reduced.  -->
-<!-- When combined with active learning frameworks like [Finetuna](https://github.com/ulissigroup/finetuna) it can speed up DFT relaxation up to 1 order of magnitude. -->
-
-<!-- **NOTE: some builds of VASP 5.x may be incompatible wih `VaspInteractive`.**
-
-See this [issue](https://github.com/ulissigroup/vasp-interactive/issues/6.) for details. 
-We have seen some builds of VASP 5.x incompatible with `VaspInteractive` due to broken output files.  Switching to VASP version > 6 (if available) or
-recompile your VASP binaries may help. 
-
-**Minimal VASP 5.x support**: starting from version 0.0.9, `VaspInteractive` supports VASP 5.x by parsing the raw output (e.g. `vasp.out` file) in case of broken `OUTCAR` / `vasprun.xml` files, although there are several limitations:
-1. Only energy and forces can be get from the calculator
-2. `VaspInteractive` must not have the `txt` option set to (`"-"` or `None`)
-
-
-### Note:
-For `VaspInteractive` to work properly, the VASP executable (i.e. environment variable `$ASE_VASP_COMMAND` or `$VASP_COMMAND`) must not
-filter or redirect the stdout from `vasp_std`. If you want to set the file name for capturing the stdout, add `txt=<your-custom-stdout-file>` to the 
-initial parameters of `VaspInteractive`. -->
+- Compatibility with VASP depends on the version and how the code is compiled. More details see [**Troubleshooting**](#troubleshooting) section.
 
 ## Benchmark
 
@@ -159,11 +145,11 @@ Two quantities are compared:
 Performance of relaxation using pure VASP routines (`IBRION=2`, conjugate gradient) is used as the baseline reference. 
 `VaspInteractive` reduces the wall time and electronic steps compared with the classic VASP+BFGS appraoch.
 
-<img align="center" src="examples/benchmark.png" width=800/>
+<img align="center" src="examples/benchmark.png" width=600/>
 
 Below are the details about the ionic and electronic steps (using system CAu8O):
 
-<img align="center" src="examples/details.png" width=600/>
+<img align="center" src="examples/details.png" width=400/>
 
 In the case of CO+Au(111) slab system, `VaspInteractive` seems even to better
 than the VASP CG optimizer. Note such results can be tuned by parameters such as IBRION or IWAVEPR.
@@ -171,7 +157,7 @@ than the VASP CG optimizer. Note such results can be tuned by parameters such as
 A more detailed example comparing the wall time and SCF cycles for `VaspInteractive` and classic `Vasp` combined with various ASE-optimizers can be find in the following figure. The horizontal broken lines are the lowest value among all optimizers
 for the same structure.
 
-<img align="center" src="examples/benchmark-large.png" width=800/>
+<img align="center" src="examples/benchmark-large.png" width=600/>
 
 In addition to the constant time reduction using `VaspInteractive+ASE` compared with `Vasp+ASE`, 
 `GPMin` seems to be the most reliable optimizer to be combined. In most cases `VaspInteractive+GPMin` 
@@ -184,7 +170,7 @@ The benchmark from previous section shows when combining with better optimizers,
 using active learning algorithms such as [FINETUNA](https://github.com/ulissigroup/finetuna) 
 ([Musielewicz et al. *Mach. Learn.: Sci. Technol.* **3** 03LT01](https://iopscience.iop.org/article/10.1088/2632-2153/ac8fe0)). An excerpt from the FINETUNA study regarding the performance can be seen in the following figure:
 
-<img align="center" src="figs/finetuna_perf.png" width="800">
+<img align="center" src="figs/finetuna_perf.png" width="600">
 
 The combination of `FINETUNA` + `VaspInteractive` can achieve up to 10x walltime boost compared with internal VASP CG optimizer.
 
@@ -228,7 +214,7 @@ with calc.pause():
 ```
 
 An example can be found in [ex13_pause_mpi.py](examples/ex13_pause_mpi.py), where computationally expensive operations (e.g. `numpy` huge matrix multiplication **A·B**) occur between VASP ionic steps. 
-The figures below show the CPU usage of VASP and Numpy processes without intervention (upper panel) and with MPI pause / resume (lower panel). With the pause / resume functionality, the `numpy` threads can gain almost 100% CPU, saving the total computational time.
+The figures below show the CPU usage of VASP and Numpy processes without intervention (upper panel) and with MPI[^2][^3] pause / resume (lower panel). With the pause / resume functionality, the `numpy` threads can gain almost 100% CPU, saving the total computational time[^4].
  
 <img align="center" src="examples/ex13_time_cpu_refined.png" width=800>
 
@@ -244,9 +230,112 @@ do_some_cpu_intensive_calculation()
 ```
 
 **Notes**
-- The MPI process pause / resume has been tested on OpenMPI > 1.3.0. For some systems you may need to explicitly add the flag `--mca orte_forward_job_control 1`.
-- If your VASP commands are run by SLURM job manager's `srun` command, the signal is sent by `scancel` utility instead of forwarding to `mpirun` directly. Make sure you have access to these utilities in your environment
-- Each pause / resume cycle adds an overhead of 0.5 ~ 5 s depending on your system load.
+[^2]: The MPI process pause / resume has been tested on OpenMPI > 1.3.0. For some systems you may need to explicitly add the flag `--mca orte_forward_job_control 1`.
+[^3]: If your VASP commands are run by SLURM job manager's `srun` command, the signal is sent by `scancel` utility instead of forwarding to `mpirun` directly. Make sure you have access to these utilities in your environment.
+[^4]: Each pause / resume cycle adds an overhead of 0.5 ~ 5 s depending on your system load.
+
+
+### Enhanced interactive mode by patching VASP source codes
+
+Original interactive mode in VASP only reads positions via stdin (using the `INPOS` subroutine). 
+As a result, some optimization tasks such as equation of state (EOS) calculation and bulk lattice relaxation
+are not feasible. Here we provide a patch script at [`vasp-build/patch.py`](./vasp-build/patch.py) to add support for lattice input into VASP source codes (adding a new subroutine `INLATT`)
+`patch.py` is designed to work for any VASP version >= 5.4 and only requires python3 standard library. Simply uncompress the VASP source code and run 
+```bash
+python patch.py vasp.X.Y.Z/src
+```
+where `vasp.X.Y.Z` is the root directory of uncompressed VASP tarball. 
+The patches should only modify `src/main.F` and `src/poscar.F`. You can check that by verifying 
+the `INLATT` subroutine only exists in these 2 files:
+```bash
+grep INLATT -5 ~/vasp.6.3.0/src/*.F
+```
+
+You can then use your normal `makefile` and `makefile.include` to compile the source codes 
+(see official VASP documentation for details).
+For a detailed description of the patch and our reproducible build environment, see [`vasp-interactive/REAME.md`](./vasp-build/README.md). 
+
+Please note this patch also flushes the I/O buffer at the end of every ionic step in the interactive mode,
+which solves the issue of truncated `vasprun.xml` and `OUTCAR` in original VASP builds (see [Troubleshooting](#compatibility-test-fails)).
+
+### The socket interface
+
+<img align="left" src="figs/socket-mode.png" width=250>
+
+`VaspInteractive` supports socket communication using the [i-PI protocol](https://github.com/i-pi/i-pi). 
+As the scheme on the left shows, the socket interface of `VaspInteractive` is built 
+as a pure python layer on top of the interactive mode.
+This means any codes that work with `VaspInteractive` via stdin can be converted to use socket driver mode, without modifying the VASP codes[^1]. 
+The socket interface is controlled via the following init parameters:
+
+`use_socket`: switching between local and driver mode. Default is `False` (local stdio)
+
+`host`: hostname of socket server
+
+`port`: socket port 
+
+`unixsocket`: identifier of the unix socket (bind to file `/tmp/ipi_{unixsocket}`)
+
+The meaning and behavior of `host`, `port` and `unixsocket` are compatible with the API in [`ase.calculators.socketio`](https://gitlab.com/ase/ase/-/blob/master/ase/calculators/socketio.py). 
+
+
+There are multiple ways to use `VaspInteractive` in driver mode:
+
+1) Use  `SocketIOCalculator` wrapper on a single machine (i.e. Machine A == Machine B)
+
+```python
+from vasp_interactive import VaspInteractive
+from ase.calculators.socketio import SocketIOCalculator
+vpi = VaspInteractive(**parameters)
+# Open a socket on default port localhost:31415
+with SocketIOCalculator(vpi) as calc:
+    opt = BFGS(atoms)
+    atoms.calc = calc
+    opt.run(fmax=0.05)
+```
+
+
+2) Start the server and launch `VaspInteractive` client separately (Machine A can be different from Machine B)
+
+On machine A:
+```python
+with SocketIOCalculator(port=12345) as calc:
+    # Server waits for connection until calculation can proceed
+    atoms.calc = calc
+    dyn = Optimizer(atoms)
+    dyn.run()
+```
+
+On machine B:
+```python
+# atoms should be the same as on machine A (or at least with same chemical symbols)
+with VaspInteractive(use_socket=True, port=12345, **params) as calc:
+    # Main event loop
+    calc.run(atoms)
+```
+
+
+3)  Start the server and call `vasp_interactive.socketio` module to launch a client (Machine A can be different from Machine B)
+
+On machine A:
+```python
+with SocketIOCalculator(port=12345) as calc:
+    # Server waits for connection until calculation can proceed
+    atoms.calc = calc
+    dyn = Optimizer(atoms)
+    dyn.run()
+```
+
+On machine B, in a folder where the VASP input files (`INCAR`, `POSCAR`, `POTCAR`, `KPOINTS`) of the
+atoms exist, you can launch the socket client using command line:
+```bash
+python -m vasp_interactive.socketio -port 12345
+```
+
+In fact, in method 1 the `VaspInteractive` calculator automatically sets its `self.command` to 
+the format `python -m vasp_interactive.socketio --port {port} --socketname {unixsocket}`. 
+`SocketIOCalculator` then uses [`FileIOClientLauncher`](https://gitlab.com/ase/ase/-/blob/master/ase/calculators/socketio.py#L226) to initialize a socket client with the above command. 
+In this case, the user does not need to set `use_socket`, `host`, `port` or `unixsocket`.
 
 
 
@@ -267,10 +356,11 @@ do_some_cpu_intensive_calculation()
 
 The compatibility test code in the [installation](#installation) section may show several different outputs
 
-1. <span style="color:green">**All pass**</span>: Raw output, OUTCAR and vasprun.xml are all complete
-2. <span style="color:olive">**Partial pass**</span>: Raw output and OUTCAR files can be parsed by vasprun.xml is truncated
-3. <span style="color:orange">**Minimal support**</span>: Raw output can be parsed while OUTCAR & vasprun.xml are both truncated
-4. <span style="color:red">**Incompatible**</span>: VASP does not print stdout during interactive mode
+1. ![](https://img.shields.io/badge/-all_pass-green): Raw output, OUTCAR and vasprun.xml are all complete
+2. ![](https://img.shields.io/badge/-partial_pass-olive): Raw output and OUTCAR files can be parsed by vasprun.xml is truncated
+3. ![](https://img.shields.io/badge/-minimal_support-orange): Raw output can be parsed while OUTCAR & vasprun.xml are both truncated
+4. ![](https://img.shields.io/badge/-incompatible-red): VASP does not print stdout during interactive mode
+
 
 Below are some of the test results for various VASP builds we have access to, including the [Cori](https://docs.nersc.gov/systems/cori/) and [Perlmutter](https://docs.nersc.gov/systems/perlmutter/) clusters
 from NERSC.
@@ -296,19 +386,28 @@ from NERSC.
 In the all / partial pass cases, `VaspInteractive` should be able to handle I/O correctly, 
 while in the case of minimal support (likely using VASP 5.4.x), only the energy and force information are parsed.
 
-If you have an incompatible VASP build, consult your sysadmin or use VASP in container images.
+If you have an incompatible VASP build, consider use our 
+[custom patch script](./vasp-build/patch.py) (more details see the [advanced topics](#enhanced-interactive-mode-by-patching-vasp-source-codes) and [readme](./vasp-build/README.md)). 
+
 
 ### `VaspInteractive` fails to parse VASP 5.4.x outputs
 
 As stated above, in some VASP 5 cases the support is minimal. Please ensure the flag `parse_vaspout=True` is set during the
-calculator initialization and `txt` parameter is neither `"-"` nor `None`, because the parsing of VASP raw output requires a 
-real file on disk.
+calculator initialization and `txt` parameter is neither `"-"` nor `None`, because the parsing of VASP raw output requires a real file on disk.
 
 ### `VaspInteractive` hangs up forever after the first ionic step
 
-First, make sure the [compatibility test](#installation) passes. Please also disable any output redirection in the VASP command
+First, make sure the [compatibility test](#installation) passes. 
+and check if `vasp.out` is empty.
+If so, disable any output redirection in the VASP command
 env variables. If you want to achieve something like `mpirun -n 16 vasp_std > vasp.out`, 
-set the `txt` parameter of the calculator instead.
+set the `txt` parameter of the calculator instead. 
+
+If the issue occurs on a batch job system (slurm, lsf, pbs, etc), 
+check if I/O buffer can be disable via the job launcher 
+(for example the ["unbeffered"](https://slurm.schedmd.com/srun.html#OPT_unbuffered) option of slurm `srun`).
+
+
 
 ### "The OUTCAR and vasprun.xml outputs may be incomplete" warning
 
@@ -329,7 +428,7 @@ There may be several causes for this:
     You will be notified by a warning like: `
     Cannot find the mpi process or you're using different ompi wrapper. Will not send continue signal to mpi.
     `
-    
+
 
 2. The SIGTSTP / SIGCONT signals sent to associated processes are not properly propagated. 
 

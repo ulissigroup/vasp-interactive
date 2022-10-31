@@ -212,11 +212,12 @@ we are not distributing them publicly.
 ### Compilation jobs on kubernetes (experimental)
 
 The building process inside the container can also be automated on a kubernetes cluster, as the example
-in [`k8s-vasp-build.yaml`](./k8s-vasp-build.yaml) shows:
+in [`k8s-vasp-build.yaml`](./extras/k8s-vasp-build.yaml) shows:
 ```bash
 # Perform a fresh building
-kubectl delete -f k8s-vasp-build.yaml
-kubectl apply -f k8s-vasp-build.yaml
+cd vasp-interactive/vasp-build
+kubectl delete -f extras/k8s-vasp-build.yaml
+kubectl apply -f extras/k8s-vasp-build.yaml
 ```
 You will find the compiled VASP binaries (pristine and patched) under the `workingDir`, which are
 the actual ones used for our CI/CD pipelines. Please note the example is only meant to be used for

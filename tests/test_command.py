@@ -11,6 +11,7 @@ import sys
 def test_command_env():
     from ase.build import molecule
 
+    # The behavior has changed since addition of socket io mode
     # When testing under the github action system, it should be
     # `mpirun -np 1 <options> <path>/vasp_gam`
     default_command = os.environ["VASP_COMMAND"]
@@ -21,10 +22,12 @@ def test_command_env():
     with tempfile.TemporaryDirectory() as tempdir:
         tempdir = Path(tempdir)
         calc = VaspInteractive(xc="pbe", directory=tempdir)
+        assert calc.command is not None
+        assert "vasp_interactive.socketio" in calc.command
         with calc:
             atoms.calc = calc
-            assert calc.command is None
-            command = calc.make_command()
+            assert calc._vasp_command is None
+            command = calc.make_command(calc._vasp_command)
             assert command == default_command
             atoms.get_potential_energy()
             # calc.process the shell mode, so args is a string
@@ -32,7 +35,7 @@ def test_command_env():
 
             # Harmless change
             new_command = default_command.replace("-np", "-n")
-            calc.command = new_command
+            calc._vasp_command = new_command
             # Should be no change
             assert calc.process.args == default_command
 
@@ -46,8 +49,8 @@ def test_command_env():
             # reset the environ
             os.environ["VASP_COMMAND"] = "echo TEST && " + default_command
             atoms.rattle()
-            calc.command = None
+            calc._vasp_command = None
             atoms.get_potential_energy()
-            assert calc.command is None
+            # assert calc.command is None
             print(calc.process.args)
             assert "TEST" in calc.process.args

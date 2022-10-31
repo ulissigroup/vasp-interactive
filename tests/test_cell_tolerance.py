@@ -7,6 +7,7 @@ from vasp_interactive import VaspInteractive
 import tempfile
 import os
 import sys
+from _common_utils import skip_lattice_if_incompatible
 
 h2_origin = molecule("H2", cell=[8, 8, 8], pbc=True)
 # Slightly change cell so system think h2_1 is still the same as h2_origin
@@ -20,7 +21,8 @@ vasp_params = dict(xc="pbe", kpts=(1, 1, 1), gamma=True)
 
 
 def test_check_state():
-    """Unit test for check_state function"""
+    """Unit test for check_state function. Only test when no lattice info needed."""
+    skip_lattice_if_incompatible(reverse=True)
     vasp = Vasp(**vasp_params)
     vpi = VaspInteractive(**vasp_params)
 
@@ -46,6 +48,7 @@ def test_check_state():
 
 
 def test_calculation():
+    skip_lattice_if_incompatible(reverse=True)
     with tempfile.TemporaryDirectory() as tmpdir:
         vpi = VaspInteractive(directory=tmpdir, **vasp_params)
         with vpi:
@@ -61,3 +64,7 @@ def test_calculation():
                 e3 = h2_2.get_potential_energy()
 
             assert pytest.approx(e1) == e2
+
+
+def test_always_true():
+    pass

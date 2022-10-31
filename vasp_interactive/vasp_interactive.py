@@ -5,15 +5,26 @@ May be merged with upstream by the end of day.
 """
 import time
 import signal
+import traceback
+import pickle
 import os
 import sys
+from pathlib import Path
 from warnings import warn
 from subprocess import Popen, PIPE
 from contextlib import contextmanager
 
 import numpy as np
-from ase.calculators.calculator import Calculator, ReadError, CalculatorSetupError
+from ase.calculators.calculator import (
+    Calculator,
+    ReadError,
+    CalculatorSetupError,
+    all_properties,
+    all_changes,
+)
 from ase.calculators.vasp.vasp import Vasp, check_atoms
+from ase.calculators.singlepoint import SinglePointDFTCalculator, SinglePointCalculator
+from ase.calculators.socketio import SocketClient
 
 
 from .utils import (
@@ -29,6 +40,27 @@ from .parse import (
     parse_vaspout_energy,
     parse_vaspout_forces,
 )
+
+
+class VPISocketClient(SocketClient):
+    """Minor patch to SocketClient to handle parent calculator termination"""
+
+    def attach_parent_calc(self, calc):
+        self.parent_calc = calc
+        return
+
+    def close(self):
+        if not self.closed:
+            self.log("Close SocketClient")
+            self.protocol.socket.close()
+            # If there is a calculator associated, use finalize to terminate
+            if hasattr(self, "parent_calc"):
+                if (self.parent_calc is not None) and (
+                    hasattr(self.parent_calc, "finalize")
+                ):
+                    if not self.parent_calc.final:
+                        self.parent_calc.finalize()
+            self.closed = True
 
 
 class VaspInteractive(Vasp):
@@ -47,6 +79,8 @@ class VaspInteractive(Vasp):
         "interactive": True,
         # Disable stopping criteria but just rely on nsw
         "ediffg": 0,
+        # Set ISIF tag to cature stress-induced energy change
+        "isif": 3,
     }
     # Enforce the job to run infinitely untill killed
     default_input = {
@@ -59,7 +93,6 @@ class VaspInteractive(Vasp):
         atoms=None,
         directory=".",
         label="vasp-interactive",
-        ignore_bad_restart_file=Calculator._deprecated,
         command=None,
         txt="vasp.out",
         allow_restart_process=True,
@@ -68,20 +101,45 @@ class VaspInteractive(Vasp):
         cell_tolerance=1e-8,
         kill_timeout=DEFAULT_KILL_TIMEOUT,
         parse_vaspout=True,
+        use_socket=False,
+        host="localhost",
+        port=None,
+        unixsocket=None,
+        timeout=None,
+        log=None,
         **kwargs,
     ):
-        """Initialize the calculator object like the normal Vasp object.
-        Additional attributes:
-            `self.process`: Popen instance to run the VASP calculation
+        """Interactive mode calculator for VASP.
+
+        `VaspInteractive` handles all compatible parameters with `ase.calculators.vasp.Vasp`.
+        There are also additional parameters controlling the interactive mode and socket-I/O mode
+        behavior:
+
+        Parameters for interactive mode:
             `allow_restart_process`: if True, will restart the VASP process if it exits before user program ends
-            `allow_mpi_pause`: If disabled, do not interfere with the vasp program but let system load balancing handle CPU requests.
-            `allow_default_param_overwrite`: If True, use mandatory input parameters to overwrite (but give warnings)
-            `cell_tolerance`: tolerance threshold for detecting cell change
-            `kill_timeout`: Timeout in seconds before forcibly kill the vasp process
+            `allow_mpi_pause`: whether the calculator can be paused.
+            `allow_default_param_overwrite`: if True, use mandatory input parameters to overwrite (but give warnings)
+            `cell_tolerance`: tolerance threshold for detecting cell change.
+            `kill_timeout`: timeout in seconds before forcibly kill the vasp process
             `parse_vaspout`: Whether to parse vasp.out for incorrect energy and forces fields. Only relevant if using VASP 5.x
+
+        Parameters for socket-I/O mode:
+            `use_socket`: if True, attach a socket client to the calculator and self.run() method
+                          will be available. Note you don't need to set use_socket when passing through
+                          SocketIOCalculator
+            `host`: hostname of the socket server running iPI protocol
+            `port`: server port to connect to
+            `unixsocket`: name of local unix socket
+            `timeout`: socket I/O timeout
+            `log`: logfile for the socket client. If None, write to stdout
+
+        Different behaviors compared with original `ase.calculators.vasp.Vasp`:
+        - VaspInteractive can be run using the context manager (the `with`-clause)
+        - Copies of the calculator do not duplicate the underlying VASP process
+        - self.command is by default set to calling the socket mode command line.
+          The actual VASP command passed in __init__ is stored in self._vasp_command
         """
 
-        # Add the mandatory keywords
         for kw, val in VaspInteractive.mandatory_input.items():
             if kw in kwargs and val != kwargs[kw]:
                 if allow_default_param_overwrite:
@@ -106,15 +164,14 @@ class VaspInteractive(Vasp):
             atoms=atoms,
             directory=directory,
             label=label,
-            ignore_bad_restart_file=ignore_bad_restart_file,
             command=command,
             txt=txt,
             restart=None,
             **kwargs,
         )
         # VaspInteractive can take 1 Popen process to track the VASP job
-        self.process = None
         # self.pid tracks if pid changes (useful for stopping slurm jobs)
+        self.process = None
         self.pid = None
         self.allow_restart_process = allow_restart_process
 
@@ -164,6 +221,53 @@ class VaspInteractive(Vasp):
             self.mpi_state = None
         self.kill_timeout = kill_timeout
         self.parse_vaspout = parse_vaspout
+
+        # VASP status flags
+        self._xml_complete = None
+        self._outcar_complete = None
+
+        input_params = dict(
+            label=label,
+            command=command,
+            txt=txt,
+            allow_restart_process=allow_restart_process,
+            allow_mpi_pause=allow_mpi_pause,
+            allow_default_param_overwrite=allow_default_param_overwrite,
+            cell_tolerance=cell_tolerance,
+            kill_timeout=kill_timeout,
+            parse_vaspout=parse_vaspout,
+            # host=host,
+            # unixsocket=unixsocket,
+            # port=port,
+            # timeout=timeout,
+            # log=log,
+        )
+        input_params.update(**kwargs)
+
+        # Store the original self.command to self._vasp_command since
+        # FileIOClientLauncher makes use of it. Leave the port & unixsocket as formatters
+        # When starting the socket-I/O interface like SocketIOCalculator(calc=calc, **params)
+        # there is no need to specify any socket parameters.
+        self._vasp_command = self.command
+        self.command = f"{sys.executable} -m vasp_interactive.socketio -p {{port}} -sn {{unixsocket}} -ht {host}"
+        self._ensure_directory()
+        # save vpi settings
+        param_file = self._indir(".vpi_params.pkl")
+        with open(param_file, "wb") as f:
+            pickle.dump(input_params, f)
+
+        if use_socket:
+            self.socket_client = VPISocketClient(
+                host=host,
+                port=port,
+                unixsocket=unixsocket,
+                timeout=timeout,
+                log=log,
+                comm=None,
+            )
+            self.socket_client.attach_parent_calc(self)
+        else:
+            self.socket_client = None
         return
 
     @property
@@ -280,41 +384,17 @@ class VaspInteractive(Vasp):
             out.write(text)
             out.flush()
 
-    def _run(self, atoms, out):
-        """Overwrite the Vasp._run method
-        Running pipe-based vasp job
-        `out` is the io stream determined by `_txt_outstream()`
-        Logic:
-        - If the vasp process not present (either not started or restarted):
-            make inputs and run until stdout captures request for new pos input
-        - Else the vasp process has started and asks for input (2+ ionic step)
-            write new positions to stdin
-        - If the process continues without asking input, check the process return code
-          if returncode != 0 then there is an error
+    def _start_vasp_process(self, atoms, out):
+        """Helper function to be used inside _run() to make sure the VASP process is running.
+        A new VASP process will be started if:
+        1. No VASP process has been started
+        2. The old VASP process successfully returned but more positions are provided
+        If the VASP process is running, do nothing.
+        Return of the function ensures self.process is not None
         """
-        # VASP process exited (possibly due to NSW limit reached), release the process handle
-        # a bit messy conditions here but works
-        if self.process is not None:
-            if (self.process.poll() == 0) and self.allow_restart_process:
-                pid = self.process.pid
-                self.process = None
-                self.pid = None
-                self._stdout(
-                    "It seems your VASP process exited normally. I'll retart a new one.",
-                    out=out,
-                )
-                warn(
-                    (
-                        f"VASP process (pid={pid}) exits normally but new positions are still provided. "
-                        "A new VASP process will be started. "
-                        "To supress this warning, you may want to increase the NSW number in your settings."
-                    )
-                )
-
         if self.process is None:
             # Delete STOPCAR left by an unsuccessful run
             stopcar = self._indir("STOPCAR")
-
             if os.path.isfile(stopcar):
                 os.remove(stopcar)
             self._stdout("Writing VASP input files\n", out=out)
@@ -322,7 +402,7 @@ class VaspInteractive(Vasp):
             self.write_input(atoms)
             self._stdout("Starting VASP for initial step...\n", out=out)
             # Dynamic generation of command args
-            command = self.make_command(self.command)
+            command = self.make_command(self._vasp_command)
             self.process = Popen(
                 command,
                 shell=True,
@@ -336,17 +416,28 @@ class VaspInteractive(Vasp):
             self.pid = self.process.pid
             self.steps = 0
         else:
-            # Whenever at this point, VASP interactive asks the input
-            # write the current atoms positions to the stdin
             retcode = self.process.poll()
+            # Still running, do nothing
             if retcode is None:
-                self._stdout("Inputting positions...\n", out=out)
-                # ase atoms --> self.sort --> write to position for VASP
-                # use scaled positions wrap back to cell
-                for atom in atoms.get_scaled_positions()[self.sort]:
-                    self._stdin(" ".join(map("{:19.16f}".format, atom)), out=out)
+                return
+            if (retcode == 0) and (self.allow_restart_process):
+                pid = self.process.pid
+                self.process = None
+                self.pid = None
+                self._stdout(
+                    "It seems your VASP process exited normally. I'll restart a new one.",
+                    out=out,
+                )
+                warn(
+                    (
+                        f"VASP process (pid={pid}) exits normally but new positions are still provided. "
+                        "A new VASP process will be started. "
+                        "To supress this warning, you may want to increase the NSW number in your settings."
+                    )
+                )
+                # Call the start process again
+                self._start_vasp_process(atoms=atoms, out=out)
             else:
-                # The vasp process stops prematurely
                 raise RuntimeError(
                     (
                         f"The VASP process has exited with code {retcode} but "
@@ -355,7 +446,78 @@ class VaspInteractive(Vasp):
                         "to enable auto restart of the VASP process."
                     )
                 )
+        return
 
+    def _write_atoms_stdin(self, atoms, out, require_cell_stdin):
+        """Helper function to write input positions / cell in _run().
+        This function adapts to different VASP compilations.
+        """
+        self._stdout("Inputting positions...\n", out=out)
+        # ase atoms --> self.sort --> write to position for VASP
+        # use scaled positions wrap back to cell
+        for atom in atoms.get_scaled_positions()[self.sort]:
+            self._stdin(" ".join(map("{:19.16f}".format, atom)), out=None)
+        # INPOS subroutine does not split the positions, so manually write into vasp.out
+        self._stdout("New scaled positions\n", out=out)
+        for i in range(len(atoms)):
+            self._stdout(self.process.stdout.readline(), out=out)
+        self._stdout("Old scaled positions\n", out=out)
+        for i in range(len(atoms)):
+            self._stdout(self.process.stdout.readline(), out=out)
+
+        # An additional line "POSITIONS: read from stdin"
+        text = self.process.stdout.readline()
+        self._stdout(text, out=out)
+        assert "POSITIONS: read from stdin" in text
+
+        # Determine if lattice input is needed
+        text = self.process.stdout.readline()
+        self._stdout(text, out=out)
+        if "LATTICE: reading from stdin" in text:
+            for vec in atoms.cell:
+                self._stdin(" ".join(map("{:19.16f}".format, vec)), out=None)
+            # Finish the lattice vector outputs. Note there can be multiple empty lines
+            # In total, there should be 9 lines before the closing sentence
+            count = 0
+            while count < (2 * 3 + 3):
+                text = self.process.stdout.readline()
+                self._stdout(text, out=out)
+                if len(text.strip()) != 0:
+                    count += 1
+            assert "LATTICE: read from stdin" in text
+        elif require_cell_stdin:
+            # Cannot continue if cell change is required but VASP does not support
+            raise RuntimeError(
+                (
+                    "The unit cell changes in your calculation but VASP does not support writing lattice parameters to stdin. "
+                    "Please consider applying this patch https://github.com/ulissigroup/vasp-interactive first."
+                )
+            )
+        return
+
+    def _run(self, atoms, out, require_cell_stdin):
+        """Overwrite the Vasp._run method
+        Running pipe-based vasp job
+        `out` is the io stream determined by `_txt_outstream()`
+        Logic:
+        - If the vasp process not present (either not started or restarted):
+            make inputs and run until stdout captures request for new pos input
+        - Else the vasp process has started and asks for input (2+ ionic step)
+            write new positions to stdin
+        - If the process continues without asking input, check the process return code
+          if returncode != 0 then there is an error
+        """
+        # 1. Start / renew the VASP process
+        self._start_vasp_process(atoms=atoms, out=out)
+
+        # 2. Input the new positions (position and / or cell) if steps > 0
+        if self.steps > 0:
+            self._write_atoms_stdin(
+                atoms=atoms, out=out, require_cell_stdin=require_cell_stdin
+            )
+
+        # 3. Start read cycle until the current ionic step
+        #    finishes by "POSITIONS: reading from stdin"
         while self.process.poll() is None:
             text = self.process.stdout.readline()
             self._stdout(text, out=out)
@@ -364,56 +526,38 @@ class VaspInteractive(Vasp):
                 if _int_version(self.version) < 6:
                     warn(
                         (
-                            "VaspInteractive is not fully compatible with VASP 5.x. "
+                            "VASP 5.x. may be not fully compatible with VaspInteractive."
                             "See this issue for details https://github.com/ulissigroup/vasp-interactive/issues/6. "
-                            "While our implementation should handle energy and forces correctly, "
-                            "other properties may be incorrectly parsed during optimization. "
-                            "If you encounter similar error messages, try using VASP version > 6 if available."
+                            "If you encounter similar error messages, try using VASP 6.x or apply our patch if possible."
                         )
                     )
             if "POSITIONS: reading from stdin" in text:
                 return
 
-        # Extra condition, vasp exited with 0 (completed)
-        # can be 2 situations: completed job due to STOPCAR
-        # or nsw is reached
-        if self.process.poll() == 0:
+        # 4. VASP process exits. Check if everything's running ok
+        retcode = self.process.poll()
+        if retcode == 0:
             self._stdout("VASP terminated normally\n", out=out)
-            # Update Aug. 13 2021
-            # Since we explicitly added the check for self.steps in self.calculate
-            # the following scenario should not happen
             if self.steps > self.incar_nsw:
                 self._stdout(
                     (
                         "However the maximum ionic iterations have been reached. "
-                        "Consider increasing NSW number in your calculation."
+                        "Consider increasing NSW number in your calculation.\n"
                     ),
                     out=out,
                 )
-                raise RuntimeError(
-                    (
-                        "VASP process terminated normally but "
-                        "your current ionic steps exceeds maximum allowed number. "
-                        "Consider increase your NSW value in calculator setup, "
-                        "or set allow_process_restart=True"
-                    )
-                )
-
-            return
         else:
             # If we've reached this point, then VASP has exited without asking for
             # new positions, meaning it either exited without error unexpectedly,
             # or it exited with an error. Either way, we need to raise an error.
-
             raise RuntimeError(
-                "VASP exited unexpectedly with exit code {}"
-                "".format(self.process.poll())
+                "VASP exited unexpectedly with exit code {}" "".format(retcode)
             )
+        return
 
     def close(self):
         """Soft stop approach for the stream-based VASP process
         Works by writing STOPCAR file and runs two dummy scf cycles
-        #TODO: add a time-out option
         """
         # Make sure the MPI process is awake before the termination
         if self.pause_mpi:
@@ -451,7 +595,8 @@ class VaspInteractive(Vasp):
                 # second is to exit the program
                 # Program may have ended before we can write, if so then cancel the stdin
                 for i in range(2):
-                    self._run(self.atoms, out=out)
+                    self._run(self.atoms, out=out, require_cell_stdin=False)
+
                     if self.process.poll() is not None:
                         self._stdout(
                             f"VASP exited with code {self.process.poll()}.", out=out
@@ -462,7 +607,6 @@ class VaspInteractive(Vasp):
                             self.mpi_match = None
                             self.mpi_state = None
                         return
-                # TODO: change the endless waiting to a timeout function
                 while self.process.poll() is None:
                     time.sleep(1)
                 self._stdout("VASP has been closed\n", out=out)
@@ -574,10 +718,11 @@ class VaspInteractive(Vasp):
         self,
         atoms=None,
         properties=["energy"],
-        system_changes=["positions", "numbers", "cell"],
+        system_changes=all_changes,
     ):
         check_atoms(atoms)
 
+        # TODO: check if this is an old hack left from ALMLP days?
         if hasattr(self, "system_changes") and self.system_changes is not None:
             system_changes = self.system_changes
             self.system_changes = None
@@ -586,7 +731,9 @@ class VaspInteractive(Vasp):
             # No need to calculate, calculator has stored calculated results
             return
 
-        # Currently VaspInteractive only handles change of positions (MD-like)
+        # VaspInteractive supports positions change by default.
+        # Change of cell is supported by a patch provided by this package, but needs to check on the fly
+        # TODO: send flag to _run to warn cell change
         if "numbers" in system_changes:
             if self.process is not None:
                 raise NotImplementedError(
@@ -595,29 +742,39 @@ class VaspInteractive(Vasp):
                         "Please create a new calculator instance or use standard Vasp calculator"
                     )
                 )
-        elif "cell" in system_changes:
-            if self.process is not None:
-                raise NotImplementedError(
-                    (
-                        "VaspInteractive does not support change of lattice parameters. "
-                        "Set VaspInteractive.cell_tolerance to a higher value if you think it's caused by round-off error. "
-                        "Otherwise, please create a new calculator instance or use standard Vasp calculator"
-                    )
-                )
+
+        # Does the VASP interactive mode needs to take cell as inputs?
+        # If require_cell_stdin is True, _run must get a "LATTICE: reading from stdin" line
+        # after sending in the positions, otherwise throws NotImplementedError
+        # Otherwise, sending cell to stdin is optional
+        if ("cell" in system_changes) and (self.process is not None):
+            require_cell_stdin = True
+        else:
+            require_cell_stdin = False
+        # elif "cell" in system_changes:
+
+        # if self.process is not None:
+        #     raise NotImplementedError(
+        #         (
+        #             "VaspInteractive does not support change of lattice parameters. "
+        #             "Set VaspInteractive.cell_tolerance to a higher value if you think it's caused by round-off error. "
+        #             "Otherwise, please create a new calculator instance or use standard Vasp calculator"
+        #         )
+        #     )
 
         self.clear_results()
         if atoms is not None:
             self.atoms = atoms.copy()
 
         with self._txt_outstream() as out:
-            self._run(self.atoms, out=out)
+            self._run(self.atoms, out=out, require_cell_stdin=require_cell_stdin)
             self.steps += 1
             # special condition: job runs with nsw limit reached.
             # In the interactive mode, VASP won't exit until steps > nsw
             # this can be problematic if the next user input is a different position
             # so we simply run a dummy step using current positions to gracefully terminate VASP
             if self.steps >= self.incar_nsw:
-                self._run(self.atoms, out=out)
+                self._run(self.atoms, out=out, require_cell_stdin=require_cell_stdin)
 
         # Use overwritten `read_results` method
         self.read_results()
@@ -625,65 +782,90 @@ class VaspInteractive(Vasp):
 
     def read_results(self):
         """Overwrites the `read_results` from parent class.
-        In the interactive mode, after each ionic SCF cycle,
-        only the OUTCAR content is written, while vasprun.xml
-        is completed after user input. The results are read as
-        much as possible from the OUTCAR file.
+        Depending on the state of the VASP patch, the vasprun.xml, OUTCAR or vasp.out fields
+        may or may not be truncated after each ionic step. `read_results` will first try
+        xml parsing using parent class's read_results.
+        If not working then OUTCAR and finally read from vasp.out if all above failed.
+
+        The xml calc reader self._xml_calc may be generated by a place-holder SP calculator
+        to make _set_old_parameters working.
         """
-        # Temporarily load OUTCAR into memory
-        outcar = self.load_file("OUTCAR")
-
-        # vasprun.xml is only valid iteration when atoms finalized
-        calc_xml = None
-        xml_results = None
-        if self.final:
+        # Record if xml contents are complete at each ionic step
+        if self._xml_complete is not False:
             try:
-                calc_xml = self._read_xml()
-                xml_results = calc_xml.results
-            except ReadError:
-                # The xml file is not complete, try using OUTCAR only
-                pass
-
-        # Fix sorting
-        if xml_results:
-            xml_results["forces"] = xml_results["forces"][self.resort]
-            self.results.update(xml_results)
-
-        # OUTCAR handling part
-        self.converged = self.read_convergence(lines=outcar)
-        self.version = self.read_version()
-        vasp5 = False
-        if self.version is not None:
-            if _int_version(self.version) < 6:
+                super().read_results()
+                self._xml_complete = True
+            except Exception as e:
                 warn(
                     (
-                        "VaspInteractive is not fully compatible with VASP 5.x. "
-                        "See this issue for details https://github.com/ulissigroup/vasp-interactive/issues/6. "
-                        "While our implementation should handle energy and forces correctly, "
-                        "other properties may be incorrectly parsed during optimization. "
-                        "If you encounter similar error messages, try using VASP version > 6 if available."
+                        "Direct reading from xml files failed. "
+                        "You VASP build may be truncating outputs."
+                        "I'll recover the remaining information using OUTCAR and vasp.out at this point"
                     )
                 )
-                if self.parse_vaspout:
-                    vasp5 = True
+                self._xml_complete = False
 
+        # Some properties, like E-Fermi might not exist in vasprun.xml but rather in OUTCAR
+        # Try to complete as much as possible
+        outcar = self.load_file("OUTCAR")
+        properties = ["stress", "fermi", "nbands", "dipole"]
+        for prop in properties:
+            if prop not in self.results.keys():
+                try:
+                    # use read_xxx method to parse outcar
+                    result = getattr(self, f"read_{prop}")(lines=outcar)
+                    self.results[prop] = result
+                except Exception:
+                    pass
+        # TODO: fermi should be added to _xml_calc instead
         # breakpoint()
+        # No need to further parsing if xml file parsing finished
+        if self._xml_complete:
+            return
+
+        self.converged = self.read_convergence(lines=outcar)
+        self.version = self.read_version()
+
+        # Do a quick test to see if OUTCAR is truncated
+        # remember the status of _outcar_complete later
+        if self._outcar_complete is None:
+            e, fe = self.read_energy(lines=outcar)
+            f = self.read_forces(lines=outcar)
+            if (e == 0) or (fe == 0) or (f is None):
+                self._outcar_complete = False
+                warn(
+                    (
+                        "OUTCAR contents are truncated and I'll try to parse "
+                        "energy and forces from vasp.out. Note some information "
+                        "like stress may be incorrect."
+                    )
+                )
+            else:
+                self._outcar_complete = True
+
+        if (self._outcar_complete is False) and (
+            getattr(self, "parse_vaspout", False) is False
+        ):
+            raise RuntimeError(
+                (
+                    "Cannot continue because both vasprun.xml and OUTCAR are truncated. "
+                    "If you are running with VASP 5.x, set parse_vaspout=True. "
+                )
+            )
+
         # Energy and magmom have multiple return values
         if "free_energy" not in self.results.keys():
             try:
-                energy_free, energy_zero = self.read_energy(
-                    lines=outcar, all=False, vasp5=vasp5
-                )
-                # breakpoint()
+                energy_free, energy_zero = self.read_energy(lines=outcar, all=False)
                 self.results.update(dict(free_energy=energy_free, energy=energy_zero))
             except Exception as e:
                 raise RuntimeError(("Failed to obtain energy from calculator.")) from e
 
         if "forces" not in self.results.keys():
             try:
-                self.results.update(
-                    dict(forces=self.read_forces(lines=outcar, vasp5=vasp5))
-                )
+                # self.read_forces already contain sort information
+                forces = self.read_forces(lines=outcar)
+                self.results.update(dict(forces=forces))
             except Exception as e:
                 raise RuntimeError(("Failed to obtain forces from calculator.")) from e
 
@@ -694,37 +876,35 @@ class VaspInteractive(Vasp):
             except Exception:
                 pass
 
-        # Missing properties that are name-consistent so can use dynamic function loading
-        # Do not parse them in vasp5
-        if not vasp5:
-            properties = ["stress", "fermi", "nbands", "dipole"]
-            for prop in properties:
-                if prop not in self.results.keys():
-                    try:
-                        # use read_xxx method to parse outcar
-                        result = getattr(self, f"read_{prop}")(lines=outcar)
-                        self.results[prop] = result
-                    except Exception:
-                        # Do not add the key
-                        pass
-
+        # print(self.results)
+        # print(all_properties)
+        # Construct a fake _xml_calc object
+        # results = self.results.copy()
+        # nbands = results.pop("nbands", None)
+        # print(self.results["forces"])
+        results = {k: v for k, v in self.results.items() if k in all_properties}
+        # print(list(results.keys()))
+        calc_xml = SinglePointDFTCalculator(
+            atoms=self.atoms, efermi=self.results.get("fermi", None), **results
+        )
+        self._xml_calc = calc_xml
         # Manunal old keywords handling
-        self.spinpol = self.read_spinpol(lines=outcar)
+        self._set_old_keywords()
 
         # Store the parameters used for this calculation
         self._store_param_state()
 
-    def read_energy(self, all=False, lines=None, vasp5=False):
+    def read_energy(self, all=False, lines=None):
         """Overwrite the parent read_energy
         VASP 5.x output behavior is unpredictable and should always use the value in vasp.out
         parameter vasp5 enforces read using vasp.out (or any txt) and uses only all=False
         """
-        try:
-            fe, e0 = super().read_energy(all=all, lines=lines)
-        except Exception:
-            fe, e0 = [0, 0]
-        # Upstream read_energy from ase has a flaw that returns 0, 0 if parsing failed
-        if vasp5:
+        if self._outcar_complete is not False:
+            try:
+                fe, e0 = super().read_energy(all=all, lines=lines)
+            except Exception:
+                fe, e0 = [0, 0]
+        else:
             if getattr(self, "parse_vaspout", False) is False:
                 raise RuntimeError(
                     (
@@ -752,14 +932,15 @@ class VaspInteractive(Vasp):
         VASP 5.x output behavior is unpredictable and should always use the value in vasp.out
         parameter vasp5 enforces read using vasp.out (or any txt)
         """
-        try:
-            forces = super().read_forces(all=all, lines=lines)
-        except Exception:
-            forces = None
+        if self._outcar_complete is not False:
+            try:
+                forces = super().read_forces(all=all, lines=lines)
+            except Exception:
+                forces = None
 
         # Upstream read_energy from ase has a flaw that returns 0, 0 if parsing failed
         # Need to handle such case
-        if vasp5:
+        else:
             if getattr(self, "parse_vaspout", False) is False:
                 raise RuntimeError(
                     (
@@ -777,7 +958,8 @@ class VaspInteractive(Vasp):
             vaspout = f_vaspout.readlines()
             f_vaspout.close()
             try:
-                forces = parse_vaspout_forces(vaspout, all=False)
+                # Remember to resort the forces according to ase input
+                forces = parse_vaspout_forces(vaspout, all=False)[self.resort]
             except Exception as e:
                 raise RuntimeError(("Cannot parse forces from vasp output.")) from e
         return forces
@@ -815,6 +997,8 @@ class VaspInteractive(Vasp):
         """Stop the stream calculator and finalize"""
         self._force_kill_process()
         self.final = True
+        if (self.socket_client is not None) and (not self.socket_client.closed):
+            self.socket_client.close()
         return
 
     def __enter__(self):
@@ -839,7 +1023,7 @@ class VaspInteractive(Vasp):
             print(
                 (
                     f"Trying to close the VASP stream but encountered error: \n"
-                    f"{e}\n"
+                    f"{traceback.format_exc(limit=2)}\n"
                     "Will now force closing the VASP process. "
                     "The OUTCAR and vasprun.xml outputs may be incomplete"
                 ),
@@ -902,3 +1086,24 @@ class VaspInteractive(Vasp):
             )
         )
         return new
+
+    # socket-related
+    def irun(self, atoms, use_stress=None):
+        """Make the client run in iterative mode"""
+        if self.socket_client is None:
+            raise NotImplementedError(
+                "Cannot use socket io mode without specifying use_socket=True"
+            )
+        atoms.calc = self
+        return self.socket_client.irun(atoms, use_stress=use_stress)
+
+    def run(self, atoms, use_stress=None):
+        """Infinitely run client code"""
+        if self.socket_client is None:
+            raise NotImplementedError(
+                "Cannot use socket io mode without specifying use_socket=True"
+            )
+        atoms.calc = self
+        # breakpoint()
+        self.socket_client.run(atoms, use_stress=use_stress)
+        return

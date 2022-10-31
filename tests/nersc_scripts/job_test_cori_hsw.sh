@@ -6,7 +6,7 @@
 #SBATCH -t 02:00:00
 
 CONDA_ROOT="/global/homes/t/ttian20/.conda/envs/vpi"
-export VASP_COMMAND="srun -n 32 -c 2 --cpu-bind=cores vasp_std"
+export VASP_COMMAND="srun -u -n 32 -c 2 --cpu-bind=cores vasp_std"
 GIT_REPO="ulissigroup/vasp-interactive"
 if [ -z "$GIT_REF" ]
 then
@@ -25,7 +25,7 @@ gh repo clone $GIT_REPO
 cd vasp-interactive
 git checkout $GIT_REF
 echo "Check to $GIT_REF"
-export PYTHONPATH=`realpath .`
+export PYTHONPATH=`realpath .`:$PYTHONPATH
 export TEMPDIR=$SCRATCH
 
 res="true"

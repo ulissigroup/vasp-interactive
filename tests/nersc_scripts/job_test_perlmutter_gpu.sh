@@ -28,7 +28,7 @@ gh repo clone $GIT_REPO
 cd vasp-interactive
 git checkout $GIT_REF
 echo "Check to $GIT_REF"
-export PYTHONPATH=`realpath .`
+export PYTHONPATH=`realpath .`:$PYTHONPATH
 export TEMPDIR=$SCRATCH
 
 res="true"
