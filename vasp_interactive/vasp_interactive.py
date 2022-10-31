@@ -578,11 +578,7 @@ class VaspInteractive(Vasp):
             retcode = self.process.poll()
             with self._txt_outstream() as out:
                 self._stdout(f"VASP exited with code {retcode}.", out=out)
-            self.process = None
-            self.pid = None
-            if hasattr(self, "mpi_match"):
-                self.mpi_match = None
-                self.mpi_state = None
+            self._reset_process()
             return
         else:
             with self._txt_outstream() as out:
@@ -601,29 +597,36 @@ class VaspInteractive(Vasp):
                         self._stdout(
                             f"VASP exited with code {self.process.poll()}.", out=out
                         )
-                        self.process = None
-                        self.pid = None
-                        if hasattr(self, "mpi_match"):
-                            self.mpi_match = None
-                            self.mpi_state = None
+                        self._reset_process()
                         return
                 while self.process.poll() is None:
                     time.sleep(1)
                 self._stdout("VASP has been closed\n", out=out)
-                self.process = None
-                self.pid = None
-                if hasattr(self, "mpi_match"):
-                    self.mpi_match = None
-                    self.mpi_state = None
+                self._reset_process()
             return
 
     def _pause_calc(self, sig=signal.SIGTSTP):
         """Pause the vasp processes by sending SIGTSTP to the master mpirun process
         If the current pid are the same with previous record, do not query the mpi pid or slurm stepid
         """
+        # Always check if current calculator allows pause in case external optimizers
+        # use self._resume_calc / self._pause_calc pair without the context
+        if not self.pause_mpi:
+            return
+        
         if not self.process:
             return
-        pid = self.process.pid
+        
+        # Whenever cannot locate the pid via psutil, reset the VASP process
+        try:
+            pid = self.process.pid
+        except Exception as e:
+            warn(
+                "VASP process no longer exists. Will reset the calculator."
+            )
+            self._reset_process()
+            return
+
         if (self.pid == pid) and getattr(self, "mpi_match", None) is not None:
             match = self.mpi_match
         else:
@@ -650,9 +653,25 @@ class VaspInteractive(Vasp):
         """Resume the vasp processes by sending SIGCONT to the master mpirun process
         If the current pid are the same with previous record, do not query the mpi pid or slurm stepid
         """
+        # Always check if current calculator allows pause in case external optimizers
+        # use self._resume_calc / self._pause_calc pair without the context
+        if not self.pause_mpi:
+            return
+
         if not self.process:
             return
-        pid = self.process.pid
+        
+        # During the pause period, the process may exit unexpectedly that self.process is no longer
+        # linked to the pid
+        try:
+            pid = self.process.pid
+        except Exception as e:
+            warn(
+                "VASP process no longer exists. Will reset the calculator."
+            )
+            self._reset_process()
+            return
+        
         if (self.pid == pid) and getattr(self, "mpi_match", None) is not None:
             match = self.mpi_match
         else:
@@ -1033,12 +1052,20 @@ class VaspInteractive(Vasp):
                 if self.process.poll() is None:
                     self.process.kill()
             # Reset process tracker
-            self.process = None
-            self.pid = None
-            if hasattr(self, "mpi_match"):
-                self.mpi_match = None
-                self.mpi_state = None
+            self._reset_process()
         return
+
+    def _reset_process(self):
+        """Reset the record for process in the calculator.
+        Useful if the process is missing or reset the calculator.
+        """
+        # Reset process tracker
+        self.process = None
+        self.pid = None
+        if hasattr(self, "mpi_match"):
+            self.mpi_match = None
+            self.mpi_state = None
+
 
     def __del__(self):
         """Explicit deconstruction, kill the process with no mercy"""
@@ -1056,7 +1083,7 @@ class VaspInteractive(Vasp):
 
         new = type(self)()
         new.__dict__.update(self.__dict__)
-        new.process = None
+        new._reset_process()
         warn(
             (
                 "Due to thread safety, copy of the VaspInteractive calculator "
