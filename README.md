@@ -4,7 +4,6 @@
 ![version](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/alchem0x2a/afede700c2b7703c77e10e51333bfa75/raw/version.json)
 ![docker image](https://github.com/ulissigroup/vasp-interactive/actions/workflows/package_and_unittest.yml/badge.svg)
 
-
 [![Cori Haswell](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_hsw_status.yaml)
 [![Cori KNL](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_knl_status.yaml)
 [![Cori Shifter](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_shifter_status.yaml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/cori_shifter_status.yaml)
@@ -370,12 +369,12 @@ from NERSC.
 
 |          | Docker images (**) | Cori Haswell (†) | Cori KNL (†) | Perlmutter CPU (†) | Perlmutter GPU (†)  |
 | ---------- | ---------- | ---------- | ---------- | ---------- | ----------  |
-| VASP 5.4.x | ![](https://img.shields.io/badge/-minimal_support-orange) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-minimal_support-orange) | ![](https://img.shields.io/badge/-not_available-lightgrey)  |
+| VASP 5.4.x | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-minimal_support-orange) | ![](https://img.shields.io/badge/-not_available-lightgrey)  |
 | VASP 5.4.x - TPC (*) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-minimal_support-orange) | ![](https://img.shields.io/badge/-not_available-lightgrey)  |
-| VASP 6.1.x | ![](https://img.shields.io/badge/-partial_pass-olive) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-not_available-lightgrey)  |
-| VASP 6.2.x | ![](https://img.shields.io/badge/-partial_pass-olive) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-partial_pass-olive)  |
+| VASP 6.1.x | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-not_available-lightgrey)  |
+| VASP 6.2.x | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-partial_pass-olive)  |
 | VASP 6.2.x - TPC (*) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-partial_pass-olive)  |
-| VASP 6.3.x | ![](https://img.shields.io/badge/-partial_pass-olive) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-partial_pass-olive) | ![](https://img.shields.io/badge/-partial_pass-olive)  |
+| VASP 6.3.x | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-partial_pass-olive) | ![](https://img.shields.io/badge/-partial_pass-olive)  |
 | VASP 6.3.x - TPC (*) | ![](https://img.shields.io/badge/-not_available-lightgrey) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-all_pass-green) | ![](https://img.shields.io/badge/-partial_pass-olive) | ![](https://img.shields.io/badge/-partial_pass-olive)  |
 
 <!-- PLACEHOLDER END -->
