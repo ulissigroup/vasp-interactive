@@ -130,7 +130,7 @@ jobs:
       run: |
         echo $JID $SHA
         ssh -i ~/.ssh/nersc ${{ secrets.NERSC_USER_NAME }}@${{ matrix.url }} \
-            "shifter --image=ulissigroup/kubeflow_vasp:beef_vdw -e GIT_REF=$SHA -e GIST_ID=$GIST_ID -e GH_TOKEN=$GHT -- bash \$SCRATCH/$JID-docker-img.sh"
+            "shifter --image=ulissigroup/kubeflow_vasp:extras-notebook -e GIT_REF=$SHA -e GIST_ID=$GIST_ID -e GH_TOKEN=$GHT -- bash \$SCRATCH/$JID-docker-img.sh"
       if: ${{ matrix.host == 'perlmutter-login-only' }}
       env:
         JID: ${{ github.run_id }}
@@ -141,7 +141,8 @@ jobs:
         rm -rf ~/.ssh
 
   render-table:
-    needs: [submit-nersc-jobs,]
+    needs: [submit-nersc-jobs, docker-github-runner]
+    if: ${{ always() }}
     defaults:
       run:
         shell: bash
