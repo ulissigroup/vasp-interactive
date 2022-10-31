@@ -8,6 +8,7 @@ import signal
 import traceback
 import pickle
 import os
+import psutil
 import sys
 from pathlib import Path
 from warnings import warn
@@ -620,6 +621,7 @@ class VaspInteractive(Vasp):
         # Whenever cannot locate the pid via psutil, reset the VASP process
         try:
             pid = self.process.pid
+            psutil_proc = psutil.Process(pid)
         except Exception as e:
             warn(
                 "VASP process no longer exists. Will reset the calculator."
@@ -665,6 +667,7 @@ class VaspInteractive(Vasp):
         # linked to the pid
         try:
             pid = self.process.pid
+            psutil_proc = Process(pid)
         except Exception as e:
             warn(
                 "VASP process no longer exists. Will reset the calculator."

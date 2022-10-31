@@ -6,6 +6,7 @@ from vasp_interactive import VaspInteractive
 import psutil
 import time
 import tempfile
+import signal
 from subprocess import run, Popen
 from pathlib import Path
 import os
@@ -31,7 +32,7 @@ def test_abrupt_kill():
     with tempfile.TemporaryDirectory() as tmpdir:
         calc = VaspInteractive(directory=tmpdir, txt="-", **params)
         with calc:
-            sleep_t = 3 + np.random.random() * 2
+            sleep_t = np.random.uniform(3, 5)
             # Test if abruptly killing vasp causes RuntimeError
             p = Popen(f"sleep {sleep_t} && killall vasp_std", shell=True)
             h2.calc = calc
@@ -41,29 +42,78 @@ def test_abrupt_kill():
                 assert p.poll() is not None
     return
 
+def test_pause_kill():
+    """Randomly kill vasp process during a run
+    """
+    h2 = h2_root.copy()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        calc = VaspInteractive(directory=tmpdir, txt="-", **params)
+        with calc:
+            print(calc.pause_mpi)
+            h2.calc = calc
+            h2.get_potential_energy()
+            calc._pause_calc()
+            # Manually kill the VASP process
+            calc.process.kill()
+            # calc._resume_calc should still work
+            calc._resume_calc()
+            h2.rattle(0.05)
+            # At this stage when calc.process checks it will return None zero exit code
+            with pytest.raises(RuntimeError):
+                h2.get_potential_energy()
+    return
 
-# def test_pause_context():
-#     """Context mode"""
-#     skip_probe(4, skip_oversubscribe=True)
-#     # skip_slurm()
-#     h2 = h2_root.copy()
-#     threshold_high = 75.0
-#     threshold_low = 25.0
-#     with tempfile.TemporaryDirectory() as tmpdir:
-#         with VaspInteractive(directory=tmpdir, **params) as calc:
-#             h2.calc = calc
-#             h2.get_potential_energy()
-#             pid = h2.calc.process.pid
-#             # Context
-#             with h2.calc.pause():
-#                 cpu_stop = get_average_cpu()
-#                 print(cpu_stop)
-#                 assert cpu_stop < threshold_low
+def test_pause_low_nsw():
+    """If VASP exits due to a low nsw setting, _resume_calc and _pause_calc
+    should not causing errors, but rather start new VASP instance.
+    """
+    h2 = h2_root.copy()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        calc = VaspInteractive(directory=tmpdir, nsw=1, txt="-", **params)
+        with calc:
+            h2.calc = calc
+            calc._pause_calc()
+            calc._resume_calc()
+            h2.get_potential_energy()
+            pid1 = calc.pid
+            # At this step calc already quits
+            calc._pause_calc()
+            assert calc.mpi_match["type"] is None
+            assert calc.mpi_match["process"] is None
+            calc._resume_calc()
+            h2.rattle(0.05)
+            h2.get_potential_energy()
+            pid2 = calc.pid
+            assert pid1 != pid2
+    return
 
-#             cpu_nonstop = get_average_cpu()
-#             print(cpu_nonstop)
-#             assert cpu_nonstop > threshold_high
-#     return
+def test_abrupt_stopcar():
+    """Randomly write STOPCAR to stop a VASP calculation.
+    pause / resume should not be affected.
+    """
+    h2 = h2_root.copy()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        calc = VaspInteractive(directory=tmpdir, txt="-", **params)
+        with calc:
+            sleep_t = np.random.uniform(1, 2)
+            # First ionic step only has 1 scf
+            h2.calc = calc
+            p = Popen(f"sleep {sleep_t} && echo 'LABORT = .TRUE.' > STOPCAR", shell=True, cwd=tmpdir)
+            e1 = h2.get_potential_energy()
+            print(e1)
+            calc._pause_calc()
+            calc._resume_calc()
+            # 
+            h2.rattle(0.05)
+            e2 = h2.get_potential_energy()
+            print(e2)
+            calc._pause_calc()
+            calc._resume_calc()
+    return
+
+
+
+
 
 
 # def test_always_true():
