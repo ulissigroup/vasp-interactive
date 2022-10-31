@@ -150,3 +150,8 @@ sandbox/
 **/output.pkl
 **/func_code.py
 README.md.bk
+vasp.*.tgz
+vasp.*/
+patch-54
+patch-6*
+.DS_Store

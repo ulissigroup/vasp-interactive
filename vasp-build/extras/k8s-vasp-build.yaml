@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: laikapack-vasp-build
+spec:
+  template:
+    spec:
+      containers:
+      - name: main
+        image: ghcr.io/ulissigroup/vasp-interactive:build_env
+        command: ["bash", "build_all.sh"]
+
+        # Temporary working directory in the container
+        workingDir: /home/jovyan/shared-scratch/TT/vasp_builds
+        env:
+        - name: PASS
+          valueFrom:
+            secretKeyRef:
+              key: PASS
+              name: github-encrypt-key
+              optional: false
+
+        # Mount the vasp_cpu folder in your workspace onto /home 
+        volumeMounts:
+        - mountPath: /home/jovyan/shared-scratch
+          name: vol1
+
+        # Ask for 8 cores, 16gb ram
+        resources:
+          limits:
+            cpu: "16"
+            memory: 8Gi
+          requests:
+            cpu: "16"
+            memory: 8Gi
+      restartPolicy: Never
+
+      volumes:
+      - name: vol1
+        persistentVolumeClaim:
+          claimName: shared-scratch
+      
+      imagePullSecrets:
+      - name: ghcr
+
+  # Don't try more than 2 times to launch
+  backoffLimit: 2

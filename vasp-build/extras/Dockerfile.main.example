@@ -1,0 +1,50 @@
+###############################################################################
+# Example Dockerfile with workable VASP binaries. 
+# Please edit the sections marked as EDITME according to your needs
+###############################################################################
+
+
+ARG BUILD_ENV=ghcr.io/ulissigroup/vasp-interactive:build_env
+ARG RUNTIME=ghcr.io/ulissigroup/vasp-interactive:runtime
+ARG LIBBEEF=/opt/libbeef
+ARG NCORES=8
+
+# Temporary cache
+FROM ${BUILD_ENV} as build
+ARG LIBBEEF
+ARG NCORES
+###############################################################################
+# EDITME!
+# 1. Place your vasp.X.Y.Z.tgz at the same level as this Dockerfile
+# 2. Replace / edit the makefiles if necessary
+# 3. Modify the variables passed to compile_vasp.sh as you wish
+# 4. You can use multiple build stages for different VASP versions and 
+#    copy them into the main stage
+###############################################################################
+WORKDIR /tmp
+COPY vasp.6.3.0.tgz ./
+COPY makefile_examples/makefile ./makefile
+COPY makefile_examples/makefile.include.vasp6 ./makefile.include
+# Example: build vasp 6.3.0 to /tmp/vasp.6.3.0/bin
+RUN NCORES=${NCORES} compile_vasp.sh vasp.6.3.0.tgz makefile makefile.include
+
+FROM ${RUNTIME} as main
+# Install libfftw
+ARG DEBIAN_FRONTEND=noninteractive
+
+#####################################################################
+# EDITME!
+# This part installs extra apt packages that to be used in the image
+#####################################################################
+RUN apt-get update -y &&\
+    apt-get install -y --no-install-recommends \
+    htop &&\
+    rm -rf /var/lib/apt/lists/*
+
+#####################################################################
+# EDITME!
+# Change the directory where you want to copy the compiled VASP binaries
+#####################################################################
+
+
+

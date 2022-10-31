@@ -1,0 +1,152 @@
+name: Build docker images (build-env & runtime)
+
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "vasp-build/**"
+      - ".github/workflows/docker_build.yml"
+  pull_request:
+    branches:  [ main ]
+    paths:
+      - "vasp-build/**"
+      - ".github/workflows/docker_build.yml"
+  workflow_dispatch:
+
+jobs:
+  build_env:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: setup docker context for buildx
+        id: buildx-context
+        run: |
+          docker context create builders || :
+      - name: setup docker buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          endpoint: builders
+      - name: Login to Github Container Repo
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set lower case repository name
+        # Hit from https://github.community/t/github-actions-repository-name-must-be-lowercase/184924
+        run: |
+          echo "REPO_OWNER_LC=${OWNER,,}" >> ${GITHUB_ENV}
+        env:
+          OWNER: "${{ github.repository_owner }}"
+      - name: Build and push to GHCR
+        uses: docker/build-push-action@v2
+        with:
+          context: vasp-build/
+          file: vasp-build/extras/Dockerfile.build_env
+          push: true
+          tags: |
+            ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:build_env
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Tag image version
+        uses: akhilerm/tag-push-action@v2.0.0
+        with:
+            src: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:build_env
+            dst: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:build_env-hpcsdk21.2-20.04
+  
+  runtime:
+    needs: [build_env,]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: setup docker context for buildx
+        id: buildx-context
+        run: |
+          docker context create builders || :
+      - name: setup docker buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          endpoint: builders
+      - name: Login to Github Container Repo
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set lower case repository name
+        # Hit from https://github.community/t/github-actions-repository-name-must-be-lowercase/184924
+        run: |
+          echo "REPO_OWNER_LC=${OWNER,,}" >> ${GITHUB_ENV}
+        env:
+          OWNER: "${{ github.repository_owner }}"
+      - name: Build and push to GHCR
+        uses: docker/build-push-action@v2
+        with:
+          context: vasp-build/
+          file: vasp-build/extras/Dockerfile.runtime
+          push: true
+          tags: |
+            ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Tag image version
+        uses: akhilerm/tag-push-action@v2.0.0
+        with:
+            src: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime
+            dst: ghcr.io/${{ env.REPO_OWNER_LC }}/vasp-interactive:runtime-hpcsdk21.2-cuda11.2-20.04
+  test:
+    needs: [runtime,]
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ulissigroup/vasp-interactive:runtime
+      env: 
+        VASP_PREFIX: "mpirun -np 1 --mca btl_vader_single_copy_mechanism none --mca mpi_cuda_support 0 --allow-run-as-root"
+      options: --user root --entrypoint /bin/bash
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        vasp-version: ["54", "61", "62", "63"]
+        variant: ["patch", "pristine"]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Download test binaries
+      run: |
+        wget --no-verbose https://github.com/ulissigroup/vasp-interactive/releases/download/v0.0.1/test_binaries.zip
+        unzip -d vasp -P $MYPWD test_binaries.zip 
+        VASP_ROOT=`realpath vasp`
+        echo "VASP_ROOT=${VASP_ROOT}" >> $GITHUB_ENV
+      env:
+        MYPWD: ${{ secrets.TEST_BINARY_KEY }}
+    - name: Run vasp binary (let it fail)
+      run: |
+        ${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std > /tmp/vasp.out 2>&1 || true
+        grep " I REFUSE TO CONTINUE WITH THIS SICK JOB" /tmp/vasp.out || grep "Error reading item" /tmp/vasp.out
+        rm -rf /tmp/vasp.out
+    - name: Do test beef
+      run: |
+        export VASP_COMMAND="${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std"
+        cd vasp/tests/beef
+        bash test.sh
+    - name: Do test interactive mode
+      run: |
+        export VASP_COMMAND="${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std"
+        cd vasp/tests/interactive
+        bash test.sh
+      if: ${{ matrix.variant == 'patch' }}
+    - name: Do test ipi-patch
+      run: |
+        export VASP_COMMAND="${VASP_PREFIX} ${VASP_ROOT}/${{ matrix.variant }}/${{ matrix.vasp-version }}/bin/vasp_std"
+        cd vasp/tests/ipi-socket
+        bash test.sh
+      if: ${{ matrix.variant == 'patch' }}
