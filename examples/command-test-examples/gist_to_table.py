@@ -122,11 +122,12 @@ def render(res_dict):
 def main():
     import argparse
     from pathlib import Path
+
     curdir = Path(__file__).parent
     readme = curdir.parents[1] / "README.md"
     readme_bk = curdir.parents[1] / "README.md.bk"
     print(readme.is_file())
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--update", action="store_true")
     args = parser.parse_args()
@@ -146,7 +147,7 @@ def main():
             end = i
         else:
             pass
-    head = readme_content[:begin + 1]
+    head = readme_content[: begin + 1]
     tail = readme_content[end:]
     new_content = head + ["\n" + update_text + "\n"] + tail
     # print(new_content)
@@ -159,7 +160,6 @@ def main():
         fd.writelines(new_content)
     print("Updated readme")
 
+
 if __name__ == "__main__":
     main()
-        
-        
