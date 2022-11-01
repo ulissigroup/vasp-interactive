@@ -49,7 +49,7 @@ def test_pause_kill():
     h2 = h2_root.copy()
     tmpdir = tempfile.mkdtemp()
     # with tempfile.TemporaryDirectory() as tmpdir:
-    calc = VaspInteractive(directory=tmpdir, txt="-", **params)
+    calc = VaspInteractive(directory=tmpdir, **params)
     with calc:
         print(calc.pause_mpi)
         h2.calc = calc
@@ -76,7 +76,7 @@ def test_pause_low_nsw():
     """
     h2 = h2_root.copy()
     with tempfile.TemporaryDirectory() as tmpdir:
-        calc = VaspInteractive(directory=tmpdir, nsw=1, txt="-", **params)
+        calc = VaspInteractive(directory=tmpdir, nsw=1, **params)
         with calc:
             h2.calc = calc
             calc._pause_calc()
@@ -101,7 +101,7 @@ def test_abrupt_stopcar():
     """
     h2 = h2_root.copy()
     with tempfile.TemporaryDirectory() as tmpdir:
-        calc = VaspInteractive(directory=tmpdir, txt="-", **params)
+        calc = VaspInteractive(directory=tmpdir, **params)
         with calc:
             sleep_t = np.random.uniform(1, 2)
             # First ionic step only has 1 scf
