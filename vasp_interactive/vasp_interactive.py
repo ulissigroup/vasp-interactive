@@ -614,18 +614,16 @@ class VaspInteractive(Vasp):
         # use self._resume_calc / self._pause_calc pair without the context
         if not self.pause_mpi:
             return
-        
+
         if not self.process:
             return
-        
+
         # Whenever cannot locate the pid via psutil, reset the VASP process
         try:
             pid = self.process.pid
             psutil_proc = psutil.Process(pid)
         except Exception as e:
-            warn(
-                "VASP process no longer exists. Will reset the calculator."
-            )
+            warn("VASP process no longer exists. Will reset the calculator.")
             self._reset_process()
             return
 
@@ -662,19 +660,17 @@ class VaspInteractive(Vasp):
 
         if not self.process:
             return
-        
+
         # During the pause period, the process may exit unexpectedly that self.process is no longer
         # linked to the pid
         try:
             pid = self.process.pid
             psutil_proc = Process(pid)
         except Exception as e:
-            warn(
-                "VASP process no longer exists. Will reset the calculator."
-            )
+            warn("VASP process no longer exists. Will reset the calculator.")
             self._reset_process()
             return
-        
+
         if (self.pid == pid) and getattr(self, "mpi_match", None) is not None:
             match = self.mpi_match
         else:
@@ -1068,7 +1064,6 @@ class VaspInteractive(Vasp):
         if hasattr(self, "mpi_match"):
             self.mpi_match = None
             self.mpi_state = None
-
 
     def __del__(self):
         """Explicit deconstruction, kill the process with no mercy"""

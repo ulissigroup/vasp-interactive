@@ -79,7 +79,7 @@ def _find_mpi_process(pid, mpi_program="mpirun", vasp_program="vasp_std"):
         warn("Psutil cannot locate the pid. Your VASP program seems already exited.")
         match = {"type": None, "process": None}
         return match
-    
+
     process_list.extend(process_list[0].children(recursive=True))
     mpi_candidates = []
     match = {"type": None, "process": None}

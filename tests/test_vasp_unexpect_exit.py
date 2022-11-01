@@ -24,10 +24,8 @@ fmax = 0.05
 ediff = 1e-4
 
 
-
 def test_abrupt_kill():
-    """Randomly kill vasp process during a run
-    """
+    """Randomly kill vasp process during a run"""
     h2 = h2_root.copy()
     with tempfile.TemporaryDirectory() as tmpdir:
         calc = VaspInteractive(directory=tmpdir, txt="-", **params)
@@ -42,9 +40,9 @@ def test_abrupt_kill():
                 assert p.poll() is not None
     return
 
+
 def test_pause_kill():
-    """Randomly kill vasp process during a run
-    """
+    """Randomly kill vasp process during a run"""
     h2 = h2_root.copy()
     with tempfile.TemporaryDirectory() as tmpdir:
         calc = VaspInteractive(directory=tmpdir, txt="-", **params)
@@ -58,10 +56,13 @@ def test_pause_kill():
             # calc._resume_calc should still work
             calc._resume_calc()
             h2.rattle(0.05)
+            print(calc.process)
+            print(calc.pid)
             # At this stage when calc.process checks it will return None zero exit code
-            with pytest.raises(RuntimeError):
-                h2.get_potential_energy()
+            # with pytest.raises(RuntimeError):
+            h2.get_potential_energy()
     return
+
 
 def test_pause_low_nsw():
     """If VASP exits due to a low nsw setting, _resume_calc and _pause_calc
@@ -76,16 +77,17 @@ def test_pause_low_nsw():
             calc._resume_calc()
             h2.get_potential_energy()
             pid1 = calc.pid
-            # At this step calc already quits
+            # At this step calc already quits.
             calc._pause_calc()
-            assert calc.mpi_match["type"] is None
-            assert calc.mpi_match["process"] is None
+            assert calc.process is None
+            assert calc.pid is None
             calc._resume_calc()
             h2.rattle(0.05)
             h2.get_potential_energy()
             pid2 = calc.pid
             assert pid1 != pid2
     return
+
 
 def test_abrupt_stopcar():
     """Randomly write STOPCAR to stop a VASP calculation.
@@ -98,22 +100,23 @@ def test_abrupt_stopcar():
             sleep_t = np.random.uniform(1, 2)
             # First ionic step only has 1 scf
             h2.calc = calc
-            p = Popen(f"sleep {sleep_t} && echo 'LABORT = .TRUE.' > STOPCAR", shell=True, cwd=tmpdir)
+            p = Popen(
+                f"sleep {sleep_t} && echo 'LABORT = .TRUE.' > STOPCAR",
+                shell=True,
+                cwd=tmpdir,
+            )
             e1 = h2.get_potential_energy()
             print(e1)
             calc._pause_calc()
             calc._resume_calc()
-            # 
+            #
             h2.rattle(0.05)
             e2 = h2.get_potential_energy()
             print(e2)
             calc._pause_calc()
             calc._resume_calc()
+            assert e1 != e2
     return
-
-
-
-
 
 
 # def test_always_true():

@@ -141,7 +141,6 @@ def test_bulk():
     # print(f_vpi)
     # print(f_ipi)
     # print(s_vpi)
-    # print(s_ipi)
     print(np.array(f_vpi) - np.array(f_ipi))
     print(np.array(s_vpi) - np.array(s_ipi))
     assert np.linalg.norm(np.array(e_vpi) - np.array(e_ipi)) < 1.0e-3
