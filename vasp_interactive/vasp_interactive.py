@@ -665,7 +665,7 @@ class VaspInteractive(Vasp):
         # linked to the pid
         try:
             pid = self.process.pid
-            psutil_proc = Process(pid)
+            psutil_proc = psutil.Process(pid)
         except Exception as e:
             warn("VASP process no longer exists. Will reset the calculator.")
             self._reset_process()
