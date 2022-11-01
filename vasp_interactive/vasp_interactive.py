@@ -1112,6 +1112,25 @@ class VaspInteractive(Vasp):
         )
         return new
 
+    def _use_mlff(self):
+        """Parameter check if mlff is used in this calculation.
+        ml_lmlff is currently not recognized as a valid parameter so need to search
+        the "custom" key. 
+        """
+        params = self.parameters.copy()
+        # Reserved for future releases of ase
+        if params.get("ml_lmlff", False) is True:
+            return True
+        
+        if "custom" not in params:
+            return False
+        
+        return params["custom"].get("ml_lmlff", False)
+
+
+
+
+
     # socket-related
     def irun(self, atoms, use_stress=None):
         """Make the client run in iterative mode"""
