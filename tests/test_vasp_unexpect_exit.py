@@ -60,7 +60,8 @@ def test_pause_kill():
             print(calc.pid)
             # At this stage when calc.process checks it will return None zero exit code
             # with pytest.raises(RuntimeError):
-            h2.get_potential_energy()
+                # print("energy")
+            # print(h2.get_potential_energy())
     return
 
 
@@ -113,9 +114,13 @@ def test_abrupt_stopcar():
             h2.rattle(0.05)
             e2 = h2.get_potential_energy()
             print(e2)
+            print(calc.process)
+            assert calc.process.poll() == 0
             calc._pause_calc()
             calc._resume_calc()
-            assert e1 != e2
+            h2.rattle(0.05)
+            e3 = h2.get_potential_energy()
+            assert e1 == e2 != e3
     return
 
 
