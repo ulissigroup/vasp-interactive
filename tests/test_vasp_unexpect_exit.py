@@ -44,24 +44,26 @@ def test_abrupt_kill():
 def test_pause_kill():
     """Randomly kill vasp process during a run"""
     h2 = h2_root.copy()
-    with tempfile.TemporaryDirectory() as tmpdir:
-        calc = VaspInteractive(directory=tmpdir, txt="-", **params)
-        with calc:
-            print(calc.pause_mpi)
-            h2.calc = calc
+    tmpdir = tempfile.mkdtemp()
+    # with tempfile.TemporaryDirectory() as tmpdir:
+    calc = VaspInteractive(directory=tmpdir, txt="-", **params)
+    with calc:
+        print(calc.pause_mpi)
+        h2.calc = calc
+        h2.get_potential_energy()
+        calc._pause_calc()
+        # Manually kill the VASP process
+        calc.process.kill()
+        # calc._resume_calc should still work
+        calc._resume_calc()
+        h2.rattle(0.05)
+        print(calc.process)
+        print(calc.pid)
+        # At this stage when calc.process checks it will return None zero exit code
+        with pytest.raises(RuntimeError):
             h2.get_potential_energy()
-            calc._pause_calc()
-            # Manually kill the VASP process
-            calc.process.kill()
-            # calc._resume_calc should still work
-            calc._resume_calc()
-            h2.rattle(0.05)
-            print(calc.process)
-            print(calc.pid)
-            # At this stage when calc.process checks it will return None zero exit code
-            # with pytest.raises(RuntimeError):
-                # print("energy")
-            # print(h2.get_potential_energy())
+        rt = calc.process.poll()
+        assert rt and (rt != 0)
     return
 
 
