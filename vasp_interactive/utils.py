@@ -181,9 +181,10 @@ def _slurm_signal(stepid, sig=signal.SIGTSTP):
     output = proc.stdout.decode("utf8").split("\n")
     return
 
+
 def _preprocess_mlff_outcar(outcar):
     """Pre-filter ML-related lines to normal VASP OUTCAR lines
-    This should only work for Vasp.read_X (X=property) method while we don't tackle the 
+    This should only work for Vasp.read_X (X=property) method while we don't tackle the
     read_vasp_out method in ase.io.
     Include (watch for the extra spaces!)
     "^ ML energy  without entropy" --> "^  energy  without entropy"
@@ -198,10 +199,11 @@ def _preprocess_mlff_outcar(outcar):
         (r"^\s+free\s+energy\s+ML\s+TOTEN", "  free  energy   TOTEN"),
         (r"ML\s+energy\(sigma->0\)", "   energy(sigma->0)"),
         (r"TOTAL-FORCE\s+\(eV/Angst\)\s+\(ML\)", "TOTAL-FORCE (eV/Angst)"),
-        (r"^\s+ML\s+FREE\s+ENERGIE\s+OF\s+THE\s+ION-ELECTRON\s+SYSTEM\s+\(eV\)",
-        "  ML FREE ENERGIE OF THE ION-ELECTRON SYSTEM (eV)"),
-        (r"ML\s+FORCE\s+on\s+cell",
-        "   FORCE on cell")
+        (
+            r"^\s+ML\s+FREE\s+ENERGIE\s+OF\s+THE\s+ION-ELECTRON\s+SYSTEM\s+\(eV\)",
+            "  ML FREE ENERGIE OF THE ION-ELECTRON SYSTEM (eV)",
+        ),
+        (r"ML\s+FORCE\s+on\s+cell", "   FORCE on cell"),
     ]
     new_outcar = []
     for line in outcar:

@@ -1,6 +1,7 @@
 """Test parser for VASP MLFF
 """
 import pytest
+from ase.units import GPa
 from ase.calculators.vasp import Vasp
 from vasp_interactive import VaspInteractive
 from vasp_interactive.vasp_interactive import (
@@ -42,7 +43,7 @@ def test_ml_istart0():
     """ML_ISTART=0: both DFT calculation and ML inference steps are present
     For the test OUTCAR, the last step is DFT
     """
-    refs = {"E": -6.69241300, "F": 0.790714}  # only z-direction
+    refs = {"E": -6.69241300, "F": 0.790714, "S": 0.57098  * -1.e-1 * GPa}  # only z-direction
     vpi = VaspInteractive(custom=dict(ml_lmlff=True))
     # Must use initialize to calculate sort/resort vectors
     vpi.initialize(atoms)
@@ -52,9 +53,12 @@ def test_ml_istart0():
     # Last energy is DFT, will work without filtering
     e, fe = vpi.read_energy(lines=outcar)
     f = vpi.read_forces(lines=outcar)
+    s = vpi.read_stress(lines=outcar)
+    print(s)
     assert e == pytest.approx(refs["E"])
     assert fe == pytest.approx(refs["E"])
     assert f[0, 2] == pytest.approx(refs["F"])
+    assert s[2] == pytest.approx(refs["S"])
     # Do pre-filtering
     outcar = _preprocess_mlff_outcar(outcar)
     e, fe = vpi.read_energy(lines=outcar)
@@ -62,13 +66,15 @@ def test_ml_istart0():
     assert e == pytest.approx(refs["E"])
     assert fe == pytest.approx(refs["E"])
     assert f[0, 2] == pytest.approx(refs["F"])
+    assert s[2] == pytest.approx(refs["S"])
+
 
 
 def test_ml_istart1():
     """ML_ISTART=1: both DFT calculation and ML inference steps are present
     For the test OUTCAR, the last step is ML
     """
-    refs = {"E": -6.71101275, "F": -4.634836}  # only z-direction
+    refs = {"E": -6.71101275, "F": -4.634836, "S": -10.86173  * -1.e-1 * GPa}  # only z-direction
     vpi = VaspInteractive(custom=dict(ml_lmlff=True))
     # Must use initialize to calculate sort/resort vectors
     vpi.initialize(atoms)
@@ -78,9 +84,11 @@ def test_ml_istart1():
     # Last energy is DFT, will work without filtering except for forces
     e, fe = vpi.read_energy(lines=outcar)
     f = vpi.read_forces(lines=outcar)
+    s = vpi.read_stress(lines=outcar)
     assert e != pytest.approx(refs["E"])
     assert fe != pytest.approx(refs["E"])
     assert f[0, 2] == pytest.approx(refs["F"])
+    assert s[2] == pytest.approx(refs["S"])
     # Do pre-filtering
     outcar = _preprocess_mlff_outcar(outcar)
     e, fe = vpi.read_energy(lines=outcar)
@@ -88,13 +96,14 @@ def test_ml_istart1():
     assert e == pytest.approx(refs["E"])
     assert fe == pytest.approx(refs["E"])
     assert f[0, 2] == pytest.approx(refs["F"])
+    assert s[2] == pytest.approx(refs["S"])
 
 
 def test_ml_istart2():
     """ML_ISTART=2: only ML inference
     For the test OUTCAR, the last step is ML
     """
-    refs = {"E": -6.75672861, "F": -5.427111}  # only z-direction
+    refs = {"E": -6.75672861, "F": -5.427111, "S": -12.68955  * -1.e-1 * GPa}  # only z-direction
     vpi = VaspInteractive(custom=dict(ml_lmlff=True))
     # Must use initialize to calculate sort/resort vectors
     vpi.initialize(atoms)
@@ -104,9 +113,11 @@ def test_ml_istart2():
     # Last energy is DFT, will work without filtering except for forces
     e, fe = vpi.read_energy(lines=outcar)
     f = vpi.read_forces(lines=outcar)
+    s = vpi.read_stress(lines=outcar)
     assert e != pytest.approx(refs["E"])
     assert fe != pytest.approx(refs["E"])
     assert f[0, 2] == pytest.approx(refs["F"])
+    assert s[2] == pytest.approx(refs["S"])
     # Do pre-filtering
     outcar = _preprocess_mlff_outcar(outcar)
     e, fe = vpi.read_energy(lines=outcar)
@@ -114,3 +125,4 @@ def test_ml_istart2():
     assert e == pytest.approx(refs["E"])
     assert fe == pytest.approx(refs["E"])
     assert f[0, 2] == pytest.approx(refs["F"])
+    assert s[2] == pytest.approx(refs["S"])
