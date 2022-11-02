@@ -8,6 +8,7 @@ import signal
 import traceback
 import pickle
 import os
+import re
 import psutil
 import sys
 from pathlib import Path
@@ -34,6 +35,7 @@ from .utils import (
     time_limit,
     _find_mpi_process,
     _slurm_signal,
+    _preprocess_mlff_outcar,
 )
 from .parse import (
     parse_outcar_iterations,
@@ -559,6 +561,8 @@ class VaspInteractive(Vasp):
     def close(self):
         """Soft stop approach for the stream-based VASP process
         Works by writing STOPCAR file and runs two dummy scf cycles
+        Note: if MLFF is enabled, STOPCAR may not work when energy/forces are
+        infered from ML model. In that case, simply send SIGINT and wait till timeout
         """
         # Make sure the MPI process is awake before the termination
         if self.pause_mpi:
@@ -572,7 +576,6 @@ class VaspInteractive(Vasp):
             if hasattr(self, "mpi_match"):
                 self.mpi_match = None
                 self.mpi_state = None
-            return
         elif self.process.poll() is not None:
             # For whatever reason the vasp process stops prematurely (possibly too small nsw)
             # do a clean up
@@ -580,7 +583,12 @@ class VaspInteractive(Vasp):
             with self._txt_outstream() as out:
                 self._stdout(f"VASP exited with code {retcode}.", out=out)
             self._reset_process()
-            return
+        elif self._use_mlff():
+            # Send only SIGINT to process to terminate.
+            # Current with VASP 6.3.0
+            warn("Terminate MLFF-VASP with SIGINT. OUTCAR may be incomplete.")
+            self._send_mpi_signal(signal.SIGINT)
+            self._reset_process()
         else:
             with self._txt_outstream() as out:
                 self._stdout("Attemping to close VASP cleanly\n", out=out)
@@ -604,20 +612,12 @@ class VaspInteractive(Vasp):
                     time.sleep(1)
                 self._stdout("VASP has been closed\n", out=out)
                 self._reset_process()
-            return
+        return
 
-    def _pause_calc(self, sig=signal.SIGTSTP):
-        """Pause the vasp processes by sending SIGTSTP to the master mpirun process
-        If the current pid are the same with previous record, do not query the mpi pid or slurm stepid
+    def _send_mpi_signal(self, sig):
+        """Send signal to the mpi process within self.process
+        If the process cannot be found, return without affecting the state
         """
-        # Always check if current calculator allows pause in case external optimizers
-        # use self._resume_calc / self._pause_calc pair without the context
-        if not self.pause_mpi:
-            return
-
-        if not self.process:
-            return
-
         # Whenever cannot locate the pid via psutil, reset the VASP process
         try:
             pid = self.process.pid
@@ -646,6 +646,21 @@ class VaspInteractive(Vasp):
             _slurm_signal(slurm_step, sig)
         else:
             raise ValueError("Unsupported process type!")
+        return
+
+    def _pause_calc(self, sig=signal.SIGTSTP):
+        """Pause the vasp processes by sending SIGTSTP to the master mpirun process
+        If the current pid are the same with previous record, do not query the mpi pid or slurm stepid
+        """
+        # Always check if current calculator allows pause in case external optimizers
+        # use self._resume_calc / self._pause_calc pair without the context
+        if not self.pause_mpi:
+            return
+
+        if not self.process:
+            return
+
+        self._send_mpi_signal(sig=sig)
         self.mpi_state = "PAUSED"
         return
 
@@ -661,35 +676,7 @@ class VaspInteractive(Vasp):
         if not self.process:
             return
 
-        # During the pause period, the process may exit unexpectedly that self.process is no longer
-        # linked to the pid
-        try:
-            pid = self.process.pid
-            psutil_proc = psutil.Process(pid)
-        except Exception as e:
-            warn("VASP process no longer exists. Will reset the calculator.")
-            self._reset_process()
-            return
-
-        if (self.pid == pid) and getattr(self, "mpi_match", None) is not None:
-            match = self.mpi_match
-        else:
-            self.pid = pid
-            match = _find_mpi_process(pid)
-            self.mpi_match = match
-        if (match["type"] is None) or (match["process"] is None):
-            warn(
-                "Cannot find the mpi process or you're using different ompi wrapper. Will not send continue signal to mpi."
-            )
-            return
-        elif match["type"] == "mpi":
-            mpi_process = match["process"]
-            mpi_process.send_signal(sig)
-        elif match["type"] == "slurm":
-            slurm_step = match["process"]
-            _slurm_signal(slurm_step, sig)
-        else:
-            raise ValueError("Unsupported process type!")
+        self._send_mpi_signal(sig=sig)
         self.mpi_state = "RUNNING"
         return
 
@@ -808,6 +795,18 @@ class VaspInteractive(Vasp):
         The xml calc reader self._xml_calc may be generated by a place-holder SP calculator
         to make _set_old_parameters working.
         """
+        # Special notes for VASP 6.3+ with MLFF flag on. Currently ase does not
+        # handle VASP output with MLFF settings, so we always need to parse from OUTCAR
+        # with some pre-filtration of text.
+        # Good news is, the OUTCAR files are always completed :)
+        if self._use_mlff():
+            use_mlff = True
+            self._xml_complete = False
+            warn(
+                "Parsing output from MLFF-enabled VASP is experimental. Use at your own risk!"
+            )
+        else:
+            use_mlff = False
         # Record if xml contents are complete at each ionic step
         if self._xml_complete is not False:
             try:
@@ -826,6 +825,9 @@ class VaspInteractive(Vasp):
         # Some properties, like E-Fermi might not exist in vasprun.xml but rather in OUTCAR
         # Try to complete as much as possible
         outcar = self.load_file("OUTCAR")
+        if use_mlff:
+            # breakpoint()
+            outcar = _preprocess_mlff_outcar(outcar)
         properties = ["stress", "fermi", "nbands", "dipole"]
         for prop in properties:
             if prop not in self.results.keys():
@@ -1049,7 +1051,8 @@ class VaspInteractive(Vasp):
             )
             if self.process is not None:
                 if self.process.poll() is None:
-                    self.process.kill()
+                    # self.process.kill()
+                    self._send_mpi_signal(signal.SIGKILL)
             # Reset process tracker
             self._reset_process()
         return
@@ -1111,6 +1114,41 @@ class VaspInteractive(Vasp):
             )
         )
         return new
+
+    def _use_mlff(self):
+        """Parameter check if mlff is used in this calculation.
+        ml_lmlff is currently not recognized as a valid parameter so need to search
+        the "custom" key.
+        """
+        params = self.parameters.copy()
+        # Reserved for future releases of ase
+        if params.get("ml_lmlff", False) is True:
+            return True
+
+        if "custom" not in params:
+            return False
+
+        return params["custom"].get("ml_lmlff", False)
+
+    def are_results_dft(self, lines=None):
+        """Parse the OUTCAR file to see if last returned energy/forces are from DFT or ML inference
+        This function can be called at the end of each ionic step
+        """
+        if not self._use_mlff():
+            return True
+        if not lines:
+            lines = self.load_file("OUTCAR")
+        pat_all = r"energy\s+without\s+entropy"
+        pat_ml = r"^\s+ML\s+energy\s+without\s+entropy"
+        last_line = None
+        for line in lines:
+            if re.search(pat_all, line):
+                last_line = line
+        if last_line and re.search(pat_ml, last_line):
+            return False
+        else:
+            return True
+
 
     # socket-related
     def irun(self, atoms, use_stress=None):
