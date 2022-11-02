@@ -32,7 +32,7 @@ def main():
     h2 = molecule("H2", pbc=True, cell=[8, 8, 8])
     h2.calc = calc
     with calc:
-        breakpoint()
+        # breakpoint()
         h2.get_potential_energy()
         h2.get_forces()
         h2.get_stress()
