@@ -338,6 +338,19 @@ the format `python -m vasp_interactive.socketio --port {port} --socketname {unix
 `SocketIOCalculator` then uses [`FileIOClientLauncher`](https://gitlab.com/ase/ase/-/blob/master/ase/calculators/socketio.py#L226) to initialize a socket client with the above command. 
 In this case, the user does not need to set `use_socket`, `host`, `port` or `unixsocket`.
 
+### Combining with the machine learning force field (MLFF) in VASP >= 6.3
+
+Since version 6.3.0, VASP provides a built-in machine learning force field (MLFF) which can be
+used to accelerate energy/forces/stress calculations if trained on multiple trajectories.
+`VaspInteractive` leverages this feature and makes it possible to combine the MLFF with 
+external optimizers without high file I/O latency. An example comparing different ways
+to use the MLFF can be found in [examples/ex17_mlff_h2_opt.py](examples/ex17_mlff_h2_opt.py).
+
+**Notes**
+- As of ASE verison 3.22.1, the MLFF INCAR tags are not recognized and you need to provide 
+them via the `custom` parameter, such as: `VaspInteractive(custom={"ml_lmlff": True}, **extra_params)`
+- The `OUTCAR` and `vasprun.xml` contents of an MLFF run are different from standard DFT and are not recognized by default `ase.io.read`. `VaspInteractive` provides a workaround to parse the OUTCAR file but may subject to change in future VASP releases.
+
 
 
 ## More examples
