@@ -124,6 +124,7 @@ def mlff_copy_checkpoint():
         td = Path(tempdir)
         ff_file = curdir / "mlff" / "ML_FF.H2"
         print("Copy ML force field checkpoint from 2000 step MD")
+        h2 = h2_root.copy()
         h2.get_potential_energy()
         shutil.copy(ff_file, td / "ML_FF")
         print("4. Running relaxation with reusable MLFF from 2000 step MD")
