@@ -8,6 +8,7 @@ import signal
 import traceback
 import pickle
 import os
+import re
 import psutil
 import sys
 from pathlib import Path
@@ -1128,6 +1129,26 @@ class VaspInteractive(Vasp):
             return False
 
         return params["custom"].get("ml_lmlff", False)
+
+    def are_results_dft(self, lines=None):
+        """Parse the OUTCAR file to see if last returned energy/forces are from DFT or ML inference
+        This function can be called at the end of each ionic step
+        """
+        if not self._use_mlff():
+            return True
+        if not lines:
+            lines = self.load_file("OUTCAR")
+        pat_all = r"energy\s+without\s+entropy"
+        pat_ml = r"^\s+ML\s+energy\s+without\s+entropy"
+        last_line = None
+        for line in lines:
+            if re.search(pat_all, line):
+                last_line = line
+        if last_line and re.search(pat_ml, last_line):
+            return False
+        else:
+            return True
+
 
     # socket-related
     def irun(self, atoms, use_stress=None):

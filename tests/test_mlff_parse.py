@@ -55,6 +55,7 @@ def test_ml_istart0():
     vpi.process = None
     outcar = open(outfile_root / "OUTCAR.istart0", "r").readlines()
     # Last energy is DFT, will work without filtering
+    assert vpi.are_results_dft(lines=outcar)
     e, fe = vpi.read_energy(lines=outcar)
     f = vpi.read_forces(lines=outcar)
     s = vpi.read_stress(lines=outcar)
@@ -88,7 +89,8 @@ def test_ml_istart1():
     print(vpi.atoms, vpi.sort, vpi.resort)
     vpi.process = None
     outcar = open(outfile_root / "OUTCAR.istart1", "r").readlines()
-    # Last energy is DFT, will work without filtering except for forces
+    # Last energy is ML, will work without filtering except for forces
+    assert not vpi.are_results_dft(lines=outcar)
     e, fe = vpi.read_energy(lines=outcar)
     f = vpi.read_forces(lines=outcar)
     s = vpi.read_stress(lines=outcar)
@@ -121,7 +123,8 @@ def test_ml_istart2():
     print(vpi.atoms, vpi.sort, vpi.resort)
     vpi.process = None
     outcar = open(outfile_root / "OUTCAR.istart2", "r").readlines()
-    # Last energy is DFT, will work without filtering except for forces
+    # Last energy is ML, will work without filtering except for forces
+    assert not vpi.are_results_dft(lines=outcar)
     e, fe = vpi.read_energy(lines=outcar)
     f = vpi.read_forces(lines=outcar)
     s = vpi.read_stress(lines=outcar)
