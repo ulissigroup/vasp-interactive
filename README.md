@@ -349,6 +349,9 @@ to use the MLFF can be found in [examples/ex17_mlff_h2_opt.py](examples/ex17_mlf
 
 - The `OUTCAR` and `vasprun.xml` contents of an MLFF run are different from standard DFT and are not recognized by default `ase.io.read`. `VaspInteractive` provides a workaround to parse the OUTCAR file but may bt subject to changes in future VASP releases.
 
+- The energy/forces/stress calculated by DFT or ML inferences are treated the same in `VaspInteractive`. 
+If you want to specify the source of your results on each ionic step, consider using `calc.are_results_dft()` method.
+
 
 
 ## More examples
