@@ -14,6 +14,7 @@ from ase.optimize import BFGS
 
 from vasp_interactive import VaspInteractive
 from ase.calculators.vasp import Vasp
+
 rootdir = Path(__file__).resolve().parents[1] / "sandbox"
 
 _m = molecule("CH4", vacuum=5, pbc=True)

@@ -983,7 +983,6 @@ class VaspInteractive(Vasp):
                 raise RuntimeError(("Cannot parse forces from vasp output.")) from e
         return forces
 
-
     def read_all_iterations(self):
         """Parse the ionic & electronic scf cycles from OUTCAR files.
         Ideas taken from Vasp.read_number_of_iterations and Vasp.read_number_of_ionic_steps

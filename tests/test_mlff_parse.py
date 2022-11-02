@@ -43,7 +43,11 @@ def test_ml_istart0():
     """ML_ISTART=0: both DFT calculation and ML inference steps are present
     For the test OUTCAR, the last step is DFT
     """
-    refs = {"E": -6.69241300, "F": 0.790714, "S": 0.57098  * -1.e-1 * GPa}  # only z-direction
+    refs = {
+        "E": -6.69241300,
+        "F": 0.790714,
+        "S": 0.57098 * -1.0e-1 * GPa,
+    }  # only z-direction
     vpi = VaspInteractive(custom=dict(ml_lmlff=True))
     # Must use initialize to calculate sort/resort vectors
     vpi.initialize(atoms)
@@ -69,12 +73,15 @@ def test_ml_istart0():
     assert s[2] == pytest.approx(refs["S"])
 
 
-
 def test_ml_istart1():
     """ML_ISTART=1: both DFT calculation and ML inference steps are present
     For the test OUTCAR, the last step is ML
     """
-    refs = {"E": -6.71101275, "F": -4.634836, "S": -10.86173  * -1.e-1 * GPa}  # only z-direction
+    refs = {
+        "E": -6.71101275,
+        "F": -4.634836,
+        "S": -10.86173 * -1.0e-1 * GPa,
+    }  # only z-direction
     vpi = VaspInteractive(custom=dict(ml_lmlff=True))
     # Must use initialize to calculate sort/resort vectors
     vpi.initialize(atoms)
@@ -103,7 +110,11 @@ def test_ml_istart2():
     """ML_ISTART=2: only ML inference
     For the test OUTCAR, the last step is ML
     """
-    refs = {"E": -6.75672861, "F": -5.427111, "S": -12.68955  * -1.e-1 * GPa}  # only z-direction
+    refs = {
+        "E": -6.75672861,
+        "F": -5.427111,
+        "S": -12.68955 * -1.0e-1 * GPa,
+    }  # only z-direction
     vpi = VaspInteractive(custom=dict(ml_lmlff=True))
     # Must use initialize to calculate sort/resort vectors
     vpi.initialize(atoms)
