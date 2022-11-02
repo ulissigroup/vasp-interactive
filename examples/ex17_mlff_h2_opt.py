@@ -1,9 +1,11 @@
 """Use VaspInteractive to calculate relaxation of H2 molecule using machine learning force field (MLFF)
 Following methods are tested:
 1. VaspInteractive interfacing Pure DFT
-2. Use high temp MD to create a force field, and use VaspInteractive to do the inference
+2. Use previously MLFF run dataset to do online MLFF optimization
+3. Do a 200-step MD and reuse MLFF for optimization (inference-only)
+4. Reuse MLFF from 2000-step MD for optimization (inference-only)
 
-In method 2, VaspInteractive can leverage the built-in MLFF for optimization purposes other than MD.
+In methods 2-4, VaspInteractive can leverage the built-in MLFF for optimization purposes other than MD.
 """
 import numpy as np
 import os
@@ -17,6 +19,7 @@ from vasp_interactive import VaspInteractive
 from ase.calculators.vasp import Vasp
 import os
 from pathlib import Path
+from packaging.version import Version
 
 curdir = Path(__file__).parent
 h2_root = molecule("H2", pbc=True, cell=[8, 8, 8])
@@ -40,7 +43,10 @@ def dft():
             opt.run(fmax=0.01)
         e = h2.get_potential_energy()
         d = h2.get_distance(0, 1)
-        return e, d
+        print(calc.version)
+        if Version(calc.version) < Version("6.3.0"):
+            raise Exception("Must run the example with VASP>= 6.3.0")
+    return e, d
 
 
 def mlff_online_opt():
@@ -66,7 +72,7 @@ def mlff_online_opt():
             opt.run(fmax=0.01)
         e = h2.get_potential_energy()
         d = h2.get_distance(0, 1)
-        return e, d
+    return e, d
 
 
 def mlff_train_inference():
@@ -110,7 +116,7 @@ def mlff_train_inference():
             opt.run(fmax=0.01)
         e = h2.get_potential_energy()
         d = h2.get_distance(0, 1)
-        return e, d
+    return e, d
 
 
 def mlff_copy_checkpoint():
@@ -137,7 +143,7 @@ def mlff_copy_checkpoint():
             opt.run(fmax=0.01)
         e = h2.get_potential_energy()
         d = h2.get_distance(0, 1)
-        return e, d
+    return e, d
 
 
 if __name__ == "__main__":
