@@ -1,6 +1,6 @@
 # `VaspInteractive`: a stream-based calculator for VASP
 [![VASP Patch](https://github.com/ulissigroup/vasp-interactive/actions/workflows/patch_test.yml/badge.svg)](https://github.com/ulissigroup/vasp-interactive/actions/workflows/patch_test.yml)
-![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/alchem0x2a/afede700c2b7703c77e10e51333bfa75/raw/test.json)
+![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/alchem0x2a/afede700c2b7703c77e10e51333bfa75/raw/vpi_coverage.json)
 ![version](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/alchem0x2a/afede700c2b7703c77e10e51333bfa75/raw/version.json)
 ![docker image](https://github.com/ulissigroup/vasp-interactive/actions/workflows/package_and_unittest.yml/badge.svg)
 
