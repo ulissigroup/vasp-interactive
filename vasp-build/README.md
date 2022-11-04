@@ -102,6 +102,16 @@ NCORES=8 ROOT=/tmp VASP_BINARY_PATH=/opt/vasp/bin \
 INTERACTIVE_PATCH=patch.py \
 ./compile_vasp.sh vasp.6.3.0.tgz examples/makefile examples/makefile.include.vasp6
 ```
+
+- **Example 3**: same as Example 2 but with VASP's GPU compatibility via OpenACC
+
+```bash
+NCORES=8 ROOT=/tmp VASP_BINARY_PATH=/opt/vasp/bin \
+INTERACTIVE_PATCH=patch.py \
+./compile_vasp.sh vasp.6.3.0.tgz examples/makefile examples/makefile.include.vasp6-acc
+```
+
+
 For detailed usage please see the source code of `./compile_vasp.sh`. 
 
 The build dependencies vary on different platforms. If you are using Nvidia HPCSDK 
