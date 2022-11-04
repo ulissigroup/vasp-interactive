@@ -1,3 +1,6 @@
+# Makefile.include for VASP6 with PGI compiler
+# The include and library paths are specific to NVHPC SDK images
+
 # Precompiler options
 CPP_OPTIONS= -DHOST=\"LinuxPGI\" -DPGI16 \
              -DMPI -DMPI_BLOCK=8000 \

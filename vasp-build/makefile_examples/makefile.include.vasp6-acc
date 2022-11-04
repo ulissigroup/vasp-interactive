@@ -1,0 +1,85 @@
+# Makefile.include for VASP6 with PGI compiler and OpenACC
+# The include and library paths are specific to NVHPC SDK images
+# In most cases you only need to change `-ta=tesla:cc35,cc50,cc60,cc70,cuda11.0` to adapt to your
+# Nvidia GPU computation capacity
+
+# Precompiler options
+CPP_OPTIONS= -DHOST=\"LinuxPGI\" \
+             -DMPI -DMPI_BLOCK=8000 -DMPI_INPLACE -Duse_collective \
+             -DscaLAPACK \
+             -DCACHE_SIZE=4000 \
+             -Davoidalloc \
+             -Dvasp6 \
+             -Duse_bse_te \
+             -Dtbdyn \
+             -Dqd_emulate \
+             -Dfock_dblbuf \
+             -D_OPENACC \
+             -DUSENCCL
+
+CPP        = pgfortran -Mpreprocess -Mfree -Mextend -E $(CPP_OPTIONS) $*$(FUFFIX)  > $*$(SUFFIX)
+
+FC         = mpif90 -acc -ta=tesla:cc35,cc50,cc60,cc70,cuda11.0
+FCL        = mpif90 -acc -ta=tesla:cc35,cc50,cc60,cc70,cuda11.0 -pgc++libs
+
+FREE       = -Mfree
+
+FFLAGS     = -Mnoupcase -Mbackslash -Mlarge_arrays
+
+OFLAG      = -fast
+
+DEBUG      = -Mfree -O0 -traceback
+
+# Use PGI provided BLAS and LAPACK libraries
+BLAS       = -lblas
+LAPACK     = -llapack
+
+BLACS      =
+SCALAPACK  = -Mscalapack
+
+CUDA       = -Mcudalib=cublas -Mcudalib=cufft -Mcudalib=cusolver -Mcuda
+
+LLIBS      = $(SCALAPACK) $(LAPACK) $(BLAS) $(CUDA)
+
+NCCL       ?= /opt/nvidia/hpc_sdk/Linux_x86_64/$(HPCSDK_VERSION)/comm_libs/nccl/lib
+LLIBS      += -L$(NCCL) -lnccl
+
+# Software emulation of quadruple precsion
+QD         ?= /opt/nvidia/hpc_sdk/Linux_x86_64/$(HPCSDK_VERSION)/compilers/extras/qd
+LLIBS      += -L$(QD)/lib -lqdmod -lqd
+INCS       += -I$(QD)/include/qd
+
+# Use the FFTs from fftw
+#FFTW       ?= /opt/pgi/fftw-3.3.8
+LLIBS      +=  -lfftw3
+#INCS       += 
+
+OBJECTS    = fftmpiw.o fftmpi_map.o fftw3d.o fft3dlib.o
+
+# Redefine the standard list of O1 and O2 objects
+SOURCE_O1  := pade_fit.o
+SOURCE_O2  := pead.o
+
+# Workaround a bug in PGI compiler up to and including version 18.10
+#OFLAG_IN   = -fast -ta=tesla:nollvm
+#OFLAG_IN   = -fast -ta=tesla:nollvm
+#SOURCE_IN  := xcspin.o
+
+# For what used to be vasp.5.lib
+CPP_LIB    = $(CPP)
+FC_LIB     = pgfortran
+CC_LIB     = pgcc
+CFLAGS_LIB = -O
+FFLAGS_LIB = -O1 -Mfixed
+FREE_LIB   = $(FREE)
+
+OBJECTS_LIB= linpack_double.o getshmem.o
+
+# For the parser library
+CXX_PARS   = pgc++ --no_warnings
+
+# Normally no need to change this
+SRCDIR     = ../../src
+BINDIR     = ../../bin
+
+MPI_INC    = /opt/nvidia/hpc_sdk/Linux_x86_64/20.11/comm_libs/mpi/include
