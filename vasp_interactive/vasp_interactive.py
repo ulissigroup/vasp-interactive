@@ -239,11 +239,6 @@ class VaspInteractive(Vasp):
             cell_tolerance=cell_tolerance,
             kill_timeout=kill_timeout,
             parse_vaspout=parse_vaspout,
-            # host=host,
-            # unixsocket=unixsocket,
-            # port=port,
-            # timeout=timeout,
-            # log=log,
         )
         input_params.update(**kwargs)
 
@@ -596,7 +591,7 @@ class VaspInteractive(Vasp):
                 with open(stopcar, "w") as fd:
                     fd.write("LABORT = .TRUE.")
 
-                # Following two calls to _run_vasp: 1 is to let vasp see STOPCAR and do 1 SCF
+                # Following two calls to _run: 1 is to let vasp see STOPCAR and do 1 SCF
                 # second is to exit the program
                 # Program may have ended before we can write, if so then cancel the stdin
                 for i in range(2):
@@ -738,7 +733,6 @@ class VaspInteractive(Vasp):
 
         # VaspInteractive supports positions change by default.
         # Change of cell is supported by a patch provided by this package, but needs to check on the fly
-        # TODO: send flag to _run to warn cell change
         if "numbers" in system_changes:
             if self.process is not None:
                 raise NotImplementedError(
@@ -756,16 +750,6 @@ class VaspInteractive(Vasp):
             require_cell_stdin = True
         else:
             require_cell_stdin = False
-        # elif "cell" in system_changes:
-
-        # if self.process is not None:
-        #     raise NotImplementedError(
-        #         (
-        #             "VaspInteractive does not support change of lattice parameters. "
-        #             "Set VaspInteractive.cell_tolerance to a higher value if you think it's caused by round-off error. "
-        #             "Otherwise, please create a new calculator instance or use standard Vasp calculator"
-        #         )
-        #     )
 
         self.clear_results()
         if atoms is not None:
@@ -896,14 +880,7 @@ class VaspInteractive(Vasp):
             except Exception:
                 pass
 
-        # print(self.results)
-        # print(all_properties)
-        # Construct a fake _xml_calc object
-        # results = self.results.copy()
-        # nbands = results.pop("nbands", None)
-        # print(self.results["forces"])
         results = {k: v for k, v in self.results.items() if k in all_properties}
-        # print(list(results.keys()))
         calc_xml = SinglePointDFTCalculator(
             atoms=self.atoms, efermi=self.results.get("fermi", None), **results
         )
@@ -1051,7 +1028,6 @@ class VaspInteractive(Vasp):
             )
             if self.process is not None:
                 if self.process.poll() is None:
-                    # self.process.kill()
                     self._send_mpi_signal(signal.SIGKILL)
             # Reset process tracker
             self._reset_process()
