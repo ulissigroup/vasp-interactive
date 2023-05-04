@@ -201,7 +201,7 @@ def _preprocess_mlff_outcar(outcar):
         (r"TOTAL-FORCE\s+\(eV/Angst\)\s+\(ML\)", "TOTAL-FORCE (eV/Angst)"),
         (
             r"^\s+ML\s+FREE\s+ENERGIE\s+OF\s+THE\s+ION-ELECTRON\s+SYSTEM\s+\(eV\)",
-            "  ML FREE ENERGIE OF THE ION-ELECTRON SYSTEM (eV)",
+            "  FREE ENERGIE OF THE ION-ELECTRON SYSTEM (eV)",
         ),
         (r"ML\s+FORCE\s+on\s+cell", "   FORCE on cell"),
     ]
@@ -209,6 +209,6 @@ def _preprocess_mlff_outcar(outcar):
     for line in outcar:
         newline = line
         for pat, rep in replacement:
-            newline = re.sub(pat, rep, newline, 0, re.MULTILINE)
+            newline = re.sub(pat, rep, newline, 0, re.MULTILINE | re.IGNORECASE)
         new_outcar.append(newline)
     return new_outcar
