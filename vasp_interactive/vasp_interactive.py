@@ -142,8 +142,8 @@ class VaspInteractive(Vasp):
         - self.command is by default set to calling the socket mode command line.
           The actual VASP command passed in __init__ is stored in self._vasp_command
         """
-
-        for kw, val in VaspInteractive.mandatory_input.items():
+        mandatory_input = VaspInteractive.mandatory_input.copy()
+        for kw, val in mandatory_input.items():
             if kw in kwargs and val != kwargs[kw]:
                 if allow_default_param_overwrite:
                     warn(
@@ -151,13 +151,14 @@ class VaspInteractive(Vasp):
                         f"For VaspInteractive to run properly it needs to be {val}. "
                         "I will overwrite."
                     )
+                    mandatory_input[kw] = kwargs[kw]
                 else:
                     raise ValueError(
                         f"Keyword {kw} cannot be overridden! "
                         f"It must have have value {val}, but {kwargs[kw]} "
                         "was provided instead."
                     )
-        kwargs.update(VaspInteractive.mandatory_input)
+        kwargs.update(mandatory_input)
 
         for kw, val in VaspInteractive.default_input.items():
             if kw not in kwargs:
