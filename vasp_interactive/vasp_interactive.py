@@ -15,6 +15,7 @@ from pathlib import Path
 from warnings import warn
 from subprocess import Popen, PIPE
 from contextlib import contextmanager
+import io
 
 import numpy as np
 from ase.calculators.calculator import (
@@ -27,11 +28,14 @@ from ase.calculators.calculator import (
 from ase.calculators.vasp.vasp import Vasp, check_atoms
 from ase.calculators.singlepoint import SinglePointDFTCalculator, SinglePointCalculator
 from ase.calculators.socketio import SocketClient
+from ase.io import write as ase_write
+from ase.io import read as ase_read
 
 
 from .utils import (
     DEFAULT_KILL_TIMEOUT,
     _int_version,
+    _int_version_minor,
     time_limit,
     _find_mpi_process,
     _slurm_signal,
@@ -70,7 +74,7 @@ class VaspInteractive(Vasp):
     """I/O stream-based VASP calculator.
     Can be used to speed up structural relaxation when using ASE optimizers.
     The atomic positions for each ionic step is passed to VASP via stdin.
-    Currently do not support change of unit cell.
+    Lattice changes are supported.
     """
 
     name = "VaspInteractive"
@@ -82,13 +86,13 @@ class VaspInteractive(Vasp):
         "interactive": True,
         # Disable stopping criteria but just rely on nsw
         "ediffg": 0,
-        # Set ISIF tag to cature stress-induced energy change
-        "isif": 3,
     }
-    # Enforce the job to run infinitely untill killed
+    # Enforce the job to run infinitely until killed
     default_input = {
         "nsw": 2000,
         "isym": 0,
+        # By default capture stress-induced changes (for VASP >=6.4)
+        "isif": 3,
     }
 
     def __init__(
@@ -110,6 +114,7 @@ class VaspInteractive(Vasp):
         unixsocket=None,
         timeout=None,
         log=None,
+        vasp_path=None,
         **kwargs,
     ):
         """Interactive mode calculator for VASP.
@@ -142,6 +147,9 @@ class VaspInteractive(Vasp):
         - self.command is by default set to calling the socket mode command line.
           The actual VASP command passed in __init__ is stored in self._vasp_command
         """
+
+        if vasp_path is not None:
+            os.environ["VASP_PP_PATH"] = vasp_path
 
         for kw, val in VaspInteractive.mandatory_input.items():
             if kw in kwargs and val != kwargs[kw]:
@@ -207,6 +215,8 @@ class VaspInteractive(Vasp):
                 "Use such settings at your own risk."
             )
 
+        incar_isif = self.int_params["isif"]
+
         # Cell tolerance parameter
         self.cell_tolerance = abs(cell_tolerance)
         if self.cell_tolerance > 1e-3:
@@ -251,7 +261,7 @@ class VaspInteractive(Vasp):
         self._ensure_directory()
         # save vpi settings
         param_file = self._indir(".vpi_params.pkl")
-        with open(param_file, "wb") as f:
+        with io.open(param_file, "wb") as f:
             pickle.dump(input_params, f)
 
         if use_socket:
@@ -274,6 +284,11 @@ class VaspInteractive(Vasp):
         if nsw_ == 0:
             nsw_ = 1
         return nsw_
+    
+    @property
+    def incar_isif(self):
+        isif_ = self.int_params["isif"]
+        return isif_
 
     def reset(self):
         """Rewrite the parent reset function.
@@ -332,7 +347,7 @@ class VaspInteractive(Vasp):
             if open_and_close:
                 # For interactive vasp mode, the io stream is in append mode
                 # Using multiple stream context would not affect the performance
-                out = open(txt, "a")
+                out = io.open(txt, "a")
             yield out
         finally:
             if open_and_close:
@@ -353,7 +368,7 @@ class VaspInteractive(Vasp):
                 else:
                     self._ensure_directory()
                     txt = self._indir(txt)
-                    fd = open(txt, "r")
+                    fd = io.open(txt, "r")
             elif hasattr(txt, "read"):
                 fd = txt
             else:
@@ -410,6 +425,7 @@ class VaspInteractive(Vasp):
                 cwd=self.directory,
                 universal_newlines=True,
                 bufsize=0,
+                text=True,
             )
             self.pid = self.process.pid
             self.steps = 0
@@ -446,51 +462,81 @@ class VaspInteractive(Vasp):
                 )
         return
 
-    def _write_atoms_stdin(self, atoms, out, require_cell_stdin):
+    def _write_atoms_stdin(self, atoms, out, require_cell_stdin, lattice_stdin=False, skip_scaled=False):
         """Helper function to write input positions / cell in _run().
         This function adapts to different VASP compilations.
         """
         self._stdout("Inputting positions...\n", out=out)
         # ase atoms --> self.sort --> write to position for VASP
         # use scaled positions wrap back to cell
-        for atom in atoms.get_scaled_positions()[self.sort]:
-            self._stdin(" ".join(map("{:19.16f}".format, atom)), out=None)
-        # INPOS subroutine does not split the positions, so manually write into vasp.out
-        self._stdout("New scaled positions\n", out=out)
-        for i in range(len(atoms)):
-            self._stdout(self.process.stdout.readline(), out=out)
-        self._stdout("Old scaled positions\n", out=out)
-        for i in range(len(atoms)):
-            self._stdout(self.process.stdout.readline(), out=out)
+        if not lattice_stdin:
+            for atom in atoms.get_scaled_positions()[self.sort]:
+                self._stdin(" ".join(map("{:19.16f}".format, atom)), out=None)
+            # INPOS subroutine does not split the positions, so manually write into vasp.out
+            if not skip_scaled:
+                # If version <=6.3 then print the old and new positions
+                self._stdout("New scaled positions\n", out=out)
+                
+                for i in range(len(atoms)):
+                    self._stdout(self.process.stdout.readline(), out=out)
+                    # error('stop here.')
+                self._stdout("Old scaled positions\n", out=out)
+                for i in range(len(atoms)):
+                    self._stdout(self.process.stdout.readline(), out=out)
 
-        # An additional line "POSITIONS: read from stdin"
-        text = self.process.stdout.readline()
-        self._stdout(text, out=out)
-        assert "POSITIONS: read from stdin" in text
+            # An additional line to get "POSITIONS: read from stdin"
+            text = self.process.stdout.readline()
+            self._stdout(text, out=out)
+
+            if skip_scaled:
+                # If version >=6.4 then another line needed
+                text = self.process.stdout.readline()
+                self._stdout(text, out=out)
+
+            assert "POSITIONS: read from stdin" in text
+        else:
+            # If version >6.4 and lattice is changing then send an OUTCAR to stdin
+            ase_write(images=atoms, format='vasp', filename='ASECAR.tmp')
+            with io.open('ASECAR.tmp') as tmpfile:
+                self._stdin(tmpfile.read(), out=out, ending='')
+            os.remove('ASECAR.tmp')
+
+            # Additional lines to get "POSITIONS AND LATTICE: read from stdin"
+            text = self.process.stdout.readline()
+            self._stdout(text, out=out)
+            text = self.process.stdout.readline()
+            self._stdout(text, out=out)
+
+            assert "POSITIONS AND LATTICE: read from stdin" in text
 
         # Determine if lattice input is needed
         text = self.process.stdout.readline()
         self._stdout(text, out=out)
-        if "LATTICE: reading from stdin" in text:
-            for vec in atoms.cell:
-                self._stdin(" ".join(map("{:19.16f}".format, vec)), out=None)
-            # Finish the lattice vector outputs. Note there can be multiple empty lines
-            # In total, there should be 9 lines before the closing sentence
-            count = 0
-            while count < (2 * 3 + 3):
-                text = self.process.stdout.readline()
-                self._stdout(text, out=out)
-                if len(text.strip()) != 0:
-                    count += 1
-            assert "LATTICE: read from stdin" in text
-        elif require_cell_stdin:
-            # Cannot continue if cell change is required but VASP does not support
-            raise RuntimeError(
-                (
-                    "The unit cell changes in your calculation but VASP does not support writing lattice parameters to stdin. "
-                    "Please consider applying this patch https://github.com/ulissigroup/vasp-interactive first."
+
+        if not lattice_stdin:
+            if "LATTICE: reading from stdin" in text:
+                for vec in atoms.cell:
+                    self._stdin(" ".join(map("{:19.16f}".format, vec)), out=None)
+                # Finish the lattice vector outputs. Note there can be multiple empty lines
+                # In total, there should be 9 lines before the closing sentence
+                count = 0
+                while count < (2 * 3 + 3):
+                    text = self.process.stdout.readline()
+                    self._stdout(text, out=out)
+                    if len(text.strip()) != 0:
+                        count += 1
+                assert "LATTICE: read from stdin" in text
+            elif require_cell_stdin:
+                # Cannot continue if cell change is required but VASP does not support
+                raise RuntimeError(
+                    (
+                        "The unit cell changes in your calculation but VASP does not support writing lattice parameters to stdin. "
+                        "Please consider applying this patch https://github.com/ulissigroup/vasp-interactive first."
+                    )
                 )
-            )
+        else:
+            assert require_cell_stdin
+
         return
 
     def _run(self, atoms, out, require_cell_stdin):
@@ -505,19 +551,33 @@ class VaspInteractive(Vasp):
         - If the process continues without asking input, check the process return code
           if returncode != 0 then there is an error
         """
+        f=open('file.test', 'w')
+        f.close()
+
         # 1. Start / renew the VASP process
         self._start_vasp_process(atoms=atoms, out=out)
-
         # 2. Input the new positions (position and / or cell) if steps > 0
-        if self.steps > 0:
-            self._write_atoms_stdin(
-                atoms=atoms, out=out, require_cell_stdin=require_cell_stdin
-            )
+        first_iteration = True
+        if self.version is not None:
+            first_iteration = False
+            if self.skip_lattice:
+                print('positions only')
+                if self.steps > 0:
+                    self._write_atoms_stdin(
+                        atoms=atoms, out=out, require_cell_stdin=require_cell_stdin, lattice_stdin=False, skip_scaled=self.skip_scaled
+                    )
+            else:
+                print('positions and lattice')
+                if self.steps > 0:
+                    self._write_atoms_stdin(
+                        atoms=atoms, out=out, require_cell_stdin=True, lattice_stdin=True, skip_scaled=self.skip_scaled
+                    )
 
         # 3. Start read cycle until the current ionic step
         #    finishes by "POSITIONS: reading from stdin"
         while self.process.poll() is None:
             text = self.process.stdout.readline()
+            print(text,end='')
             self._stdout(text, out=out)
             # Read vasp version from stdio, warn user of VASP5 issue
             if self._read_vasp_version_stream(text):
@@ -529,8 +589,34 @@ class VaspInteractive(Vasp):
                             "If you encounter similar error messages, try using VASP 6.x or apply our patch if possible."
                         )
                     )
-            if "POSITIONS: reading from stdin" in text:
-                return
+                if first_iteration:
+                    if (_int_version(self.version) == 6) and (_int_version_minor(self.version) < 4):
+                        self.skip_scaled = False
+                    else:
+                        self.skip_scaled = True
+
+                    print(self.incar_isif)
+                    if (_int_version(self.version) == 6) and (_int_version_minor(self.version) < 4) or ((self.incar_isif in [0,1,2,4,5])):
+                        self.skip_lattice = True
+                        if self.steps > 0:
+                            self._write_atoms_stdin(
+                                atoms=atoms, out=out, require_cell_stdin=require_cell_stdin, skip_scaled=self.skip_scaled, lattice_stdin=self.skip_lattice
+                            )
+                    else:
+                        self.skip_lattice = False
+                        if self.steps > 0:
+                            self._write_atoms_stdin(
+                                atoms=atoms, out=out, require_cell_stdin=True, skip_scaled=self.skip_scaled, lattice_stdin=self.skip_lattice
+                            )
+
+
+            if hasattr(self, 'skip_lattice'):
+                if self.skip_lattice:
+                    if "POSITIONS: reading from stdin" in text:
+                        return
+                else:
+                    if "POSITIONS AND LATTICE: reading from stdin" in text:
+                        return
 
         # 4. VASP process exits. Check if everything's running ok
         retcode = self.process.poll()
@@ -552,6 +638,9 @@ class VaspInteractive(Vasp):
                 "VASP exited unexpectedly with exit code {}" "".format(retcode)
             )
         return
+
+    # def clean_exit(self):
+    #     self.close()
 
     def close(self):
         """Soft stop approach for the stream-based VASP process
@@ -588,7 +677,7 @@ class VaspInteractive(Vasp):
             with self._txt_outstream() as out:
                 self._stdout("Attemping to close VASP cleanly\n", out=out)
                 stopcar = self._indir("STOPCAR")
-                with open(stopcar, "w") as fd:
+                with io.open(stopcar, "w") as fd:
                     fd.write("LABORT = .TRUE.")
 
                 # Following two calls to _run: 1 is to let vasp see STOPCAR and do 1 SCF
@@ -783,6 +872,8 @@ class VaspInteractive(Vasp):
         # handle VASP output with MLFF settings, so we always need to parse from OUTCAR
         # with some pre-filtration of text.
         # Good news is, the OUTCAR files are always completed :)
+        self.version = self.read_version()
+
         if self._use_mlff():
             use_mlff = True
             self._xml_complete = False
@@ -828,7 +919,7 @@ class VaspInteractive(Vasp):
             return
 
         self.converged = self.read_convergence(lines=outcar)
-        self.version = self.read_version()
+        
 
         # Do a quick test to see if OUTCAR is truncated
         # remember the status of _outcar_complete later
@@ -1146,3 +1237,4 @@ class VaspInteractive(Vasp):
         # breakpoint()
         self.socket_client.run(atoms, use_stress=use_stress)
         return
+
