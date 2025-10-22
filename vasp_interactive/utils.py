@@ -119,6 +119,13 @@ def _int_version(version_string):
     major = int(version_string.split(".")[0])
     return major
 
+def _int_version_minor(version_string):
+    """Convert version string to its minor version
+    5.4.4pl2 --> 4
+    6.3.0-gpu --> 3
+    """
+    minor = int(version_string.split(".")[1])
+    return minor
 
 def _get_slurm_jobid():
     jobid = os.environ.get("SLURM_JOB_ID", None)
@@ -212,3 +219,4 @@ def _preprocess_mlff_outcar(outcar):
             newline = re.sub(pat, rep, newline, 0, re.MULTILINE)
         new_outcar.append(newline)
     return new_outcar
+
